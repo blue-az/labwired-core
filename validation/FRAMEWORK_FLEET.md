@@ -20,11 +20,11 @@ This is the product bar beyond unit tests and UART-only CI fixtures.
 
 | Chip | Arduino matrix | Zephyr matrix | L3 I2C kit | Notes |
 |------|----------------|---------------|------------|-------|
-| esp32 | ✅ | ❌ no ESP Zephyr path yet | pilot skip (NACK) | L4 SPI skip (SPI master hang); FreeRTOS dual-core |
-| esp32c3 | ✅ | ❌ | ✅ Arduino | L4 SPI skip (frame/hang); RISC-V FreeRTOS |
+| esp32 | ✅ | ❌ no ESP Zephyr path yet | pilot skip (NACK) | L4 SPI skip (classic ESP incomplete); FreeRTOS dual-core |
+| esp32c3 | ✅ | ❌ | ✅ Arduino | L4 SPI green; RISC-V FreeRTOS |
 | esp32s3 | ✅ | ❌ | pilot skip (NACK) | L4 SPI skip (no SPI model); Dual-core |
-| nrf52832 | ✅ | ✅ | ✅ Arduino; Zephyr system+i2c0 | L4 SPI skip (hang); TWIM overlay Zephyr L3 |
-| nrf52840 | ✅ | ✅ | ✅ both | L4 SPI skip (hang); Zephyr L3 green |
+| nrf52832 | ✅ | ✅ | ✅ Arduino; Zephyr system+i2c0 | L4 SPI green (legacy SPI); TWIM overlay Zephyr L3 |
+| nrf52840 | ✅ | ✅ | ✅ both | L4 SPI green (legacy SPI); Zephyr L3 green |
 | nrf5340 | ❌ | ✅ | ❌ no I2C model | Add Arduino when PIO path exists |
 | nrf54l15 | ❌ | ❌ | — | Chip model present; frameworks TBD |
 | rp2040 | ✅ | ✅ | ✅ Arduino; Zephyr L3 skip | L4 SPI skip (local/CI boot env); DW Zephyr L3 |

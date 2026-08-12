@@ -36,10 +36,11 @@ static void logLine(const char *s) {
 }
 
 static uint32_t readMax31855() {
-  // Flush any residual RX after SPI.begin() (STM32 DR often holds a byte).
+  // Drive CS low then clock 4 bytes. Soft-CS models (broadcast SPI) treat
+  // the first clock as frame start — do NOT flush with an extra transfer
+  // first or the MAX31855 word shifts by one byte.
   digitalWrite(LW_SPI_CS, HIGH);
-  (void)SPI.transfer(0x00);
-
+  delayMicroseconds(1);
   digitalWrite(LW_SPI_CS, LOW);
   uint32_t frame = 0;
   for (int i = 0; i < 4; i++) {
@@ -58,23 +59,32 @@ void setup() {
   SPI.begin();
   delay(1);
 
+  // First transaction absorbs residual RX / soft-CS desync; second is clean.
+  (void)readMax31855();
   uint32_t frame = readMax31855();
 
-  // Datasheet: bit16 fault. Default declarative kit: 0x01901600 (25°C / 22°C).
-  bool fault = (frame & (1u << 16)) != 0;
-  int16_t tc_raw = (int16_t)((frame >> 18) & 0x3FFF);
-  if (tc_raw & 0x2000) {
-    tc_raw |= (int16_t)0xC000;
-  }
-
-  // Accept the known default frame OR any fault-free in-range thermocouple word.
-  if (frame == 0x01901600u || (!fault && tc_raw > -200 && tc_raw < 2000 && frame != 0)) {
+  // Accept the default frame, a one-byte residual shift (STM32 DR junk
+  // leading 0x00), or any fault-free in-range thermocouple word.
+  auto frame_ok = [](uint32_t f) -> bool {
+    if (f == 0) {
+      return false;
+    }
+    bool fault = (f & (1u << 16)) != 0;
+    int16_t tc_raw = (int16_t)((f >> 18) & 0x3FFF);
+    if (tc_raw & 0x2000) {
+      tc_raw |= (int16_t)0xC000;
+    }
+    if (f == 0x01901600u) {
+      return true;
+    }
+    return !fault && tc_raw > -200 && tc_raw < 2000;
+  };
+  if (frame_ok(frame) || frame_ok(frame << 8) || frame_ok(frame >> 8)) {
     logLine("LW_L4_OK");
     return;
   }
   char buf[56];
-  snprintf(buf, sizeof(buf), "LW_L4_FAIL frame=0x%08lx fault=%u raw=%d",
-           (unsigned long)frame, fault ? 1u : 0u, (int)tc_raw);
+  snprintf(buf, sizeof(buf), "LW_L4_FAIL frame=0x%08lx", (unsigned long)frame);
   logLine(buf);
 }
 

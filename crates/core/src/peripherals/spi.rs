@@ -530,6 +530,10 @@ struct Nrf52SpiRegs {
     events_endrx: u32,
     events_end: u32,
     events_endtx: u32,
+    /// Legacy SPI (NRF_SPI_Type) EVENTS_READY @ 0x108 — TXD byte done / RXD ready.
+    events_ready: u32,
+    /// Legacy SPI RXD @ 0x518 (last byte clocked in).
+    legacy_rxd: u32,
 
     // INTEN — bit-field enabling each event's IRQ
     inten: u32,
@@ -562,6 +566,9 @@ struct Nrf52SpiRegs {
 /// `ENABLE` value that selects the SPIM personality on the shared
 /// SPIM/SPIS/SPI/TWIM/TWI/TWIS window (nRF52840 PS v1.11 §6.25.6.17, p733).
 const NRF52_ENABLE_SPIM: u32 = 7;
+/// Nordic legacy SPI (NRF_SPI_Type) ENABLE value — Arduino SPI library uses this,
+/// not SPIM EasyDMA. PS: SPI_ENABLE_ENABLE_Enabled = 1.
+const NRF52_ENABLE_SPI: u32 = 1;
 /// `CONFIG` fields (nRF52840 PS v1.11 §6.25.6.22, p737).
 const NRF52_CONFIG_ORDER_LSB: u32 = 1 << 0;
 const NRF52_CONFIG_CPHA: u32 = 1 << 1;
@@ -584,6 +591,7 @@ impl Nrf52SpiRegs {
             0x010 | 0x014 => 0,
             // EVENTS
             0x104 => self.events_stopped,
+            0x108 => self.events_ready, // legacy SPI EVENTS_READY
             0x110 => self.events_endrx,
             0x118 => self.events_end,
             0x120 => self.events_endtx,
@@ -595,6 +603,8 @@ impl Nrf52SpiRegs {
             0x50C => self.psel_mosi,
             0x510 => self.psel_miso,
             0x514 => self.psel_csn,
+            0x518 => self.legacy_rxd, // legacy SPI RXD
+            0x51C => 0,               // legacy SPI TXD (write-only on silicon)
             0x524 => self.frequency,
             0x554 => self.config,
             // EasyDMA descriptors
@@ -630,6 +640,7 @@ impl Nrf52SpiRegs {
 
             // EVENTS — SW write of 1 ignored; SW write of 0 clears
             0x104 if value == 0 => self.events_stopped = 0,
+            0x108 if value == 0 => self.events_ready = 0,
             0x110 if value == 0 => self.events_endrx = 0,
             0x118 if value == 0 => self.events_end = 0,
             0x120 if value == 0 => self.events_endtx = 0,
@@ -2063,6 +2074,18 @@ impl crate::Peripheral for Spi {
         let byte_offset = (offset % 4) as u32;
 
         if let SpiRegs::Nrf52(_) = &self.regs {
+            // Legacy SPI (Arduino SPI.cpp): write TXD @ 0x51C with ENABLE=1
+            // clocks one byte immediately and raises EVENTS_READY.
+            if reg_offset == 0x51C && byte_offset == 0 {
+                let enable = match &self.regs {
+                    SpiRegs::Nrf52(r) => r.enable & 0xF,
+                    _ => 0,
+                };
+                if enable == NRF52_ENABLE_SPI {
+                    self.nrf52_legacy_spi_txd(value);
+                    return Ok(());
+                }
+            }
             let cur = match &self.regs {
                 SpiRegs::Nrf52(r) => r.read_reg(reg_offset),
                 _ => 0,
@@ -2137,6 +2160,17 @@ impl crate::Peripheral for Spi {
     fn write_u32(&mut self, offset: u64, value: u32) -> SimResult<()> {
         if let SpiRegs::Nrf52(_) = &self.regs {
             let reg_offset = offset & !3;
+            // Legacy SPI TXD: same immediate-byte path as the u8 write arm.
+            if reg_offset == 0x51C {
+                let enable = match &self.regs {
+                    SpiRegs::Nrf52(r) => r.enable & 0xF,
+                    _ => 0,
+                };
+                if enable == NRF52_ENABLE_SPI {
+                    self.nrf52_legacy_spi_txd(value as u8);
+                    return Ok(());
+                }
+            }
             let start_triggered = if let SpiRegs::Nrf52(r) = &mut self.regs {
                 r.write_reg(reg_offset, value)
             } else {
@@ -2473,6 +2507,31 @@ impl Spi {
             self.selected_devices[index] = selected;
         }
     }
+    /// Nordic **legacy SPI** (Arduino `SPI.transfer`): write `TXD` with
+    /// `ENABLE=1` clocks one byte through attached devices, latches MISO into
+    /// `RXD`, and raises `EVENTS_READY` so firmware's busy-wait exits.
+    ///
+    /// This is a different register file from SPIM EasyDMA (`ENABLE=7`). The
+    /// Arduino nRF5 SPI library uses the legacy peripheral; without this path
+    /// `while (!EVENTS_READY)` hangs forever under sim.
+    fn nrf52_legacy_spi_txd(&mut self, mosi: u8) {
+        let mut miso = 0u8;
+        if !self.attached_devices.is_empty() {
+            for dev in &mut self.attached_devices {
+                let resp = dev.transfer(mosi);
+                if resp != 0 {
+                    miso = resp;
+                }
+            }
+        } else if self.loopback {
+            miso = mosi;
+        }
+        if let SpiRegs::Nrf52(r) = &mut self.regs {
+            r.legacy_rxd = u32::from(miso);
+            r.events_ready = 1;
+        }
+    }
+
     /// nRF52 SPIM EasyDMA engine shared by `tick_with_bus` and `on_event`.
     ///
     /// Reads TXD.MAXCNT bytes from RAM at TXD.PTR, clocks each through the
@@ -3290,6 +3349,29 @@ mod tests {
         let mut spi = Spi::new_with_layout(SpiRegisterLayout::Nrf52Spim);
         nrf_write_u32(&mut spi, 0x010, 1); // TASKS_START
         assert_eq!(nrf_read_u32(&spi, 0x010), 0, "TASKS_START reads as 0");
+    }
+
+    /// Arduino nRF SPI library: ENABLE=1 + TXD write must raise EVENTS_READY
+    /// and put device MISO into RXD (legacy SPI, not SPIM EasyDMA).
+    #[test]
+    fn nrf52_legacy_spi_txd_raises_ready_and_returns_miso() {
+        let mut spi = Spi::new_with_layout(SpiRegisterLayout::Nrf52Spim);
+        struct Echo;
+        impl SpiDevice for Echo {
+            fn transfer(&mut self, mosi: u8) -> u8 {
+                mosi ^ 0xFF
+            }
+            fn cs_pin(&self) -> &str {
+                "P0.22"
+            }
+        }
+        spi.push_device(Box::new(Echo));
+        nrf_write_u32(&mut spi, 0x500, 1); // ENABLE = SPI (legacy)
+        nrf_write_u32(&mut spi, 0x51C, 0xA5); // TXD
+        assert_eq!(nrf_read_u32(&spi, 0x108), 1, "EVENTS_READY");
+        assert_eq!(nrf_read_u32(&spi, 0x518) & 0xFF, 0x5A, "RXD = mosi^0xFF");
+        nrf_write_u32(&mut spi, 0x108, 0); // clear READY
+        assert_eq!(nrf_read_u32(&spi, 0x108), 0);
     }
 
     /// Second TASKS_START after a completed transfer re-arms the engine.

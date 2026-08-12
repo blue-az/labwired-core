@@ -21,7 +21,7 @@ boards:
     notes: "Arduino-ESP32 FreeRTOS — real models only (no thunks)"
     sketches_skip: [L4_spi_sensor]
     sketches_skip_reason:
-      L4_spi_sensor: "Arduino SPI.transfer hangs or SPI master incomplete on this family under sim (STM32 L4 green; tracked for ESP/nRF/RP)"
+      L4_spi_sensor: "Classic ESP SPI master path incomplete under Arduino (STM32 L4 green)"
 
   - id: esp32c3
     chip: esp32c3
@@ -35,9 +35,6 @@ boards:
     led_min_edges: 2
     family: esp32
     notes: "Arduino-ESP32-C3 RISC-V"
-    sketches_skip: [L4_spi_sensor]
-    sketches_skip_reason:
-      L4_spi_sensor: "Arduino SPI.transfer hangs or SPI master incomplete on this family under sim (STM32 L4 green; tracked for ESP/nRF/RP)"
 
   - id: esp32s3
     chip: esp32s3
@@ -50,7 +47,7 @@ boards:
     notes: "Arduino-ESP32-S3"
     sketches_skip: [L4_spi_sensor]
     sketches_skip_reason:
-      L4_spi_sensor: "esp32s3 chip yaml has no SPI controller model yet (I2C L3 still exercised)"
+      L4_spi_sensor: "esp32s3 chip yaml has no SPI controller model yet"
 
   - id: nrf52832
     chip: nrf52832
@@ -62,9 +59,6 @@ boards:
     led_watch: "gpio0:17"
     led_min_edges: 2
     family: nrf
-    sketches_skip: [L4_spi_sensor]
-    sketches_skip_reason:
-      L4_spi_sensor: "Arduino SPI.transfer hangs or SPI master incomplete on this family under sim (STM32 L4 green; tracked for ESP/nRF/RP)"
 
   - id: nrf52840
     chip: nrf52840
@@ -75,9 +69,6 @@ boards:
     led_watch: "gpio0:17"
     led_min_edges: 2
     family: nrf
-    sketches_skip: [L4_spi_sensor]
-    sketches_skip_reason:
-      L4_spi_sensor: "Arduino SPI.transfer hangs or SPI master incomplete on this family under sim (STM32 L4 green; tracked for ESP/nRF/RP)"
 
   - id: rp2040
     chip: rp2040
@@ -92,7 +83,7 @@ boards:
     notes: "Needs platform raspberrypi (pio pkg install -g -p raspberrypi if missing)"
     sketches_skip: [L4_spi_sensor]
     sketches_skip_reason:
-      L4_spi_sensor: "Arduino SPI.transfer hangs or SPI master incomplete on this family under sim (STM32 L4 green; tracked for ESP/nRF/RP)"
+      L4_spi_sensor: "RP2040 SPI master not yet proven for L4 MAX31855 under Arduino mbed"
 
   - id: stm32f103
     chip: stm32f103
