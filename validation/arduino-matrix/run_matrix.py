@@ -302,7 +302,7 @@ def main() -> int:
                     except OSError:
                         pass
 
-            # L2 optional GPIO / RMT honesty (boards.yaml)
+            # L2 LED / L6 PWM optional GPIO / RMT honesty (boards.yaml)
             watch: list[str] = []
             min_edges: int | None = None
             min_rmt: int | None = None
@@ -312,6 +312,15 @@ def main() -> int:
                     min_edges = int(board.get("led_min_edges", 2))
                 if board.get("min_rmt_tx") is not None:
                     min_rmt = int(board["min_rmt_tx"])
+            elif sid.startswith("L6"):
+                # PWM→pad edge routing is incomplete on many twins; only enforce
+                # edges when boards.yaml sets pwm_watch explicitly (opt-in).
+                # Sketch still leaves mid duty running for future pad oracles.
+                if board.get("pwm_watch"):
+                    watch = [str(board["pwm_watch"])]
+                    min_edges = int(board.get("pwm_min_edges") or 2)
+                if board.get("pwm_min_rmt_tx") is not None:
+                    min_rmt = int(board["pwm_min_rmt_tx"])
 
             script = cell_out / "test.yaml"
             write_test_script(
@@ -364,13 +373,17 @@ def main() -> int:
             f"(partial run; not full {len(all_boards)}×{len(all_sketches)})"
         )
 
-    passed = sum(1 for r in rows if r["status"] in ("pass", "skipped"))
-    failed = sum(1 for r in rows if r["status"] not in ("pass", "skipped"))
+    n_pass = sum(1 for r in rows if r["status"] == "pass")
+    n_skip = sum(1 for r in rows if r["status"] == "skipped")
+    n_fail = sum(1 for r in rows if r["status"] not in ("pass", "skipped"))
     print()
-    print(f"Done in {elapsed:.0f}s — {passed}/{len(rows)} pass/skip ({failed} fail)")
+    print(
+        f"Done in {elapsed:.0f}s — {n_pass} pass / {n_skip} skip / {n_fail} fail "
+        f"(cells {len(rows)}; gate treats skip as non-fail)"
+    )
     print(f"Scoreboard: {out / 'scoreboard.md'}")
     print(pub_note)
-    return 0 if failed == 0 else 1
+    return 0 if n_fail == 0 else 1
 
 
 if __name__ == "__main__":

@@ -216,14 +216,14 @@ const CHIPS: &[ChipConf] = &[
         reset_oracle: None,
         behavior_gate: Some("firmware_survival::test_kw41z_smoke_survival"),
     },
-    // Classic Arduino Nano / ATmega328P — P0 CPU + Timer0/USART twin. No silicon
-    // SWD capture and no firmware_survival golden yet (behavior lands with a
-    // blink/UART smoke). Estate-only until those exist.
+    // Classic Arduino Nano / ATmega328P — sim-smoke twin (PORT/Timer0/USART0).
+    // Behavior: PlatformIO nanoatmega328 golden (serial nano-ok + D13 toggle).
+    // No silicon SWD capture yet → stays below L2 reg-match.
     ChipConf {
         name: "atmega328p",
         yaml: "configs/chips/atmega328p.yaml",
         reset_oracle: None,
-        behavior_gate: None,
+        behavior_gate: Some("avr_nano_golden_survival::arduino_nano_golden_prints_and_blinks"),
     },
 ];
 
@@ -341,6 +341,8 @@ fn dummy_manifest(path: &str) -> SystemManifest {
         wifi_ap: None,
         peripherals: vec![],
         memory_overrides: Default::default(),
+        // No override: these harnesses take whatever the chip declares.
+        cpu_hz: None,
     }
 }
 

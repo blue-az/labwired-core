@@ -71,6 +71,7 @@ pub(crate) fn run_firmware_riscv(
         schema_version: "1.0".to_string(),
         name: chip.name.clone(),
         chip: args.chip.to_string_lossy().into_owned(),
+        cpu_hz: None,
         memory_overrides: Default::default(),
         external_devices: vec![],
         cosim_models: Vec::new(),
@@ -1182,6 +1183,7 @@ pub(crate) fn run_interactive(
             labwired_core::Arch::Arm => labwired_config::Arch::Arm,
             labwired_core::Arch::RiscV => labwired_config::Arch::RiscV,
             labwired_core::Arch::XtensaLx7 => labwired_config::Arch::Xtensa,
+            labwired_core::Arch::Avr => labwired_config::Arch::Avr,
             _ => labwired_config::Arch::Unknown,
         };
 

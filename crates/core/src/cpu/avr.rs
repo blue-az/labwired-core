@@ -9,9 +9,24 @@
 //! Public PC is a **byte** address (ELF/DWARF). Fetch uses word index
 //! `pc_byte / 2`. Data space is separate from program flash.
 
+use crate::peripherals::i2c::I2cDevice;
+use crate::peripherals::spi::SpiDevice;
 use crate::snapshot::{AvrCpuSnapshot, CpuSnapshot};
 use crate::{Bus, Cpu, SimResult, SimulationConfig, SimulationError, SimulationObserver};
 use std::sync::{Arc, Mutex};
+
+/// Master TWI phase after a completed bus event (status already latched).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+enum TwiPhase {
+    #[default]
+    Idle,
+    /// START/REP_START sent; next TWDR is SLA+R/W.
+    Started,
+    /// Master transmitter (write).
+    Mt,
+    /// Master receiver (read).
+    Mr,
+}
 
 pub const FLASH_SIZE: usize = 32 * 1024;
 pub const RAMEND: u16 = 0x08FF;
@@ -48,7 +63,6 @@ pub fn classify_avr_vma(vma: u64) -> (AvrLoadSpace, u64) {
     }
 }
 
-#[derive(Debug, Clone)]
 pub struct Avr {
     pub r: [u8; 32],
     pub pc: u32,
@@ -74,13 +88,79 @@ pub struct Avr {
     pub ucsr0b: u8,
     pub ucsr0c: u8,
     pub ubrr0: u16,
+    /// SPI control / status / data (ATmega328P data-space 0x4C..0x4E).
+    pub spcr: u8,
+    pub spsr: u8,
+    pub spdr: u8,
+    /// SPI slaves (e.g. matrix MAX31855) attached for L4.
+    ///
+    /// Not `Clone`/`Debug`: trait objects. Kits land here after
+    /// [`crate::bus::SystemBus::take_spi_devices`] moves them off the bus
+    /// parking SPI controller (AVR has no MMIO SPI model).
+    pub spi_devices: Vec<Box<dyn SpiDevice>>,
+    /// TWI (I²C) — TWBR/TWSR/TWAR/TWDR/TWCR (data-space 0xB8..0xBC).
+    pub twbr: u8,
+    pub twsr: u8,
+    pub twar: u8,
+    pub twdr: u8,
+    pub twcr: u8,
+    twi_phase: TwiPhase,
+    twi_slave: Option<usize>,
+    /// I²C slaves (e.g. matrix INA219) attached for L3.
+    pub i2c_slaves: Vec<Box<dyn I2cDevice>>,
+    /// ADC (ADMUX/ADCSRA/ADCL/ADCH) — matrix L5 analogRead.
+    pub admux: u8,
+    pub adcsra: u8,
+    pub adcl: u8,
+    pub adch: u8,
+}
+
+impl std::fmt::Debug for Avr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Avr")
+            .field("pc", &self.pc)
+            .field("sp", &self.sp)
+            .field("sreg", &self.sreg)
+            .field("cycles", &self.cycles)
+            .field("spcr", &self.spcr)
+            .field("spsr", &self.spsr)
+            .field("spdr", &self.spdr)
+            .field("spi_devices", &self.spi_devices.len())
+            .field("twcr", &self.twcr)
+            .field("twsr", &self.twsr)
+            .field("i2c_slaves", &self.i2c_slaves.len())
+            .finish_non_exhaustive()
+    }
 }
 
 pub const VEC_TIMER0_OVF: u32 = 17; // datasheet 1-based; @0x40 = __vector_16
+/// TWI_vect is `_VECTOR(24)` → PC 0x60; pending bit uses vec=25 (`(vec-1)*4`).
+pub const VEC_TWI: u32 = 25;
 pub const UCSRA_UDRE: u8 = 1 << 5;
 pub const UCSRA_TXC: u8 = 1 << 6;
 pub const TIMSK_TOIE0: u8 = 1 << 0;
 pub const TIFR_TOV0: u8 = 1 << 0;
+
+// TWCR bits (ATmega328P datasheet).
+const TWINT: u8 = 1 << 7;
+const TWEA: u8 = 1 << 6;
+const TWSTA: u8 = 1 << 5;
+const TWSTO: u8 = 1 << 4;
+const TWWC: u8 = 1 << 3;
+const TWEN: u8 = 1 << 2;
+const TWIE: u8 = 1 << 0;
+
+// TW_STATUS codes (TWSR & 0xF8).
+const TW_START: u8 = 0x08;
+const TW_REP_START: u8 = 0x10;
+const TW_MT_SLA_ACK: u8 = 0x18;
+const TW_MT_SLA_NACK: u8 = 0x20;
+const TW_MT_DATA_ACK: u8 = 0x28;
+const TW_MT_DATA_NACK: u8 = 0x30;
+const TW_MR_SLA_ACK: u8 = 0x40;
+const TW_MR_SLA_NACK: u8 = 0x48;
+const TW_MR_DATA_ACK: u8 = 0x50;
+const TW_MR_DATA_NACK: u8 = 0x58;
 
 impl Default for Avr {
     fn default() -> Self {
@@ -114,6 +194,22 @@ impl Avr {
             ucsr0b: 0,
             ucsr0c: 0,
             ubrr0: 0,
+            spcr: 0,
+            spsr: 0,
+            spdr: 0,
+            spi_devices: Vec::new(),
+            twbr: 0,
+            twsr: 0xF8, // no-info status with prescaler 0
+            twar: 0,
+            twdr: 0xFF,
+            twcr: 0,
+            twi_phase: TwiPhase::Idle,
+            twi_slave: None,
+            i2c_slaves: Vec::new(),
+            admux: 0,
+            adcsra: 0,
+            adcl: 0,
+            adch: 0,
         }
     }
 
@@ -227,6 +323,21 @@ impl Avr {
             0x00C4 => Ok((self.ubrr0 & 0xFF) as u8),
             0x00C5 => Ok((self.ubrr0 >> 8) as u8),
             0x00C6 => Ok(0),
+            // SPI: SPCR/SPSR/SPDR (ATmega328P data space)
+            0x004C => Ok(self.spcr),
+            0x004D => Ok(self.spsr),
+            0x004E => Ok(self.spdr),
+            // TWI: TWBR/TWSR/TWAR/TWDR/TWCR
+            0x00B8 => Ok(self.twbr),
+            0x00B9 => Ok(self.twsr),
+            0x00BA => Ok(self.twar),
+            0x00BB => Ok(self.twdr),
+            0x00BC => Ok(self.twcr),
+            // ADC: ADCL/ADCH/ADCSRA/ADMUX (data space)
+            0x0078 => Ok(self.adcl),
+            0x0079 => Ok(self.adch),
+            0x007A => Ok(self.adcsra),
+            0x007C => Ok(self.admux),
             0x0020..=0x00FF => Ok(self.io[(addr - 0x20) as usize]),
             a if (SRAM_START..=RAMEND).contains(&a) => Ok(self.sram[(a - SRAM_START) as usize]),
             _ => Err(SimulationError::MemoryViolation(addr as u64)),
@@ -313,9 +424,86 @@ impl Avr {
                 bus.write_u8(addr as u64, value)?;
                 Ok(())
             }
+            0x004C => {
+                self.spcr = value;
+                Ok(())
+            }
+            0x004D => {
+                // Writing 1 to SPIF/WCOL clears them (AVR: write 1 then access SPDR).
+                self.spsr &= !value;
+                Ok(())
+            }
+            0x004E => {
+                // SPI data: master clocks one byte through attached slaves.
+                let mosi = value;
+                let mut miso = 0u8;
+                for dev in &mut self.spi_devices {
+                    let resp = dev.transfer(mosi);
+                    if resp != 0 {
+                        miso = resp;
+                    }
+                }
+                self.spdr = miso;
+                self.spsr |= 1 << 7; // SPIF
+                Ok(())
+            }
+            0x00B8 => {
+                self.twbr = value;
+                Ok(())
+            }
+            0x00B9 => {
+                // Only prescaler bits [1:0] are writable; status is read-only.
+                self.twsr = (self.twsr & 0xF8) | (value & 0x03);
+                Ok(())
+            }
+            0x00BA => {
+                self.twar = value;
+                Ok(())
+            }
+            0x00BB => {
+                self.twdr = value;
+                Ok(())
+            }
+            0x00BC => {
+                self.twi_write_cr(value);
+                Ok(())
+            }
+            0x0078 => {
+                self.adcl = value;
+                Ok(())
+            }
+            0x0079 => {
+                self.adch = value;
+                Ok(())
+            }
+            0x007A => {
+                // ADSC (bit 6): write 1 starts a conversion; complete immediately
+                // with mid-scale 512 (~Vcc/2) so analogRead() never hangs.
+                const ADSC: u8 = 1 << 6;
+                const ADIF: u8 = 1 << 4;
+                const ADEN: u8 = 1 << 7;
+                self.adcsra = value;
+                if value & ADEN != 0 && value & ADSC != 0 {
+                    self.adcl = 0x00;
+                    self.adch = 0x02; // 512
+                    self.adcsra = (value & !ADSC) | ADIF;
+                }
+                Ok(())
+            }
+            0x007C => {
+                self.admux = value;
+                Ok(())
+            }
             0x0020..=0x00FF => {
                 self.io[(addr - 0x20) as usize] = value;
-                bus.write_u8(addr as u64, value)?;
+                // PORTB (0x23..0x25): mirror to high bus window so --watch-gpio
+                // portb:N works (flash@0 swallows low-address bus writes).
+                if (0x0023..=0x0025).contains(&addr) {
+                    // High-window mirror is best-effort (must not fail IN/OUT).
+                    let _mirror = bus.write_u8(0x0001_0000 + addr as u64, value);
+                } else {
+                    let _mirror = bus.write_u8(addr as u64, value);
+                }
                 Ok(())
             }
             a if (SRAM_START..=RAMEND).contains(&a) => {
@@ -368,6 +556,129 @@ impl Avr {
 
     pub fn set_serial_sink(&mut self, sink: Arc<Mutex<Vec<u8>>>) {
         self.serial_sink = Some(sink);
+    }
+
+    pub fn push_spi_device(&mut self, device: Box<dyn SpiDevice>) {
+        self.spi_devices.push(device);
+    }
+
+    pub fn push_i2c_slave(&mut self, device: Box<dyn I2cDevice>) {
+        self.i2c_slaves.push(device);
+    }
+
+    fn find_i2c_slave(&self, addr7: u8) -> Option<usize> {
+        self.i2c_slaves.iter().position(|s| s.address() == addr7)
+    }
+
+    /// Write TWCR: writing 1 to TWINT clears it and starts the next TWI step
+    /// (START / SLA / DATA / STOP). Completes immediately and re-asserts TWINT
+    /// (except pure STOP) so Arduino's interrupt-driven `twi.c` advances.
+    fn twi_write_cr(&mut self, value: u8) {
+        let en = value & TWEN != 0;
+        let ie = value & TWIE != 0;
+        let start = value & TWSTA != 0;
+        let stop = value & TWSTO != 0;
+        let clear_int = value & TWINT != 0;
+        let ack = value & TWEA != 0;
+
+        // Preserve enable/ie/ea; drop TWINT/TWSTA/TWSTO/TWWC until op completes.
+        self.twcr = value & (TWEN | TWIE | TWEA);
+
+        if !en {
+            self.twi_phase = TwiPhase::Idle;
+            self.twi_slave = None;
+            return;
+        }
+
+        if !clear_int {
+            // Init path: TWCR = TWEN|TWIE|TWEA without starting a transfer.
+            return;
+        }
+
+        if stop {
+            if let Some(idx) = self.twi_slave {
+                self.i2c_slaves[idx].stop();
+            }
+            self.twi_phase = TwiPhase::Idle;
+            self.twi_slave = None;
+            // STOP auto-clears TWSTO; TWINT is not set after STOP.
+            self.twcr = TWEN | (if ie { TWIE } else { 0 }) | (if ack { TWEA } else { 0 });
+            return;
+        }
+
+        if start {
+            let status = if matches!(self.twi_phase, TwiPhase::Idle) {
+                TW_START
+            } else {
+                TW_REP_START
+            };
+            self.twsr = (self.twsr & 0x03) | status;
+            self.twi_phase = TwiPhase::Started;
+            self.twcr = TWEN | TWINT | (if ie { TWIE } else { 0 }) | (if ack { TWEA } else { 0 });
+            if ie {
+                self.pending_irq |= 1u64 << VEC_TWI;
+            }
+            return;
+        }
+
+        // Continue: address or data depending on phase.
+        match self.twi_phase {
+            TwiPhase::Idle => {
+                // Spurious TWINT clear with no START — no-info.
+                self.twsr = (self.twsr & 0x03) | 0xF8;
+            }
+            TwiPhase::Started => {
+                let addr7 = self.twdr >> 1;
+                let is_read = self.twdr & 1 != 0;
+                match self.find_i2c_slave(addr7) {
+                    Some(idx) => {
+                        self.twi_slave = Some(idx);
+                        if is_read {
+                            self.twi_phase = TwiPhase::Mr;
+                            self.twsr = (self.twsr & 0x03) | TW_MR_SLA_ACK;
+                        } else {
+                            self.twi_phase = TwiPhase::Mt;
+                            self.twsr = (self.twsr & 0x03) | TW_MT_SLA_ACK;
+                        }
+                    }
+                    None => {
+                        self.twi_slave = None;
+                        self.twsr = (self.twsr & 0x03)
+                            | if is_read {
+                                TW_MR_SLA_NACK
+                            } else {
+                                TW_MT_SLA_NACK
+                            };
+                        self.twi_phase = TwiPhase::Idle;
+                    }
+                }
+            }
+            TwiPhase::Mt => {
+                if let Some(idx) = self.twi_slave {
+                    self.i2c_slaves[idx].write(self.twdr);
+                    self.twsr = (self.twsr & 0x03) | TW_MT_DATA_ACK;
+                } else {
+                    self.twsr = (self.twsr & 0x03) | TW_MT_DATA_NACK;
+                }
+            }
+            TwiPhase::Mr => {
+                if let Some(idx) = self.twi_slave {
+                    self.twdr = self.i2c_slaves[idx].read();
+                    self.twsr =
+                        (self.twsr & 0x03) | if ack { TW_MR_DATA_ACK } else { TW_MR_DATA_NACK };
+                } else {
+                    self.twdr = 0xFF;
+                    self.twsr = (self.twsr & 0x03) | TW_MR_DATA_NACK;
+                }
+            }
+        }
+
+        self.twcr = TWEN | TWINT | (if ie { TWIE } else { 0 }) | (if ack { TWEA } else { 0 });
+        // Drop TWWC (write collision) — not modelled.
+        let _ = TWWC;
+        if ie {
+            self.pending_irq |= 1u64 << VEC_TWI;
+        }
     }
 
     /// Load a ProgramImage: low addresses → flash; data-space addresses → SRAM.
@@ -1490,6 +1801,17 @@ impl Cpu for Avr {
         self.ucsr0b = 0;
         self.ucsr0c = 0;
         self.ubrr0 = 0;
+        self.spcr = 0;
+        self.spsr = 0;
+        self.spdr = 0;
+        self.twbr = 0;
+        self.twsr = 0xF8;
+        self.twar = 0;
+        self.twdr = 0xFF;
+        self.twcr = 0;
+        self.twi_phase = TwiPhase::Idle;
+        self.twi_slave = None;
+        // Keep attached SPI/I2C slaves across reset (same wiring as real board).
         Ok(())
     }
 

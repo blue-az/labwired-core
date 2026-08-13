@@ -58,7 +58,19 @@ pub fn try_build(canonical_type: &str, p_cfg: &PeripheralConfig) -> Option<Box<d
             Box::new(timer_group::Esp32s3TimerGroup::new(src(50), cpu_clock_hz))
         }
         "esp32s3_gdma" => Box::new(gdma::Esp32s3Gdma::new(src(66))),
-        "esp32s3_spi" => Box::new(gpspi::Esp32s3Spi::new(src(21))),
+        "esp32s3_spi" => {
+            let irq = p_cfg
+                .irq
+                .or_else(|| {
+                    p_cfg
+                        .config
+                        .get("irq")
+                        .and_then(|v| v.as_u64())
+                        .map(|n| n as u32)
+                })
+                .unwrap_or(21);
+            Box::new(gpspi::Esp32s3Spi::new(src(irq)))
+        }
         "esp32s3_i2s" => Box::new(i2s::Esp32s3I2s::new(src(25))),
         "esp32s3_mcpwm" => Box::new(mcpwm::Esp32s3Mcpwm::new(src(38))),
         "esp32s3_rmt" => Box::new(rmt::Esp32s3Rmt::new(src(40))),

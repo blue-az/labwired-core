@@ -36,6 +36,11 @@ name: "stm32h563zi"
 arch: "arm"
 core: "cortex-m33"
 registers_count: 220
+# Simulated core clock, Hz — see ChipDescriptor::cpu_hz. Self-timed devices
+# scale their datasheet microseconds by it; a slower board overrides it.
+# STM32H563ZI maximum core clock, 250 MHz.
+cpu_hz: 250_000_000
+
 flash:
   base: 0x08000000
   # Binary units (MiB) so the buffer is exactly 2 * 0x100000 = 2,097,152 bytes,
@@ -336,7 +341,9 @@ peripherals:
     irq: 37
     config:
       debug_schema: "../peripherals/stm32h563/adc1.yaml"
-      profile: "stm32l4"
+      # H5 ADC is the H7-class IP (DEEPPWD/ADVREGEN/ADCAL/ADSTART), not L4.
+      # L4 profile made Arduino analogRead hang forever on DEEPPWD.
+      profile: "stm32h7"
     # ADC1/2 are clocked from RCC_AHB2ENR.ADCEN (bit 10) — the H5 ADC sits on
     # AHB2, not an APB bus. Unclocked out of reset (RM0481 §11.8.34): CR reads 0
     # (not its 0x20000000 DEEPPWD reset) until the clock is enabled.

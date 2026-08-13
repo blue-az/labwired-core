@@ -103,7 +103,13 @@ fn a_bus_without_simctl_never_stops_early() {
     // silently discarded. Faulting on the store is the stronger control: it
     // proves the address really is unmapped without the device, rather than
     // proving the fuel counter works.
+    //
+    // The abort contract is the `LABWIRED_CORTEXM_FAULTS=0` opt-out behaviour
+    // now that ARMv7-M fault escalation defaults on — with escalation on, this
+    // store would pend a BusFault/HardFault instead. The control is about the
+    // missing device, not about fault semantics, so pin the opt-out explicitly.
     let mut m = machine(false);
+    m.cpu.set_faults_enabled(false);
     load_store_to_simctl_program(&mut m, SIMCTL_BASE + EXIT_OFFSET, 0);
 
     let outcome = m.advance(AdvanceRequest::run(Some(64)));
@@ -194,6 +200,7 @@ mod from_declaration {
         ChipDescriptor {
             schema_version: "1.0".to_string(),
             name: "simctl-test-chip".to_string(),
+            cpu_hz: 0,
             arch: Arch::Arm,
             core: None,
             flash: MemoryRange {
@@ -227,6 +234,7 @@ mod from_declaration {
             schema_version: "1.0".to_string(),
             name: "simctl-test-system".to_string(),
             chip: "simctl-test-chip".to_string(),
+            cpu_hz: None,
             memory_overrides: HashMap::new(),
             external_devices: Vec::new(),
             cosim_models: Vec::new(),

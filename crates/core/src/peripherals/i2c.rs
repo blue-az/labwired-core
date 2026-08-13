@@ -1860,6 +1860,17 @@ impl I2c {
         }
     }
 
+    /// Drain every attached slave (AVR parks kits on a bus `i2c` controller,
+    /// then moves them onto the CPU TWI model after `from_config`).
+    pub fn take_slaves(&mut self) -> Vec<Box<dyn I2cDevice>> {
+        let cells = match self {
+            Self::Stm32F1(i) => std::mem::take(&mut i.attached_devices),
+            Self::Stm32L4(i) => std::mem::take(&mut i.attached_devices),
+            Self::Kinetis(i) => std::mem::take(&mut i.attached_devices),
+        };
+        cells.into_iter().map(RefCell::into_inner).collect()
+    }
+
     /// Attached I2C devices (used by config/bus validation + tests).
     pub fn attached_devices(&self) -> &[RefCell<Box<dyn I2cDevice>>] {
         match self {

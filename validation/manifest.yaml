@@ -268,8 +268,18 @@ boards:
     # Merged 2026-08-10: the discharge recorded above applies to the tree as it
     # stood at that live capture. The acks below cover model changes that
     # postdate it and are NOT evidenced by that capture.
-    drift_ack: 2026-08-10
-    drift_ack_digest: c6872bbd0b1353e3bbe8d645989d1d309fa4f03b6d5c7db5654a72ae7f60f24c
+    # 2026-08-13 (#962): the chip descriptor now declares the clock its core
+    # runs at (`ChipDescriptor::cpu_hz`), which moved every configs/chips/*.yaml
+    # and this board's digest with them. NOTHING THIS CAPTURE PINS MOVED: the
+    # field is declarative and no peripheral model reads it — the ESP/nRF
+    # peripherals keep their own CPU_CLOCK_HZ constants, and a new test
+    # (cpu_hz_single_source) asserts the descriptor agrees with them rather
+    # than replacing them. What consumes the clock is the external-device
+    # attach path (DHT22, HC-SR04, rotary encoder, WS2812), and no silicon
+    # capture covers any of those. No live re-capture owed for this change;
+    # any re-capture already owed above still is.
+    drift_ack: 2026-08-13
+    drift_ack_digest: 7ff611a215be6e82552c6a5dae1e87470f12b4c411a9e93da70ca9e85f7ce8b6
     models:
       - crates/core/src/peripherals/nrf52
       - configs/chips/nrf52840.yaml
@@ -413,8 +423,18 @@ boards:
     # Merged 2026-08-10: the discharge recorded above applies to the tree as it
     # stood at that live capture. The acks below cover model changes that
     # postdate it and are NOT evidenced by that capture.
-    drift_ack: 2026-08-10
-    drift_ack_digest: c6872bbd0b1353e3bbe8d645989d1d309fa4f03b6d5c7db5654a72ae7f60f24c
+    # 2026-08-13 (#962): the chip descriptor now declares the clock its core
+    # runs at (`ChipDescriptor::cpu_hz`), which moved every configs/chips/*.yaml
+    # and this board's digest with them. NOTHING THIS CAPTURE PINS MOVED: the
+    # field is declarative and no peripheral model reads it — the ESP/nRF
+    # peripherals keep their own CPU_CLOCK_HZ constants, and a new test
+    # (cpu_hz_single_source) asserts the descriptor agrees with them rather
+    # than replacing them. What consumes the clock is the external-device
+    # attach path (DHT22, HC-SR04, rotary encoder, WS2812), and no silicon
+    # capture covers any of those. No live re-capture owed for this change;
+    # any re-capture already owed above still is.
+    drift_ack: 2026-08-13
+    drift_ack_digest: 7ff611a215be6e82552c6a5dae1e87470f12b4c411a9e93da70ca9e85f7ce8b6
     models:
       - crates/core/src/peripherals/nrf52
       - configs/chips/nrf52840.yaml
@@ -647,8 +667,28 @@ boards:
     # longer stands in for a missing capture; see silicon.last_capture. Note the
     # scope caveat recorded there: the register diff was re-run, the FLASH
     # program-behaviour live-diff was not.
-    drift_ack: 2026-08-10
-    drift_ack_digest: 1a723b165e42c49b19f54091b7254eadd3c16ac53d1ed2f28b3565f40432ae06
+    # 2026-08-12 (#959): peripherals/adc.rs — the F1 regular-channel select moved
+    # off the legacy CR2[4:0] fallback onto SQR3 SQ1[4:0] (RM0008 §11.12.14),
+    # with ADC_SQR3 newly stored/readable @ 0x34; the same PR's NTC example
+    # firmware now enables ADC1EN. THIS BOARD'S ADC PATH IS UNTOUCHED: the H563
+    # maps to the L4/modern layout, and every non-test edit is inside F1AdcRegs
+    # or the F1-only advance_conversion channel pick — the L4/H7 arms and the
+    # synchronous L4 conversion path are byte-unchanged. The remaining diff is
+    # unit/differential test scripts. No register layout, reset value or byte
+    # path this board's capture pins moved; drift is the shared-file hash only.
+    # Re-capture pending (no H563 probe attached this session).
+    # 2026-08-13 (#962): the chip descriptor now declares the clock its core
+    # runs at (`ChipDescriptor::cpu_hz`), which moved every configs/chips/*.yaml
+    # and this board's digest with them. NOTHING THIS CAPTURE PINS MOVED: the
+    # field is declarative and no peripheral model reads it — the ESP/nRF
+    # peripherals keep their own CPU_CLOCK_HZ constants, and a new test
+    # (cpu_hz_single_source) asserts the descriptor agrees with them rather
+    # than replacing them. What consumes the clock is the external-device
+    # attach path (DHT22, HC-SR04, rotary encoder, WS2812), and no silicon
+    # capture covers any of those. No live re-capture owed for this change;
+    # any re-capture already owed above still is.
+    drift_ack: 2026-08-13
+    drift_ack_digest: 37b51e405aa2148064b2b8373b9b34c88ed9aca52cf20467e9252174b952e0df
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/peripherals/rcc.rs
@@ -693,8 +733,18 @@ boards:
     # code path was altered. Checked rather than argued: esp32c3_reset_conformance (2 passed) and
     # esp32s3_reset_conformance (1 passed) were executed on this branch. The source digest moved;
     # the model did not.
-    drift_ack: 2026-08-10
-    drift_ack_digest: 078c92aa3ef810a70d957c90e4b31a8db82e534a62c68b496fe4b242c5e0b312
+    # 2026-08-13 (#962): the chip descriptor now declares the clock its core
+    # runs at (`ChipDescriptor::cpu_hz`), which moved every configs/chips/*.yaml
+    # and this board's digest with them. NOTHING THIS CAPTURE PINS MOVED: the
+    # field is declarative and no peripheral model reads it — the ESP/nRF
+    # peripherals keep their own CPU_CLOCK_HZ constants, and a new test
+    # (cpu_hz_single_source) asserts the descriptor agrees with them rather
+    # than replacing them. What consumes the clock is the external-device
+    # attach path (DHT22, HC-SR04, rotary encoder, WS2812), and no silicon
+    # capture covers any of those. No live re-capture owed for this change;
+    # any re-capture already owed above still is.
+    drift_ack: 2026-08-13
+    drift_ack_digest: f364ebc696e57daef3e0092e5697399c3c018db313aa4f44e830df1029836760
     models:
       - crates/core/src/peripherals/esp32c3
       - crates/core/src/peripherals/esp_xtensa_common
@@ -1531,8 +1581,25 @@ boards:
     # Merged 2026-08-10: the discharge recorded above applies to the tree as it
     # stood at that live capture. The acks below cover model changes that
     # postdate it and are NOT evidenced by that capture.
-    drift_ack: 2026-08-10
-    drift_ack_digest: fe9aeec8dda6854ca6ba421e77bebbc1a10b5239429a8b3abc47303cac5e1f67
+    # 2026-08-12 (#959): peripherals/adc.rs — the F1 regular-channel select moved
+    # to SQR3 SQ1[4:0] (RM0008 §11.12.14) and ADC_SQR3 is newly stored @ 0x34;
+    # the same PR's NTC example firmware enables ADC1EN. The L4 ADC engine this
+    # board runs is byte-unchanged: every non-test edit is inside F1AdcRegs or
+    # the F1-only channel pick, and l476_mmio_diff/parity (RCC/GPIO/SPI1/TIM2)
+    # cannot observe the F1 arm at all. Drift is the shared-file hash only.
+    # Re-capture pending (no L476 probe attached this session).
+    # 2026-08-13 (#962): the chip descriptor now declares the clock its core
+    # runs at (`ChipDescriptor::cpu_hz`), which moved every configs/chips/*.yaml
+    # and this board's digest with them. NOTHING THIS CAPTURE PINS MOVED: the
+    # field is declarative and no peripheral model reads it — the ESP/nRF
+    # peripherals keep their own CPU_CLOCK_HZ constants, and a new test
+    # (cpu_hz_single_source) asserts the descriptor agrees with them rather
+    # than replacing them. What consumes the clock is the external-device
+    # attach path (DHT22, HC-SR04, rotary encoder, WS2812), and no silicon
+    # capture covers any of those. No live re-capture owed for this change;
+    # any re-capture already owed above still is.
+    drift_ack: 2026-08-13
+    drift_ack_digest: d426d9ffbafaa97898118b0678fe94fcf696161c47f934b549b332a5f3f97080
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/peripherals/rcc.rs
@@ -1718,8 +1785,18 @@ boards:
     # Merged 2026-08-10: the discharge recorded above applies to the tree as it
     # stood at that live capture. The acks below cover model changes that
     # postdate it and are NOT evidenced by that capture.
-    drift_ack: 2026-08-10
-    drift_ack_digest: 5c0c39f903efb56360220aa0c3b6c5a473e0f8176fee2211782f41c0f8552d41
+    # 2026-08-13 (#962): the chip descriptor now declares the clock its core
+    # runs at (`ChipDescriptor::cpu_hz`), which moved every configs/chips/*.yaml
+    # and this board's digest with them. NOTHING THIS CAPTURE PINS MOVED: the
+    # field is declarative and no peripheral model reads it — the ESP/nRF
+    # peripherals keep their own CPU_CLOCK_HZ constants, and a new test
+    # (cpu_hz_single_source) asserts the descriptor agrees with them rather
+    # than replacing them. What consumes the clock is the external-device
+    # attach path (DHT22, HC-SR04, rotary encoder, WS2812), and no silicon
+    # capture covers any of those. No live re-capture owed for this change;
+    # any re-capture already owed above still is.
+    drift_ack: 2026-08-13
+    drift_ack_digest: 911aa0ddc97db339660027e270f64b5daa42492bf947f364442939a741ef916a
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/peripherals/rcc.rs
@@ -1944,8 +2021,32 @@ boards:
     # Merged 2026-08-10: the discharge recorded above applies to the tree as it
     # stood at that live capture. The acks below cover model changes that
     # postdate it and are NOT evidenced by that capture.
-    drift_ack: 2026-08-10
-    drift_ack_digest: bf4bc6823001078d05c619850a228c985c16420a53de4df0afbc44317fba2529
+    # 2026-08-12 (#959): BEHAVIOURAL, deliberate — peripherals/adc.rs F1
+    # regular-channel select moved from the legacy CR2[4:0] fallback to SQR3
+    # SQ1[4:0] per RM0008 §11.12.14, and ADC_SQR3 @ 0x34 is now stored and
+    # readable (previously unmapped, read 0). The fallback always read >= 1 for
+    # any firmware holding ADON (CR2 bit 0), so a stimulus-seeded channel 0
+    # never reached DR: the ntc-thermistor-lab printed adc=0/4095 (unclocked
+    # ADC1EN — fixed by the same PR's firmware change) and would have printed a
+    # bare DR increment even clocked. The change moves the model TOWARD silicon:
+    # real F1 firmware selects the regular channel in SQR3, and SQR3 resetting
+    # to 0 keeps unwritten-sequence firmware on channel 0. The frozen capture is
+    # unaffected — the tier-1 ADC cell (gated-dead, then ADON/SWSTART -> EOC ->
+    # DR != 0) still converts channel 0 with nothing injected (DR = 1 as
+    # before), and the cell passes unchanged on this branch. ADC channel-select
+    # re-capture pending (no F103 probe attached this session).
+    # 2026-08-13 (#962): the chip descriptor now declares the clock its core
+    # runs at (`ChipDescriptor::cpu_hz`), which moved every configs/chips/*.yaml
+    # and this board's digest with them. NOTHING THIS CAPTURE PINS MOVED: the
+    # field is declarative and no peripheral model reads it — the ESP/nRF
+    # peripherals keep their own CPU_CLOCK_HZ constants, and a new test
+    # (cpu_hz_single_source) asserts the descriptor agrees with them rather
+    # than replacing them. What consumes the clock is the external-device
+    # attach path (DHT22, HC-SR04, rotary encoder, WS2812), and no silicon
+    # capture covers any of those. No live re-capture owed for this change;
+    # any re-capture already owed above still is.
+    drift_ack: 2026-08-13
+    drift_ack_digest: 7f49451fc56984bfbe2f4d27597e6e19d5a34cc3828e26543a9a3395750ab8b6
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/peripherals/rcc.rs
@@ -2144,9 +2245,22 @@ boards:
     # failed, cargo fmt clean. Acked WITHOUT a live re-capture for this board:
     # it was not attached. Its own live diff remains owed and is NOT evidenced
     # by this entry.
-    drift_ack: 2026-08-10
-    drift_ack_digest: 11ff9229d7ed39dc14174aba1c3cdf90761b36fa7f61e0a268f9100e58be6701
+    # 2026-08-13 (#962): the chip descriptor now declares the clock its core
+    # runs at (`ChipDescriptor::cpu_hz`), which moved every configs/chips/*.yaml
+    # and this board's digest with them. NOTHING THIS CAPTURE PINS MOVED: the
+    # field is declarative and no peripheral model reads it — the ESP/nRF
+    # peripherals keep their own CPU_CLOCK_HZ constants, and a new test
+    # (cpu_hz_single_source) asserts the descriptor agrees with them rather
+    # than replacing them. What consumes the clock is the external-device
+    # attach path (DHT22, HC-SR04, rotary encoder, WS2812), and no silicon
+    # capture covers any of those. No live re-capture owed for this change;
+    # any re-capture already owed above still is.
+    drift_ack: 2026-08-13
+    drift_ack_digest: 20b0f7311d06465603ddb36136bb56f033cd81ddbc35ba189147e9276109dabd
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
+    # 2026-08-12: chip yaml adds bxcan1 (type bxcan @ 0x40006400, APB1ENR bit 25) for
+    # Arduino matrix L8 loopback. Existing BxCan model; no register-map change to
+    # the silicon-pinned SPI/I2C/UART/GPIO set. Matrix L8 green; no live re-capture.
     models:
       - crates/core/src/peripherals/rcc.rs
       - crates/core/src/peripherals/gpio.rs
@@ -2434,7 +2548,17 @@ boards:
     # code path was altered. Checked rather than argued: esp32c3_reset_conformance (2 passed) and
     # esp32s3_reset_conformance (1 passed) were executed on this branch. The source digest moved;
     # the model did not.
-    drift_ack: 2026-08-10
+    # 2026-08-13 (#962): the chip descriptor now declares the clock its core
+    # runs at (`ChipDescriptor::cpu_hz`), which moved every configs/chips/*.yaml
+    # and this board's digest with them. NOTHING THIS CAPTURE PINS MOVED: the
+    # field is declarative and no peripheral model reads it — the ESP/nRF
+    # peripherals keep their own CPU_CLOCK_HZ constants, and a new test
+    # (cpu_hz_single_source) asserts the descriptor agrees with them rather
+    # than replacing them. What consumes the clock is the external-device
+    # attach path (DHT22, HC-SR04, rotary encoder, WS2812), and no silicon
+    # capture covers any of those. No live re-capture owed for this change;
+    # any re-capture already owed above still is.
+    drift_ack: 2026-08-13
     # 2026-08-10: GP-SPI2 CPU W-buffer transactions now deliver MOSI bytes to
     # attached devices and return their MISO bytes; display D/C observes the S3
     # GPIO output; GPIO labels resolve against the S3 register bank. This is an
@@ -2442,7 +2566,11 @@ boards:
     # The anchored nine reset registers and their reset values are unchanged.
     # Owner-approved drift acknowledgement without a new live register capture;
     # focused evidence: 3 production ILI9341 path tests and 20 GP-SPI tests.
-    drift_ack_digest: 2db52b8c59a9b1ce54f55d190a3c6ea193f269420bcabe5184016ecafd71c17d
+    # 2026-08-12: clippy-only factory SPI irq cast cleanup (no behaviour change).
+    # 2026-08-12: chip yaml documents sar_adc_s3 + twai already registered by
+    # configure_xtensa_esp32s3 (ESP32S3_PERIPHERALS). Address-map honesty only —
+    # 9-reg reset-state silicon anchor unchanged. Arduino matrix L5/L8 green.
+    drift_ack_digest: 90dff2b2b3cd90e550c11d2d05d9dd698aa010f1608d4b0515e77a32951b2f51
     models:
       - crates/core/src/peripherals/esp32s3
       - crates/core/src/peripherals/esp_xtensa_common
@@ -2498,8 +2626,18 @@ boards:
     # the old source and drew a flat line. Observability only: no register
     # read/write path, reset value or layout changed, and the frozen capture
     # covers register values rather than probe binding. No live re-capture.
-    drift_ack: 2026-08-05
-    drift_ack_digest: 464f96a5779c0b909939e03690fb7fca2e9e251eaf0597ce3fad88ce64e027d3
+    # 2026-08-13 (#962): the chip descriptor now declares the clock its core
+    # runs at (`ChipDescriptor::cpu_hz`), which moved every configs/chips/*.yaml
+    # and this board's digest with them. NOTHING THIS CAPTURE PINS MOVED: the
+    # field is declarative and no peripheral model reads it, and a new test
+    # (cpu_hz_single_source) asserts the descriptor agrees with the peripheral
+    # constants rather than replacing them. What consumes the clock is the
+    # external-device attach path (DHT22, HC-SR04, rotary encoder, WS2812), and
+    # no silicon capture covers any of those. The digest is re-stamped here so
+    # this ack names content a human actually read; no live re-capture owed for
+    # this change, and any already owed above still is.
+    drift_ack: 2026-08-13
+    drift_ack_digest: 2480b05f7681ed812e0867cd9796bb5d0a561bf07378981b8114fb7fe195b477
     models:
       - configs/chips/rp2040.yaml
       - crates/core/src/peripherals/rp2040
@@ -2567,8 +2705,18 @@ boards:
     # use. Recorded explicitly because `--write-ack-digests` re-stamps EVERY
     # ack, which would otherwise have widened this one to cover a change
     # nobody had written down.
-    drift_ack: 2026-07-28
-    drift_ack_digest: 304051ade8b9ff6fde81189ec89a4d25adb26ddb9b3764c586d4179575e3697a
+    # 2026-08-13 (#962): the chip descriptor now declares the clock its core
+    # runs at (`ChipDescriptor::cpu_hz`), which moved every configs/chips/*.yaml
+    # and this board's digest with them. NOTHING THIS CAPTURE PINS MOVED: the
+    # field is declarative and no peripheral model reads it, and a new test
+    # (cpu_hz_single_source) asserts the descriptor agrees with the peripheral
+    # constants rather than replacing them. What consumes the clock is the
+    # external-device attach path (DHT22, HC-SR04, rotary encoder, WS2812), and
+    # no silicon capture covers any of those. The digest is re-stamped here so
+    # this ack names content a human actually read; no live re-capture owed for
+    # this change, and any already owed above still is.
+    drift_ack: 2026-08-13
+    drift_ack_digest: 6e8066344403540c9c5607a52a948c9b916aae00e40fba8ff6e4799ef337488a
     models:
       - configs/chips/stm32h735.yaml
       - crates/core/src/peripherals/rcc.rs
@@ -2616,8 +2764,28 @@ boards:
     # use. Recorded explicitly because `--write-ack-digests` re-stamps EVERY
     # ack, which would otherwise have widened this one to cover a change
     # nobody had written down.
-    drift_ack: 2026-07-28
-    drift_ack_digest: 0d7b1c221e916cebed6f697e7f40e05ae3e0ec340e2c7df93e19625e4a61da55
+    # 2026-08-12 (#959): peripherals/adc.rs — the F1 regular-channel select moved
+    # to SQR3 SQ1[4:0] (RM0008 §11.12.14) and ADC_SQR3 is newly stored/readable
+    # @ 0x34. This board's ADC1 runs the F1 layout (no profile override in its
+    # chip yaml), so the arm IS reachable here — but the tier-1 fixture's adc
+    # cell (ADON/SWSTART -> EOC -> DR != 0, nothing injected) converts channel 0
+    # under the SQR3 reset value exactly as before, and DR = 1 either way.
+    # Recorded explicitly for the same reason as the 2026-08-09 note:
+    # `--write-ack-digests` re-stamps every ack, and this digest now covers the
+    # #959 adc.rs content. No silicon capture exists to re-run (sim-derived
+    # board); the tier-1 fixture lane is the evidence and passes unchanged.
+    # 2026-08-13 (#962): the chip descriptor now declares the clock its core
+    # runs at (`ChipDescriptor::cpu_hz`), which moved every configs/chips/*.yaml
+    # and this board's digest with them. NOTHING THIS CAPTURE PINS MOVED: the
+    # field is declarative and no peripheral model reads it, and a new test
+    # (cpu_hz_single_source) asserts the descriptor agrees with the peripheral
+    # constants rather than replacing them. What consumes the clock is the
+    # external-device attach path (DHT22, HC-SR04, rotary encoder, WS2812), and
+    # no silicon capture covers any of those. The digest is re-stamped here so
+    # this ack names content a human actually read; no live re-capture owed for
+    # this change, and any already owed above still is.
+    drift_ack: 2026-08-13
+    drift_ack_digest: f51aa6d65c014e1d097e1692c55af700b5a61785d27059d099081ce72204cbee
     models:
       - configs/chips/stm32f411ceu6.yaml
       - crates/core/src/peripherals/rcc.rs
@@ -2670,8 +2838,18 @@ boards:
     # no register read/write path, reset value or layout is touched. The source
     # digest moved because a shared file's commit date moved; the model did not.
     # No live re-capture is evidenced here.
-    drift_ack: 2026-07-28
-    drift_ack_digest: 2b15565f0ffebc59310b713de72047218b6e9dfbd132b3761ab5c095e87b8f75
+    # 2026-08-13 (#962): the chip descriptor now declares the clock its core
+    # runs at (`ChipDescriptor::cpu_hz`), which moved every configs/chips/*.yaml
+    # and this board's digest with them. NOTHING THIS CAPTURE PINS MOVED: the
+    # field is declarative and no peripheral model reads it, and a new test
+    # (cpu_hz_single_source) asserts the descriptor agrees with the peripheral
+    # constants rather than replacing them. What consumes the clock is the
+    # external-device attach path (DHT22, HC-SR04, rotary encoder, WS2812), and
+    # no silicon capture covers any of those. The digest is re-stamped here so
+    # this ack names content a human actually read; no live re-capture owed for
+    # this change, and any already owed above still is.
+    drift_ack: 2026-08-13
+    drift_ack_digest: f094f93912717a58376ddabb5503eb13c35669d06da1dbd514538653b23fa42f
     models:
       - configs/chips/mkw41z4.yaml
       - crates/core/src/peripherals/i2c.rs
