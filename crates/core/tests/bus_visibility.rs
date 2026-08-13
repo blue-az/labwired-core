@@ -239,6 +239,8 @@ fn dummy_manifest(path: &str) -> SystemManifest {
         wifi_ap: None,
         peripherals: vec![],
         memory_overrides: Default::default(),
+        // No override: these harnesses take whatever the chip declares.
+        cpu_hz: None,
     }
 }
 

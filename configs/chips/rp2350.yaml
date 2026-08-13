@@ -11,6 +11,13 @@ name: "rp2350"
 arch: "arm"
 core: "cortex-m33"
 registers_count: 240
+# Simulated core clock, Hz — see ChipDescriptor::cpu_hz. Self-timed devices
+# scale their datasheet microseconds by it; a slower board overrides it.
+# RP2350 maximum system clock, 150 MHz (datasheet §8.6.3: "the maximum
+# frequencies of the chip's clock generators … for the system PLL this is
+# 150 MHz").
+cpu_hz: 150_000_000
+
 flash:
   base: 0x10000000
   size: "2MB"

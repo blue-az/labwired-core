@@ -642,6 +642,7 @@ fn test_from_config_attaches_adxl345_external_device_to_i2c() {
         atomic_register_aliases: false,
         memory_regions: Vec::new(),
         name: "stm32f103-test".to_string(),
+        cpu_hz: 0,
         arch: Arch::Arm,
         core: None,
         flash: MemoryRange {
@@ -677,6 +678,7 @@ fn test_from_config_attaches_adxl345_external_device_to_i2c() {
         schema_version: "1.0".to_string(),
         name: "adxl345-test".to_string(),
         chip: "../chips/stm32f103.yaml".to_string(),
+        cpu_hz: None,
         memory_overrides: HashMap::new(),
         external_devices: vec![ExternalDevice {
             id: "adxl345".to_string(),
@@ -1194,6 +1196,7 @@ fn test_esp32c3_i2c_gpio_matrix_distinguishes_gpio45_from_gpio67() {
             schema_version: "1.0".to_string(),
             name: "c3-physical-i2c-route".to_string(),
             chip: "../chips/esp32c3.yaml".to_string(),
+            cpu_hz: None,
             memory_overrides: HashMap::new(),
             external_devices: vec![ExternalDevice {
                 id: "oled".to_string(),
@@ -1369,6 +1372,7 @@ fn test_from_config_attaches_bmp280_to_esp32c3_i2c0() {
         atomic_register_aliases: false,
         memory_regions: Vec::new(),
         name: "esp32c3-i2c-test".to_string(),
+        cpu_hz: 0,
         arch: Arch::RiscV,
         core: None,
         flash: MemoryRange {
@@ -1415,6 +1419,7 @@ fn test_from_config_attaches_bmp280_to_esp32c3_i2c0() {
         schema_version: "1.0".to_string(),
         name: "esp32c3-bmp280-test".to_string(),
         chip: "../chips/esp32c3.yaml".to_string(),
+        cpu_hz: None,
         memory_overrides: HashMap::new(),
         external_devices: vec![ExternalDevice {
             id: "bmp280".to_string(),
@@ -1518,6 +1523,7 @@ fn test_from_config_attaches_mlx90640_to_esp32c3_i2c0_and_reads_eeprom() {
         atomic_register_aliases: false,
         memory_regions: Vec::new(),
         name: "esp32c3-mlx-test".to_string(),
+        cpu_hz: 0,
         arch: Arch::RiscV,
         core: None,
         flash: MemoryRange {
@@ -1568,6 +1574,7 @@ fn test_from_config_attaches_mlx90640_to_esp32c3_i2c0_and_reads_eeprom() {
         schema_version: "1.0".to_string(),
         name: "esp32c3-mlx90640-test".to_string(),
         chip: "../chips/esp32c3.yaml".to_string(),
+        cpu_hz: None,
         memory_overrides: HashMap::new(),
         external_devices: vec![ExternalDevice {
             id: "thermal_cam".to_string(),
@@ -2386,6 +2393,7 @@ fn empty_manifest() -> SystemManifest {
         schema_version: "1.0".to_string(),
         name: "bit-band-test".to_string(),
         chip: "unused".to_string(),
+        cpu_hz: None,
         memory_overrides: std::collections::HashMap::new(),
         external_devices: Vec::new(),
         board_io: Vec::new(),
@@ -2886,6 +2894,7 @@ fn chip_with_i2c_and_uart() -> labwired_config::ChipDescriptor {
         atomic_register_aliases: false,
         memory_regions: Vec::new(),
         name: "stm32f103-test".to_string(),
+        cpu_hz: 0,
         arch: Arch::Arm,
         core: None,
         flash: MemoryRange {
@@ -2933,6 +2942,7 @@ fn manifest_with_external_device(
         schema_version: "1.0".to_string(),
         name: "adxl345-test".to_string(),
         chip: "../chips/stm32f103.yaml".to_string(),
+        cpu_hz: None,
         memory_overrides: std::collections::HashMap::new(),
         external_devices: vec![labwired_config::ExternalDevice {
             id: "sensor1".to_string(),
@@ -3092,6 +3102,7 @@ fn test_flash_boot_alias_read_and_write() {
         nvic: None,
         observers: Vec::new(),
         config: crate::SimulationConfig::default(),
+        cpu_hz: 0,
         bit_band_enabled: true,
         pending_cpu_irqs: [0; 2],
         dport_idx: None,
@@ -3203,6 +3214,7 @@ fn h5_flash_bus(gate: bool) -> SystemBus {
         nvic: None,
         observers: Vec::new(),
         config: crate::SimulationConfig::default(),
+        cpu_hz: 0,
         bit_band_enabled: false,
         pending_cpu_irqs: [0; 2],
         dport_idx: None,
@@ -3465,6 +3477,7 @@ fn h5_rww_bus(gate: bool) -> SystemBus {
         nvic: None,
         observers: Vec::new(),
         config: crate::SimulationConfig::default(),
+        cpu_hz: 0,
         bit_band_enabled: false,
         pending_cpu_irqs: [0; 2],
         dport_idx: None,
@@ -3725,6 +3738,7 @@ fn test_peripheral_range_index_lookup() {
         nvic: None,
         observers: Vec::new(),
         config: crate::SimulationConfig::default(),
+        cpu_hz: 0,
         bit_band_enabled: true,
         pending_cpu_irqs: [0; 2],
         dport_idx: None,
@@ -3840,6 +3854,7 @@ fn test_dma_tick_executes_copy_and_raises_irq() {
         nvic: None,
         observers: Vec::new(),
         config: crate::SimulationConfig::default(),
+        cpu_hz: 0,
         bit_band_enabled: true,
         pending_cpu_irqs: [0; 2],
         dport_idx: None,

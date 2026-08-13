@@ -52,6 +52,7 @@ fn validate_chip(path: &PathBuf) -> anyhow::Result<()> {
         schema_version: "1.0".to_string(),
         name: "test-bench".to_string(),
         chip: path.to_string_lossy().to_string(),
+        cpu_hz: None,
         external_devices: vec![],
         cosim_models: Vec::new(),
         motor_models: Vec::new(),

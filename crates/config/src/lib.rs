@@ -37,6 +37,24 @@ where
     }
 }
 
+/// [`deserialize_u64_lax`] for an optional field: absent ⇒ `None`, present ⇒
+/// the same int-or-underscored-string parse. YAML 1.2 does not accept `_` in a
+/// number, so `cpu_hz: 160_000_000` arrives as a *string* — the corpus is
+/// written that way throughout and this is what makes it a clock.
+fn deserialize_opt_u64_lax<'de, D>(deserializer: D) -> Result<Option<u64>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    use serde::Deserialize;
+    let raw = Option::<serde_yaml::Value>::deserialize(deserializer)?;
+    match raw {
+        None | Some(serde_yaml::Value::Null) => Ok(None),
+        Some(v) => deserialize_u64_lax(v).map(Some).map_err(|e| {
+            serde::de::Error::custom(format!("cpu_hz is not a whole number of hertz: {e}"))
+        }),
+    }
+}
+
 /// Default schema version for YAML configs
 fn default_schema_version() -> String {
     "1.0".to_string()
@@ -182,6 +200,26 @@ pub struct ChipDescriptor {
     /// that predate this field.
     #[serde(default)]
     pub core: Option<String>,
+    /// The clock this chip's core runs at in the simulator, in Hz — the single
+    /// source of truth for every "how many cycles is a microsecond" question.
+    ///
+    /// Self-timing devices (DHT22, the rotary encoder, WS2812) convert their
+    /// datasheet µs/ns windows to simulated cycles with this number, so it has
+    /// to agree with the clock the firmware was built against or the firmware
+    /// decodes noise. It used to be four inline literals and two board-name
+    /// string comparisons spread over two languages; it is now declared once,
+    /// here, per chip.
+    ///
+    /// This is the chip's *default* rate. A board that runs the part slower —
+    /// the NUCLEO-L476RG never leaves the 4 MHz MSI reset clock — overrides it
+    /// with [`SystemManifest::cpu_hz`].
+    ///
+    /// `0` means "undeclared". Every in-tree chip declares it and
+    /// `every_chip_descriptor_declares_a_cpu_hz` fails the build if a new one does
+    /// not, but the field stays defaulted so an out-of-tree chip YAML written before
+    /// this existed still loads.
+    #[serde(default, deserialize_with = "deserialize_u64_lax")]
+    pub cpu_hz: u64,
     pub flash: MemoryRange,
     pub ram: MemoryRange,
     /// Offset in bytes from the flash base to the application vector table
@@ -731,6 +769,17 @@ pub struct SystemManifest {
     pub schema_version: String,
     pub name: String,
     pub chip: String, // Reference to chip name or file path
+    /// Override for [`ChipDescriptor::cpu_hz`] — the clock THIS board runs the
+    /// part at, in Hz. Absent ⇒ the chip's declared default.
+    ///
+    /// The key has been in the corpus for a long time; until now nothing in the
+    /// engine read it. Ten system YAMLs declared a `cpu_hz:` that serde threw
+    /// away, and `nucleo-l476rg.yaml` documented the discard in a comment —
+    /// the firmware there never configures the PLL, so the core really runs at
+    /// the 4 MHz MSI reset rate and every self-timed device on that board was
+    /// nevertheless being told 80 MHz. Reading the key is the fix.
+    #[serde(default, deserialize_with = "deserialize_opt_u64_lax")]
+    pub cpu_hz: Option<u64>,
     #[serde(default)]
     pub memory_overrides: HashMap<String, String>,
     #[serde(default)]
@@ -2904,6 +2953,11 @@ impl From<labwired_ir::IrDevice> for ChipDescriptor {
             name: ir.name,
             arch,
             core,
+            // An SVD/IR document describes a register map, not a clock tree —
+            // it has no core frequency to carry over. `0` is the honest answer
+            // ("undeclared"); attach sites keep their historical default for it
+            // rather than inventing a number here.
+            cpu_hz: 0,
             flash,
             ram,
             reset_vector_offset: 0,
@@ -3012,6 +3066,7 @@ impl ResolvedSystem {
                 schema_version: default_schema_version(),
                 name: chip.to_string(),
                 chip: chip.to_string(),
+                cpu_hz: None,
                 ..SystemManifest::default()
             },
             base_dir: PathBuf::from("."),

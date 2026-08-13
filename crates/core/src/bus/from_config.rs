@@ -212,6 +212,10 @@ impl SystemBus {
             nvic: None,
             observers: Vec::new(),
             config: crate::SimulationConfig::default(),
+            // The board's clock beats the chip's rated one: the NUCLEO-L476RG
+            // never configures the PLL, so it really does run its 80 MHz part
+            // at the 4 MHz MSI reset rate and says so in its manifest.
+            cpu_hz: manifest.cpu_hz.unwrap_or(chip.cpu_hz),
             bit_band_enabled: Self::chip_has_bit_band(chip),
             reset_vector_offset: chip.reset_vector_offset,
             atomic_register_aliases: chip.atomic_register_aliases,

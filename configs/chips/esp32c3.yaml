@@ -7,6 +7,13 @@
 name: "esp32c3"
 arch: "riscv"
 registers_count: 50
+# Simulated core clock, Hz — see ChipDescriptor::cpu_hz. Self-timed devices
+# scale their datasheet microseconds by it; a slower board overrides it.
+# Matches the engine's C3 constants (esp32c3/uart.rs CPU_CLOCK_HZ,
+# esp32c3/i2c.rs CPU_CLK_HZ, esp32c3/rtc_timer.rs CPU_HZ) and the
+# `cpu_hz: 160_000_000` every in-tree C3 system manifest declares.
+cpu_hz: 160_000_000
+
 flash:
   base: 0x42000000
   size: "4MB"

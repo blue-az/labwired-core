@@ -227,6 +227,19 @@ pub struct SystemBus {
     pub nvic: Option<Arc<NvicState>>,
     pub observers: Vec<Arc<dyn crate::SimulationObserver>>,
     pub config: crate::SimulationConfig,
+    /// The clock this system's core runs at, in Hz: the manifest's `cpu_hz:`
+    /// when it declares one, otherwise the chip descriptor's.
+    ///
+    /// Every device that times its own waveform reads it from here. Before
+    /// this field the number was a literal at each attach site — `80_000_000`
+    /// in the declarative-device arms, `160_000_000` in the WS2812 kit — and a
+    /// board's declared clock reached none of them.
+    ///
+    /// `0` when neither the manifest nor the chip declares one; each attach
+    /// site keeps its former literal as the fallback for that case, so a chip
+    /// YAML predating [`labwired_config::ChipDescriptor::cpu_hz`] behaves
+    /// exactly as it did.
+    pub cpu_hz: u64,
     /// Enable Cortex-M peripheral/SRAM bit-band alias translation.
     /// False for architectures (e.g. RISC-V) whose memory maps collide with
     /// the bit-band alias ranges 0x42000000–0x44000000 / 0x22000000–0x24000000.
