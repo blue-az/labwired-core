@@ -65,10 +65,6 @@
 
   "_known_red_about": "Tests that are RED ON MAIN TODAY for a known, tracked reason. A shard that sees one of these fail reports it as known, not new. An entry whose test PASSES is stale and FAILS the aggregate job — shrink this list in the PR that fixes the test. Exact (package, target, test-name) triples, one GitHub issue per entry: no patterns, so an unrelated failure in the same file can never hide behind an entry. Wave 0.1's suite-baseline.json never landed, so this list was measured directly (see the PR that introduced it).",
   "known_red": [
-    { "package": "labwired-cli", "target": "environment_runner",
-      "test": "environment_runner_prioritizes_failed_assertions_over_runtime_errors",
-      "issue": 929,
-      "reason": "Stale stop_reason assertion: expects \"halt\", gets \"memory_violation\" after the deliberate memory-violation propagation re-land (#886). Red in every core-full nightly since 2026-08-10." },
     { "package": "labwired-core", "target": "cpu_trace_conformance",
       "test": "every_cpu_core_is_covered_by_this_file",
       "issue": 961,
