@@ -418,6 +418,7 @@ jobs:
           python3 -m pytest -q \
             scripts/perf/test_board_perf.py \
             scripts/ci/test_board_matrix.py \
+            scripts/ci/test_workspace_test_shard.py \
             scripts/test_generate_validation_status.py
 
       # Universal staleness gate. Regenerates EVERY committed artifact derived
@@ -724,6 +725,196 @@ jobs:
           --test stm32f103_dma_walk_differential
           --test systick_walk_differential
           --test board_batch_width
+
+  # ── Workspace tests on PRs (sharded; advisory for now) ─────────────────────
+  #
+  # THE LANE THAT RAN THE NIGHT AFTER THE MERGE. A plain
+  # `cargo test --workspace` touches 215 default-runnable test targets across
+  # 14 packages. Until this job existed it ran ONLY in `core-full` (nightly /
+  # dispatch / `[full-ci]`), so a PR could break any of those 215 targets and
+  # learn about it from the next nightly — after the squash-merge. Remediation
+  # plan task 2.3.
+  #
+  # ── SHAPE: three shards + one aggregate ──
+  #
+  # `scripts/ci/workspace_test_shard.py` builds the workspace's whole test set
+  # in ONE `cargo test --workspace --no-run` per shard and then executes each
+  # test binary straight out of cargo's artifact list. Why not
+  # `cargo test -p <pkg>` per package: feature unification. crates/wasm
+  # requests labwired-core/event-scheduler, so under `--workspace` EVERY
+  # core/cli/oracle test runs against a scheduler-enabled core and the
+  # `required-features = ["event-scheduler"]` targets run too — the nightly's
+  # semantics. Per-package invocations would silently test a different
+  # program (measured: core#929's environment_runner test passes under
+  # `-p labwired-cli` and fails under `--workspace`). Each shard assigns its
+  # slice of the artifact list by deterministic round-robin (contiguous blocks
+  # would hand one shard all ~125 labwired-core integration binaries); running
+  # binaries individually costs a few seconds of process overhead and makes
+  # every failure attributable to exactly one target, with per-target
+  # durations for future balancing.
+  #
+  # EXCLUDED, BY DESIGN: the cross-build suites in
+  # `scripts/ci/workspace-test-shards.json` — targets that build firmware for
+  # thumbv*/xtensa at test time or panic without a pre-built cross ELF. They
+  # need the five rustup targets `core-full` installs and no PR runner has;
+  # `core-full` keeps running them nightly, so this removes no coverage. The
+  # classification is closed: a default-runnable target in NEITHER the shard
+  # run nor the exclusion list is a hard error, so a new test file cannot
+  # silently miss the lane, and a stale exclusion entry is an error too.
+  #
+  # KNOWN-RED ALLOW-LIST. `workspace-test-shards.json`'s `known_red` holds the
+  # tests red on main TODAY, as exact (package, target, test-name) triples with
+  # one GitHub issue each — no patterns, so an unrelated failure in the same
+  # file can never hide behind an entry. A shard fails only on NEW red; the
+  # aggregate additionally fails when an allow-listed test PASSES, so the list
+  # shrinks in the PR that fixes the test instead of silently re-arming.
+  #
+  # ── ADVISORY, NOT REQUIRED — FOR NOW ──
+  #
+  # `main` requires exactly two contexts (`pr-gate`,
+  # `release-runner-contract`) with `enforce_admins` ON. This lane deliberately
+  # does NOT join them yet: the wall-clock budget on hosted runners is measured
+  # by this very lane's first runs, and a required check whose runtime nobody
+  # has measured is how you get a red lane that means nothing. The aggregate
+  # job's context name (`pr-workspace-tests`) is the one to add to branch
+  # protection once the timing proves out — requiring the matrix shards
+  # individually would couple protection to the shard count.
+  #
+  # Cache key matches `core-integrity` (`core-ci` + rustfmt/clippy components)
+  # so the first PR run restores main's warm target dir; see the
+  # `pr-scheduler-observable` comment for what happens when the components
+  # don't fold into the same key.
+  pr-workspace-tests:
+    name: pr-workspace-tests (shard ${{ matrix.shard }})
+    # `workflow_dispatch` too: it is the only way to exercise the lane against
+    # a branch without opening a PR, which is how its own runtime gets
+    # measured before anyone considers making it required.
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    # Sized generously until the first real runs say otherwise — the nightly
+    # `Run Workspace Tests` step takes ~8 min to cover roughly half the
+    # targets on a warm cache, so a shard of ~72 should sit well under this.
+    # Tighten to measured x1.5 once there is data; a timeout that cannot fit
+    # the work it names is a gate that fails for the wrong reason.
+    timeout-minutes: 45
+    strategy:
+      # A red shard must not cancel its siblings: their reports are what tell
+      # the aggregate (and the human) whether the red is new or known.
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    steps:
+      # Full history, on purpose — the same reason as `full:`: the Tier-1
+      # baseline ratchet (labwired-cli lib) and bus_proof_matrix
+      # (labwired-core lib) resolve their baseline from
+      # `git merge-base HEAD origin/main`, and on a shallow checkout they
+      # FAIL LOUDLY rather than guess. The first shard run proved it: four
+      # "new red" that were really this line missing.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # actions/checkout fetches the checked-out ref only, so the
+      # origin/main remote-tracking ref the ratchets merge-base against may
+      # not exist yet. Same step as `full:`.
+      - name: Fetch merge-base ref for the baseline ratchets
+        run: git fetch --no-tags --prune origin +refs/heads/main:refs/remotes/origin/main
+
+      # rustfmt + clippy are NOT used by this job — they are installed so
+      # rust-cache's key (which folds in components) matches core-integrity's
+      # and the restore hits main's warm cache.
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@1.95.0
+        with:
+          components: rustfmt, clippy
+
+      # The labwired-wasm LIB unittests include the secure-boot playground
+      # repro, which builds firmware-nrf52840-secure-boot for thumbv7em at
+      # test time (ensure_firmware_built). pr-gate installs the same target
+      # for the same tests. It is a lib unittest, not a [[test]] target, so
+      # it cannot go in cross_build_excluded — the target must simply exist.
+      - name: Add ARM target (wasm secure-boot repro firmware)
+        run: rustup target add thumbv7em-none-eabi
+
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: core-ci
+          workspaces: |
+            . -> target
+
+      # ubuntu-latest's system python3 (3.12+) suffices — the script is
+      # stdlib-only and drives cargo as a subprocess.
+      - name: Workspace tests — shard ${{ matrix.shard }}/3
+        run: >
+          python3 scripts/ci/workspace_test_shard.py run
+          --shard ${{ matrix.shard }}
+          --report shard-${{ matrix.shard }}.json
+
+      # `if: always()`: a shard that found new red exits 1, and its report is
+      # precisely what the aggregate needs to distinguish new red from known
+      # red — withholding it would turn an explainable failure into an
+      # unexplained one.
+      - name: Upload shard report + per-target logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: workspace-test-shard-${{ matrix.shard }}
+          path: |
+            shard-${{ matrix.shard }}.json
+            shard-${{ matrix.shard }}-logs/
+          if-no-files-found: error
+          # One day: the report matters for the aggregate run minutes from
+          # now, not for archaeology.
+          retention-days: 1
+
+  pr-workspace-tests-aggregate:
+    # The single stable context this lane reports. This is the name to add to
+    # branch protection IF the lane ever becomes required — never the matrix
+    # shards, whose count is an implementation detail.
+    name: pr-workspace-tests
+    needs: pr-workspace-tests
+    # `always()`: the aggregate's whole job is to render a verdict on partial
+    # information — a missing shard report is a FAILURE here, not a pass, so
+    # it must run even when (especially when) a shard job went red or was
+    # cancelled.
+    if: >
+      always() &&
+      (github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      # The checkout carries the allow-list (workspace-test-shards.json) and
+      # the aggregator script — at the PR's own revision, so a PR that shrinks
+      # the list is judged by its own list.
+      - uses: actions/checkout@v4
+
+      - name: Download shard reports
+        uses: actions/download-artifact@v4
+        with:
+          pattern: workspace-test-shard-*
+          path: reports
+
+      - name: Aggregate — new red fails, known red is named, stale entries fail
+        run: python3 scripts/ci/workspace_test_aggregate.py --reports reports
+
+      # A shard job that went red WITHOUT a report to explain it (timeout,
+      # cancelled, infra) leaves the aggregate no evidence to judge — that is
+      # a red lane with no readable reason, so say so explicitly instead of
+      # letting the missing-report error read like a test failure.
+      - name: Shard job status must be explainable
+        # always(): when the aggregate step above goes red the default
+        # skip-on-failure would mute exactly the message that explains the red.
+        if: always() && needs.pr-workspace-tests.result != 'success'
+        run: |
+          set -euo pipefail
+          if [ "${{ needs.pr-workspace-tests.result }}" = "cancelled" ]; then
+            echo "::error::pr-workspace-tests was cancelled (concurrency supersede or timeout). Re-run the workflow; a cancelled shard is not a verdict."
+            exit 1
+          fi
+          # 'failure' with all three reports present is explainable (new red,
+          # hard error); the aggregate step above already said which.
+          echo "Shard jobs failed; see the aggregate step above for the attribution."
 
   # ── Main-branch integrity (push to main) — fuller than PR, still no matrices ─
   integrity:
