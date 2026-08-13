@@ -77,6 +77,7 @@ fn nrf54l15_bus() -> SystemBus {
         schema_version: "1.0".to_string(),
         name: "nrf54l15-boot".to_string(),
         chip: path.to_string_lossy().to_string(),
+        cpu_hz: None,
         external_devices: vec![],
         board_io: vec![],
         debug_uart: None,

@@ -15,6 +15,11 @@ name: "stm32f767zi"
 arch: "arm"
 core: "cortex-m7"
 registers_count: 150
+# Simulated core clock, Hz — see ChipDescriptor::cpu_hz. Self-timed devices
+# scale their datasheet microseconds by it; a slower board overrides it.
+# STM32F767ZI maximum core clock, 216 MHz.
+cpu_hz: 216_000_000
+
 flash:
   base: 0x08000000
   size: "2MB"

@@ -1160,6 +1160,7 @@ mod tests {
             atomic_register_aliases: false,
             memory_regions: Vec::new(),
             name: "test".to_string(),
+            cpu_hz: 0,
             arch: labwired_config::Arch::Arm,
             core: None,
             flash: labwired_config::MemoryRange {
@@ -1188,6 +1189,7 @@ mod tests {
             schema_version: "1.0".to_string(),
             name: "test-system".to_string(),
             chip: "test-chip".to_string(),
+            cpu_hz: None,
             memory_overrides: HashMap::new(),
             external_devices: Vec::new(),
             cosim_models: Vec::new(),
@@ -1223,6 +1225,7 @@ mod tests {
             atomic_register_aliases: false,
             memory_regions: Vec::new(),
             name: "test".to_string(),
+            cpu_hz: 0,
             arch: labwired_config::Arch::Arm,
             core: None,
             flash: labwired_config::MemoryRange {
@@ -1251,6 +1254,7 @@ mod tests {
             schema_version: "1.0".to_string(),
             name: "test-system".to_string(),
             chip: "test-chip".to_string(),
+            cpu_hz: None,
             memory_overrides: HashMap::new(),
             external_devices: Vec::new(),
             cosim_models: Vec::new(),
@@ -1300,6 +1304,7 @@ mod tests {
             atomic_register_aliases: false,
             memory_regions: Vec::new(),
             name: "test".to_string(),
+            cpu_hz: 0,
             arch: labwired_config::Arch::Arm,
             core: None,
             flash: labwired_config::MemoryRange {
@@ -1328,6 +1333,7 @@ mod tests {
             schema_version: "1.0".to_string(),
             name: "test-system".to_string(),
             chip: "test-chip".to_string(),
+            cpu_hz: None,
             memory_overrides: HashMap::new(),
             external_devices: Vec::new(),
             cosim_models: Vec::new(),

@@ -8,6 +8,11 @@ name: "stm32f103c8"
 arch: "arm"
 core: "cortex-m3"
 registers_count: 125
+# Simulated core clock, Hz — see ChipDescriptor::cpu_hz. Self-timed devices
+# scale their datasheet microseconds by it; a slower board overrides it.
+# STM32F103C8 maximum core clock, 72 MHz.
+cpu_hz: 72_000_000
+
 flash:
   base: 0x08000000
   size: "1MB"

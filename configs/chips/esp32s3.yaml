@@ -6,6 +6,12 @@
 
 name: "esp32s3"
 arch: "xtensa-lx7"
+# Simulated core clock, Hz — see ChipDescriptor::cpu_hz. Self-timed devices
+# scale their datasheet microseconds by it; a slower board overrides it.
+# Matches the engine's S3 constants: esp32s3/gpspi.rs CPU_CLOCK_HZ and
+# esp32s3/usb_serial_jtag.rs ESP32S3_CPU_CLOCK_HZ are both 240 MHz.
+cpu_hz: 240_000_000
+
 flash:
   base: 0x42000000
   size: "16MB"

@@ -477,6 +477,7 @@ mod tests {
             schema_version: "1.0".to_string(),
             name: "test-s3-tmp102".to_string(),
             chip: "esp32s3.yaml".to_string(),
+            cpu_hz: None,
             memory_overrides: std::collections::HashMap::new(),
             peripherals: vec![],
             external_devices: vec![labwired_config::ExternalDevice {
@@ -574,6 +575,7 @@ mod tests {
             schema_version: "1.0".to_string(),
             name: "test-esp32-epaper".to_string(),
             chip: "esp32.yaml".to_string(),
+            cpu_hz: None,
             memory_overrides: std::collections::HashMap::new(),
             peripherals: vec![],
             external_devices: vec![ExternalDevice {
@@ -652,6 +654,7 @@ mod tests {
             schema_version: "1.0".to_string(),
             name: "test-esp32s3-epaper".to_string(),
             chip: "esp32s3.yaml".to_string(),
+            cpu_hz: None,
             memory_overrides: std::collections::HashMap::new(),
             peripherals: vec![],
             external_devices: vec![ExternalDevice {
@@ -710,6 +713,7 @@ mod tests {
             schema_version: "1.0".to_string(),
             name: "test".to_string(),
             chip: "esp32.yaml".to_string(),
+            cpu_hz: None,
             memory_overrides: std::collections::HashMap::new(),
             peripherals: vec![],
             external_devices: vec![ExternalDevice {

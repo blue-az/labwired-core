@@ -200,6 +200,7 @@ mod from_declaration {
         ChipDescriptor {
             schema_version: "1.0".to_string(),
             name: "simctl-test-chip".to_string(),
+            cpu_hz: 0,
             arch: Arch::Arm,
             core: None,
             flash: MemoryRange {
@@ -233,6 +234,7 @@ mod from_declaration {
             schema_version: "1.0".to_string(),
             name: "simctl-test-system".to_string(),
             chip: "simctl-test-chip".to_string(),
+            cpu_hz: None,
             memory_overrides: HashMap::new(),
             external_devices: Vec::new(),
             cosim_models: Vec::new(),
