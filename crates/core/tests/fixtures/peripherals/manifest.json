@@ -2408,7 +2408,7 @@
         {
           "name": "cpu_hz",
           "ty": "int",
-          "doc": "Simulated CPU Hz for edge timing. Defaults to 160_000_000."
+          "doc": "Simulated CPU Hz for edge timing. Defaults to the system's clock (the manifest's `cpu_hz:`, else the chip descriptor's)."
         }
       ],
       "labs": [],
