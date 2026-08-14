@@ -121,6 +121,29 @@ jobs:
           - id: kw41z-cow-activity
             script: examples/kw41z-cow-activity/calm.yaml
             system: configs/systems/frdm-kw41z-lcd.yaml
+          # F405 and F767 had no cell at all: their only smokes borrowed
+          # firmware-f401-demo from a sibling part, which needs a build, so no
+          # workflow ran them. Their own TIER1 fixtures are committed blobs, so
+          # these two cells cost seconds and no toolchain — and they are what
+          # found I2C1 answering before its RCC gate on both parts.
+          - id: feather-f405
+            script: examples/feather-f405/tier1-smoke.yaml
+            system: examples/feather-f405/system.yaml
+          - id: nucleo-f767zi
+            script: examples/nucleo-f767zi/tier1-smoke.yaml
+            system: examples/nucleo-f767zi/system.yaml
+          # The first CLI cell on an ESP32-S3. No S3 chip had one, because
+          # `labwired test` could not boot an S3 image: it recognised the part by
+          # an exact name (so every board variant took the generic builder and
+          # died with a memory violation) and then booted every S3 image on the
+          # factory-partition flash layout (so a bare-metal image's DROM reads
+          # landed on the wrong pages and it jumped to 0x0 at step 48). The
+          # Arduino matrix's esp32s3 cell could not see either defect — its
+          # images DO have a partition table and it never names a board variant.
+          # Committed fixture, no toolchain, 3.2s.
+          - id: esp32s3-zero
+            script: examples/esp32s3-zero/tier1-smoke.yaml
+            system: examples/esp32s3-zero/system.yaml
 
     steps:
       - uses: actions/checkout@v4
