@@ -184,10 +184,32 @@ fn run_c3_rom_boot_no_elf(
     let manifest_opt = system.map(|s| s.manifest.clone());
     let debug_uart = manifest_opt.as_ref().and_then(|m| m.debug_uart.clone());
 
-    // UART capture, mirroring the main flow: honour debug_uart, else all UARTs,
-    // plus the IO-Link master log sink.
+    // Console capture, mirroring the main flow: honour debug_uart, else all
+    // UARTs, plus the IO-Link master log sink.
+    //
+    // `debug_uart` names the console the board's USB socket is wired to, and on
+    // an ESP32-C3/S3 that can be the chip's USB-Serial-JTAG block rather than a
+    // UART (see docs/configuration_reference.md). This branch only ever asked
+    // `attach_uart_tx_sink_named`, so the documented value
+    // `debug_uart: "usb_serial_jtag"` could not resolve: it warned
+    // "did not resolve to a UART peripheral", fell back to the UARTs, and the
+    // CDC console was never tapped.
+    //
+    // That is the ELF-less rom-boot path — the one the hosted builder takes for
+    // every ESP32-C3 Arduino build, which PlatformIO compiles with
+    // -DARDUINO_USB_CDC_ON_BOOT=1 so `Serial` IS the USB-Serial-JTAG block and
+    // HardwareSerial is not even linked. Measured 2026-08-15 on hosted prod: a
+    // bare `Serial.println("BARE_OK")` sketch returned the ROM banner and
+    // nothing else at 20M, 200M and 500M steps. The sibling ELF-bearing rom-boot
+    // branch below already taps the CDC block; only this one did not.
     let uart_tx = Arc::new(Mutex::new(Vec::new()));
-    if let Some(debug_uart) = debug_uart.as_deref() {
+    let cdc_console = debug_uart.as_deref() == Some(labwired_core::console::USB_SERIAL_JTAG);
+    if cdc_console {
+        // Attached AFTER the rom-boot machine is built — `bus` here is the
+        // pre-boot bus and carries no USB-Serial-JTAG block yet, so asking it
+        // now can only produce a spurious "this chip has no USB-Serial-JTAG
+        // block" warning and a silent fallback to the UARTs.
+    } else if let Some(debug_uart) = debug_uart.as_deref() {
         if !bus.attach_uart_tx_sink_named(debug_uart, uart_tx.clone(), !args.no_uart_stdout) {
             warn!(
                 "debug_uart '{}' did not resolve to a UART peripheral; falling back to all UARTs",
@@ -288,6 +310,21 @@ fn run_c3_rom_boot_no_elf(
     // the browser. No-op when there is no `wifi_ap`.
     if let Some(manifest) = manifest_opt.as_ref() {
         labwired_core::system::wifi::attach_configured_wifi_ap(&mut machine.bus, manifest);
+    }
+
+    // The declared console, now that the rom-boot machine exists. `esp32c3_rom`
+    // constructs the USB-Serial-JTAG block (with its interrupt source) while
+    // building this machine, so this is the first point at which the block can
+    // be tapped — the pre-boot bus above has none.
+    if cdc_console && !machine.bus.attach_usb_serial_jtag_sink(uart_tx.clone()) {
+        warn!(
+            "debug_uart '{}' was declared but this machine has no USB-Serial-JTAG block; \
+             falling back to all UARTs",
+            labwired_core::console::USB_SERIAL_JTAG
+        );
+        machine
+            .bus
+            .attach_uart_tx_sink(uart_tx.clone(), !args.no_uart_stdout);
     }
 
     let metrics = std::sync::Arc::new(labwired_core::metrics::PerformanceMetrics::new());
