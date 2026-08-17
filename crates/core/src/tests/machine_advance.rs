@@ -1198,3 +1198,41 @@ fn unified_single_releases_and_steps_app_cpu() {
     assert_eq!(cpu1.pc, 0x4008_0002);
     assert_eq!(cpu1.steps, 1);
 }
+
+/// The rom-boot reset edge releases the secondary core, and `Machine::advance`
+/// is what acts on it — for EVERY driver, not just the one that remembered.
+///
+/// This lived in the native runner's step loop. On an ESP32-S3 a core left in
+/// reset is not a missing core, it is a dead run: ESP-IDF's `start_other_core`
+/// spins `while (!s_cpu_up[1]) esp_rom_delay_us(100)` before app_main, so the
+/// run stops inside the mask ROM's `ets_delay_us` at 0x40041a76 with nothing on
+/// the console past the boot banner — indistinguishable from a hung sketch.
+///
+/// Deleting the release arm at the top of `advance` must fail this test.
+#[test]
+fn rom_boot_reset_edge_releases_the_secondary_core() {
+    use crate::peripherals::esp_xtensa_common::rom_thunks::APPCPU_RESET_RELEASED;
+
+    let mut machine = counting_dual_core_machine();
+    machine.cpu_secondary.as_mut().unwrap().halted = true;
+
+    // No edge yet: a halted core stays halted, or the release is unconditional
+    // and this test proves nothing.
+    APPCPU_RESET_RELEASED.with(|s| s.set(false));
+    machine.step().expect("step should succeed");
+    assert!(
+        machine.cpu_secondary.as_ref().unwrap().halted,
+        "core 1 came out of reset with no reset edge to release it"
+    );
+
+    APPCPU_RESET_RELEASED.with(|s| s.set(true));
+    machine.step().expect("step should succeed");
+    assert!(
+        !machine.cpu_secondary.as_ref().unwrap().halted,
+        "the SYSTEM_CORE_1_RESETING edge did not release core 1"
+    );
+    assert!(
+        !APPCPU_RESET_RELEASED.with(|s| s.get()),
+        "the edge must be consumed, not left latched for the next boundary"
+    );
+}
