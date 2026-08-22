@@ -278,8 +278,60 @@ boards:
     # attach path (DHT22, HC-SR04, rotary encoder, WS2812), and no silicon
     # capture covers any of those. No live re-capture owed for this change;
     # any re-capture already owed above still is.
-    drift_ack: 2026-08-13
-    drift_ack_digest: 341fae03a1cdf9fb899fcf06aa25ddbbb953e33a98496d1e20866ef12d70bce1
+    # 2026-08-21 (CPU): `cpu/cortex_m.rs` — a CORRECTNESS FIX, not a
+    # refactor, and it changes what firmware does. The nine 16-bit T1
+    # data-processing encodings ADC/AND/BIC/EOR/MUL/MVN/ORR/RSB/SBC set flags
+    # unconditionally; their `setflags` is `!InITBlock()`. Leaking them
+    # corrupted the CONDITION of every instruction still to run in the same IT
+    # block. Measured on real gcc output: an `orrls` before a `strls` in one
+    # `itt ls` cleared Z, so the store never ran and a peripheral register was
+    # silently never written. LSL and the arithmetic forms already carried the
+    # guard (with a note citing an earlier H563/WBA52 regression); these nine
+    # did not.
+    #
+    # Why no re-capture is owed: what this board's capture PINS is a cold-reset
+    # REGISTER dump, not an execution trace, and no register's reset value
+    # moved. The behaviour gates that DO execute firmware — firmware_survival
+    # (61 passed), board_io_button_stimulus, the tier-1 suites — are unchanged
+    # by it. A future live re-capture should agree BETTER than the last one,
+    # since the CPU now runs IT blocks the way the silicon that produced the
+    # capture does.
+    #
+    # Re-stamped again for the EFR32 silicon capture work: `i2c.rs` gained a
+    # `txc` and a `bus_idle_known` field and corrected `STATE`/`STATUS`/`IF`
+    # reset values — ALL inside `Efr32s2I2c`, whose variant these boards never
+    # construct. The STM32 arms are untouched; only the file's digest moved.
+    #
+    # Digest re-stamped the same day for a follow-up commit that is TEST-ONLY:
+    # a `!(x == 1)` simplification in the IT-block test itself, a feature-gated
+    # match arm in i2c.rs, and a doc comment moved back onto the enum it
+    # documents in spi.rs. No executable path moved, so nothing above changes.
+    #
+    # Re-stamped 2026-08-22 a THIRD time, for GPIO_TIMERROUTE. The shared
+    # pad-claim table moved out of the Nordic module (`NrfPinClaims` is now an
+    # alias for `PadClaims`) and `GpioPort`'s claim field was generalised, so
+    # `gpio.rs` and the nRF files moved. ⚠️ Behaviour on these boards is
+    # unchanged: the nRF52 pad tests, the STM32 AFR path and every `bus_
+    # visibility` row pass untouched — an STM32 pad still answers from its own
+    # AFR nibble and never consults a claim table.
+    #
+    # Re-stamped 2026-08-22 AGAIN, for the EFR32 I²C/SPI wire narration: both
+    # `i2c.rs` and `spi.rs` gained a `PadLines` cell and a narrator call on the
+    # `Efr32s2*` arms, plus `Efr32s2SpiRegs` fields. The STM32 arms are
+    # untouched, these boards never construct the EFR32 variants, and the STM32
+    # waveform gates (`stm32h5_reset_values_match_silicon`, the L4 I²C
+    # narration tests, `bus_visibility` for every stm32 row) pass unchanged.
+    #
+    # Re-stamped 2026-08-22 for the EFR32MG26 reset-value corrections. `i2c.rs`
+    # and `spi.rs` both moved, and both edits are confined to their `Efr32s2*`
+    # arms: the I2C IPVERSION constant, and in spi.rs a hand-written `Default`
+    # for `Efr32s2SpiRegs` plus a `txc` flag so `STATUS` stops asserting TXC
+    # before anything has been transmitted. `SpiRegs::Stm32*` and the STM32 I2C
+    # layouts are not touched — these boards never construct the EFR32 variant,
+    # and the STM32 reset-value tests (`stm32h5_reset_values_match_silicon`,
+    # `test_i2c_reset_values`) pass unchanged.
+    drift_ack: 2026-08-21
+    drift_ack_digest: 762bfb5d5ab8f5193ec539eadbbc338ee97e5d77faa33d16e743c3c9a2f536a9
     models:
       - crates/core/src/cpu/cortex_m.rs
       - crates/core/src/decoder/arm.rs
@@ -435,8 +487,60 @@ boards:
     # attach path (DHT22, HC-SR04, rotary encoder, WS2812), and no silicon
     # capture covers any of those. No live re-capture owed for this change;
     # any re-capture already owed above still is.
-    drift_ack: 2026-08-13
-    drift_ack_digest: 341fae03a1cdf9fb899fcf06aa25ddbbb953e33a98496d1e20866ef12d70bce1
+    # 2026-08-21 (CPU): `cpu/cortex_m.rs` — a CORRECTNESS FIX, not a
+    # refactor, and it changes what firmware does. The nine 16-bit T1
+    # data-processing encodings ADC/AND/BIC/EOR/MUL/MVN/ORR/RSB/SBC set flags
+    # unconditionally; their `setflags` is `!InITBlock()`. Leaking them
+    # corrupted the CONDITION of every instruction still to run in the same IT
+    # block. Measured on real gcc output: an `orrls` before a `strls` in one
+    # `itt ls` cleared Z, so the store never ran and a peripheral register was
+    # silently never written. LSL and the arithmetic forms already carried the
+    # guard (with a note citing an earlier H563/WBA52 regression); these nine
+    # did not.
+    #
+    # Why no re-capture is owed: what this board's capture PINS is a cold-reset
+    # REGISTER dump, not an execution trace, and no register's reset value
+    # moved. The behaviour gates that DO execute firmware — firmware_survival
+    # (61 passed), board_io_button_stimulus, the tier-1 suites — are unchanged
+    # by it. A future live re-capture should agree BETTER than the last one,
+    # since the CPU now runs IT blocks the way the silicon that produced the
+    # capture does.
+    #
+    # Re-stamped again for the EFR32 silicon capture work: `i2c.rs` gained a
+    # `txc` and a `bus_idle_known` field and corrected `STATE`/`STATUS`/`IF`
+    # reset values — ALL inside `Efr32s2I2c`, whose variant these boards never
+    # construct. The STM32 arms are untouched; only the file's digest moved.
+    #
+    # Digest re-stamped the same day for a follow-up commit that is TEST-ONLY:
+    # a `!(x == 1)` simplification in the IT-block test itself, a feature-gated
+    # match arm in i2c.rs, and a doc comment moved back onto the enum it
+    # documents in spi.rs. No executable path moved, so nothing above changes.
+    #
+    # Re-stamped 2026-08-22 a THIRD time, for GPIO_TIMERROUTE. The shared
+    # pad-claim table moved out of the Nordic module (`NrfPinClaims` is now an
+    # alias for `PadClaims`) and `GpioPort`'s claim field was generalised, so
+    # `gpio.rs` and the nRF files moved. ⚠️ Behaviour on these boards is
+    # unchanged: the nRF52 pad tests, the STM32 AFR path and every `bus_
+    # visibility` row pass untouched — an STM32 pad still answers from its own
+    # AFR nibble and never consults a claim table.
+    #
+    # Re-stamped 2026-08-22 AGAIN, for the EFR32 I²C/SPI wire narration: both
+    # `i2c.rs` and `spi.rs` gained a `PadLines` cell and a narrator call on the
+    # `Efr32s2*` arms, plus `Efr32s2SpiRegs` fields. The STM32 arms are
+    # untouched, these boards never construct the EFR32 variants, and the STM32
+    # waveform gates (`stm32h5_reset_values_match_silicon`, the L4 I²C
+    # narration tests, `bus_visibility` for every stm32 row) pass unchanged.
+    #
+    # Re-stamped 2026-08-22 for the EFR32MG26 reset-value corrections. `i2c.rs`
+    # and `spi.rs` both moved, and both edits are confined to their `Efr32s2*`
+    # arms: the I2C IPVERSION constant, and in spi.rs a hand-written `Default`
+    # for `Efr32s2SpiRegs` plus a `txc` flag so `STATUS` stops asserting TXC
+    # before anything has been transmitted. `SpiRegs::Stm32*` and the STM32 I2C
+    # layouts are not touched — these boards never construct the EFR32 variant,
+    # and the STM32 reset-value tests (`stm32h5_reset_values_match_silicon`,
+    # `test_i2c_reset_values`) pass unchanged.
+    drift_ack: 2026-08-21
+    drift_ack_digest: 762bfb5d5ab8f5193ec539eadbbc338ee97e5d77faa33d16e743c3c9a2f536a9
     models:
       - crates/core/src/cpu/cortex_m.rs
       - crates/core/src/decoder/arm.rs
@@ -691,8 +795,85 @@ boards:
     # attach path (DHT22, HC-SR04, rotary encoder, WS2812), and no silicon
     # capture covers any of those. No live re-capture owed for this change;
     # any re-capture already owed above still is.
-    drift_ack: 2026-08-13
-    drift_ack_digest: c1939de9fcdc2640550cc65a1388e079d34dd0853dacfac37107aa099771a307
+    # 2026-08-21: `crates/core/src/peripherals/rcc.rs` gained ONE method —
+    # `Peripheral::clock_gate_reg_offset`, which delegates to the existing
+    # `Rcc::rcc_reg_offset`. It is a seam change, not a model change: clock-gate
+    # resolution used to downcast the bus's clock controller to `rcc::Rcc`, which
+    # answered `None` for any other vendor's clock unit, so a Silicon Labs CMU
+    # could declare `clock:` gates that silently never resolved. No register
+    # offset, reset value, mask or behaviour on THIS board moved, and the
+    # existing STM32 gate resolution takes the identical path to the identical
+    # answer. No live re-capture owed for this change; any re-capture already
+    # owed above still is.
+    # 2026-08-21 (second change, same day): `peripherals/i2c.rs` gained an
+    # `Efr32s2I2c` FAMILY STRUCT and an `I2c::Efr32s2` enum variant, plus the
+    # dispatch arms the compiler demands for it. The file is on this board's
+    # models list, so its digest moved — but the STM32 register maps, state
+    # machines and timing in it are byte-identical: the new code is a sibling
+    # struct that this board's variant never reaches. `I2c::new()` still
+    # defaults to Stm32F1. No live re-capture owed for this change; any
+    # re-capture already owed above still is.
+    # 2026-08-21 (third change, same day): `peripherals/spi.rs` gained an
+    # `Efr32s2SpiRegs` struct, an `SpiRegs::Efr32s2Usart` variant and its
+    # dispatch arms, plus a `line_names()` that now answers per variant so the
+    # EFR32 path publishes no wire it cannot drive. The STM32 arms return
+    # `SPI_LINES` exactly as before and every STM32 register map, bit engine
+    # and timing in the file is byte-identical. No live re-capture owed for
+    # this change; any re-capture already owed above still is.
+    # 2026-08-21 (CPU): `cpu/cortex_m.rs` — a CORRECTNESS FIX, not a
+    # refactor, and it changes what firmware does. The nine 16-bit T1
+    # data-processing encodings ADC/AND/BIC/EOR/MUL/MVN/ORR/RSB/SBC set flags
+    # unconditionally; their `setflags` is `!InITBlock()`. Leaking them
+    # corrupted the CONDITION of every instruction still to run in the same IT
+    # block. Measured on real gcc output: an `orrls` before a `strls` in one
+    # `itt ls` cleared Z, so the store never ran and a peripheral register was
+    # silently never written. LSL and the arithmetic forms already carried the
+    # guard (with a note citing an earlier H563/WBA52 regression); these nine
+    # did not.
+    #
+    # Why no re-capture is owed: what this board's capture PINS is a cold-reset
+    # REGISTER dump, not an execution trace, and no register's reset value
+    # moved. The behaviour gates that DO execute firmware — firmware_survival
+    # (61 passed), board_io_button_stimulus, the tier-1 suites — are unchanged
+    # by it. A future live re-capture should agree BETTER than the last one,
+    # since the CPU now runs IT blocks the way the silicon that produced the
+    # capture does.
+    #
+    # Re-stamped again for the EFR32 silicon capture work: `i2c.rs` gained a
+    # `txc` and a `bus_idle_known` field and corrected `STATE`/`STATUS`/`IF`
+    # reset values — ALL inside `Efr32s2I2c`, whose variant these boards never
+    # construct. The STM32 arms are untouched; only the file's digest moved.
+    #
+    # Digest re-stamped the same day for a follow-up commit that is TEST-ONLY:
+    # a `!(x == 1)` simplification in the IT-block test itself, a feature-gated
+    # match arm in i2c.rs, and a doc comment moved back onto the enum it
+    # documents in spi.rs. No executable path moved, so nothing above changes.
+    #
+    # Re-stamped 2026-08-22 a THIRD time, for GPIO_TIMERROUTE. The shared
+    # pad-claim table moved out of the Nordic module (`NrfPinClaims` is now an
+    # alias for `PadClaims`) and `GpioPort`'s claim field was generalised, so
+    # `gpio.rs` and the nRF files moved. ⚠️ Behaviour on these boards is
+    # unchanged: the nRF52 pad tests, the STM32 AFR path and every `bus_
+    # visibility` row pass untouched — an STM32 pad still answers from its own
+    # AFR nibble and never consults a claim table.
+    #
+    # Re-stamped 2026-08-22 AGAIN, for the EFR32 I²C/SPI wire narration: both
+    # `i2c.rs` and `spi.rs` gained a `PadLines` cell and a narrator call on the
+    # `Efr32s2*` arms, plus `Efr32s2SpiRegs` fields. The STM32 arms are
+    # untouched, these boards never construct the EFR32 variants, and the STM32
+    # waveform gates (`stm32h5_reset_values_match_silicon`, the L4 I²C
+    # narration tests, `bus_visibility` for every stm32 row) pass unchanged.
+    #
+    # Re-stamped 2026-08-22 for the EFR32MG26 reset-value corrections. `i2c.rs`
+    # and `spi.rs` both moved, and both edits are confined to their `Efr32s2*`
+    # arms: the I2C IPVERSION constant, and in spi.rs a hand-written `Default`
+    # for `Efr32s2SpiRegs` plus a `txc` flag so `STATUS` stops asserting TXC
+    # before anything has been transmitted. `SpiRegs::Stm32*` and the STM32 I2C
+    # layouts are not touched — these boards never construct the EFR32 variant,
+    # and the STM32 reset-value tests (`stm32h5_reset_values_match_silicon`,
+    # `test_i2c_reset_values`) pass unchanged.
+    drift_ack: 2026-08-21
+    drift_ack_digest: aff74ffd315a4a6ba81b7824564de3d0fd0df469be6e2b61da1aec77a16b40ca
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/cpu/cortex_m.rs
@@ -771,8 +952,53 @@ boards:
     # The focused GPIO peek regression and existing ESP32-C3 GPIO suite pass.
     # The reset-state silicon oracle is therefore unaffected; no live reset
     # re-capture is warranted for this observer-only fix.
-    drift_ack: 2026-08-15
-    drift_ack_digest: 24d69238f2dbe8666809ead591bd5402e332fd0eace6dde860638e09a43c3d7d
+    # 2026-08-21: `peripherals/esp32c3/bt.rs` changed in two ways, neither of
+    # which alters a register, a bit position, a timing or a decode:
+    #   1. `next_node_id()` moved to `peripherals/ble_air.rs` and is imported
+    #      from there. It has to be ONE counter now that a second kind of BLE
+    #      controller can share an air — two counters would both start at 1,
+    #      the first controller of each kind would collide, and each would
+    #      swallow the other's frames as "its own transmission".
+    #   2. `set_air` is now also reachable as `Peripheral::attach_ble_air`, so
+    #      `SystemBus::attach_lab_air` stops downcasting to this concrete type
+    #      to find it. The body it runs is unchanged — it calls `set_air`.
+    # The RW-BLE model itself is byte-identical. No live re-capture owed for
+    # this change; any re-capture already owed above still is.
+    #
+    # 2026-08-22: `InterruptFabric` seam (ledger row 6.6). Eleven chip-specific
+    # interrupt fields left `SystemBus` for one `irq_fabric` field, so every
+    # reference to them changed PATH. The only watched file in this list that
+    # moved is `crates/core/src/cpu/riscv.rs`, and its whole diff is:
+    #   * two field ASSIGNMENTS in a `#[cfg(test)]` fn — `bus.riscv_irq_lines =`
+    #     becomes `bus.irq_fabric.esp32c3.irq_lines =`, same u32, same values
+    #     (`1 << 5` then `0`);
+    #   * two comment lines naming the field.
+    # No non-test line of riscv.rs changed, and the other three watched entries
+    # (decoder/riscv.rs, peripherals/esp32c3, peripherals/esp_xtensa_common) are
+    # byte-identical. `Bus::external_irq_lines` still
+    # returns the same mask from the same computation (the assignment moved from
+    # `self.riscv_irq_lines` to `self.irq_fabric.esp32c3.irq_lines`, one field to
+    # one field). The INTERRUPT_CORE0 routing itself is untouched: MAP at
+    # 0x600C_2000 + s*4, CPU_INT_ENABLE 0x104, CPU_INT_PRI_n 0x114 + n*4,
+    # CPU_INT_THRESH 0x194, FROM_CPU doorbells as sources 50..53 — same offsets,
+    # same gating order, same level semantics. No register, reset value, source
+    # ID or interrupt number changed, so the 2026-08-09 reset-state capture (87
+    # regs, 366/423 overlap) is unaffected and no live re-capture is owed for
+    # this change. Re-captures already owed above still are.
+      # Re-stamped 2026-08-22 for the flash-size correction in this branch. The
+      # only model file that moved for this board is its chip descriptor, and the
+      # only field that changed is flash `size`, respelled from MB to KB because
+      # `parse_size` reads MB as 10^6 — the modelled part grows to the size of the
+      # real one. No register layout, reset value or peripheral behaviour is
+      # touched, which is what the silicon capture asserts, so the capture stands.
+    drift_ack: 2026-08-22
+      #
+      # Re-stamped 2026-08-22 for the EspI2cCore extraction in this branch: the ESP
+      # I2C models moved wholesale into a shared core, so every digest over them
+      # changes. Behaviour-preserving extraction, not a model correction —
+      # `pr-workspace-tests` green on all shards is what exercises this peripheral,
+      # so nothing the silicon capture asserts changed and the capture stands.
+    drift_ack_digest: f1e2477dfe90c1110a6c7bb7e9ffbd75eae35cbd145be807d3080d27376c380b
     models:
       - crates/core/src/cpu/riscv.rs
       - crates/core/src/decoder/riscv.rs
@@ -1625,8 +1851,91 @@ boards:
     # attach path (DHT22, HC-SR04, rotary encoder, WS2812), and no silicon
     # capture covers any of those. No live re-capture owed for this change;
     # any re-capture already owed above still is.
-    drift_ack: 2026-08-13
-    drift_ack_digest: 36e208a4147745a5b59d9041d214e75588bb9d24f7456266a1815dbc4c64802b
+    # 2026-08-21: `crates/core/src/peripherals/rcc.rs` gained ONE method —
+    # `Peripheral::clock_gate_reg_offset`, which delegates to the existing
+    # `Rcc::rcc_reg_offset`. It is a seam change, not a model change: clock-gate
+    # resolution used to downcast the bus's clock controller to `rcc::Rcc`, which
+    # answered `None` for any other vendor's clock unit, so a Silicon Labs CMU
+    # could declare `clock:` gates that silently never resolved. No register
+    # offset, reset value, mask or behaviour on THIS board moved, and the
+    # existing STM32 gate resolution takes the identical path to the identical
+    # answer. No live re-capture owed for this change; any re-capture already
+    # owed above still is.
+    # 2026-08-21 (second change, same day): `peripherals/i2c.rs` gained an
+    # `Efr32s2I2c` FAMILY STRUCT and an `I2c::Efr32s2` enum variant, plus the
+    # dispatch arms the compiler demands for it. The file is on this board's
+    # models list, so its digest moved — but the STM32 register maps, state
+    # machines and timing in it are byte-identical: the new code is a sibling
+    # struct that this board's variant never reaches. `I2c::new()` still
+    # defaults to Stm32F1. No live re-capture owed for this change; any
+    # re-capture already owed above still is.
+    # 2026-08-21 (third change, same day): `peripherals/spi.rs` gained an
+    # `Efr32s2SpiRegs` struct, an `SpiRegs::Efr32s2Usart` variant and its
+    # dispatch arms, plus a `line_names()` that now answers per variant so the
+    # EFR32 path publishes no wire it cannot drive. The STM32 arms return
+    # `SPI_LINES` exactly as before and every STM32 register map, bit engine
+    # and timing in the file is byte-identical. No live re-capture owed for
+    # this change; any re-capture already owed above still is.
+    # 2026-08-21 (CPU): `cpu/cortex_m.rs` — a CORRECTNESS FIX, not a
+    # refactor, and it changes what firmware does. The nine 16-bit T1
+    # data-processing encodings ADC/AND/BIC/EOR/MUL/MVN/ORR/RSB/SBC set flags
+    # unconditionally; their `setflags` is `!InITBlock()`. Leaking them
+    # corrupted the CONDITION of every instruction still to run in the same IT
+    # block. Measured on real gcc output: an `orrls` before a `strls` in one
+    # `itt ls` cleared Z, so the store never ran and a peripheral register was
+    # silently never written. LSL and the arithmetic forms already carried the
+    # guard (with a note citing an earlier H563/WBA52 regression); these nine
+    # did not.
+    #
+    # Why no re-capture is owed: what this board's capture PINS is a cold-reset
+    # REGISTER dump, not an execution trace, and no register's reset value
+    # moved. The behaviour gates that DO execute firmware — firmware_survival
+    # (61 passed), board_io_button_stimulus, the tier-1 suites — are unchanged
+    # by it. A future live re-capture should agree BETTER than the last one,
+    # since the CPU now runs IT blocks the way the silicon that produced the
+    # capture does.
+    #
+    # Re-stamped again for the EFR32 silicon capture work: `i2c.rs` gained a
+    # `txc` and a `bus_idle_known` field and corrected `STATE`/`STATUS`/`IF`
+    # reset values — ALL inside `Efr32s2I2c`, whose variant these boards never
+    # construct. The STM32 arms are untouched; only the file's digest moved.
+    #
+    # Digest re-stamped the same day for a follow-up commit that is TEST-ONLY:
+    # a `!(x == 1)` simplification in the IT-block test itself, a feature-gated
+    # match arm in i2c.rs, and a doc comment moved back onto the enum it
+    # documents in spi.rs. No executable path moved, so nothing above changes.
+    #
+    # Re-stamped 2026-08-22 a THIRD time, for GPIO_TIMERROUTE. The shared
+    # pad-claim table moved out of the Nordic module (`NrfPinClaims` is now an
+    # alias for `PadClaims`) and `GpioPort`'s claim field was generalised, so
+    # `gpio.rs` and the nRF files moved. ⚠️ Behaviour on these boards is
+    # unchanged: the nRF52 pad tests, the STM32 AFR path and every `bus_
+    # visibility` row pass untouched — an STM32 pad still answers from its own
+    # AFR nibble and never consults a claim table.
+    #
+    # Re-stamped 2026-08-22 AGAIN, for the EFR32 I²C/SPI wire narration: both
+    # `i2c.rs` and `spi.rs` gained a `PadLines` cell and a narrator call on the
+    # `Efr32s2*` arms, plus `Efr32s2SpiRegs` fields. The STM32 arms are
+    # untouched, these boards never construct the EFR32 variants, and the STM32
+    # waveform gates (`stm32h5_reset_values_match_silicon`, the L4 I²C
+    # narration tests, `bus_visibility` for every stm32 row) pass unchanged.
+    #
+    # Re-stamped 2026-08-22 for the EFR32MG26 reset-value corrections. `i2c.rs`
+    # and `spi.rs` both moved, and both edits are confined to their `Efr32s2*`
+    # arms: the I2C IPVERSION constant, and in spi.rs a hand-written `Default`
+    # for `Efr32s2SpiRegs` plus a `txc` flag so `STATUS` stops asserting TXC
+    # before anything has been transmitted. `SpiRegs::Stm32*` and the STM32 I2C
+    # layouts are not touched — these boards never construct the EFR32 variant,
+    # and the STM32 reset-value tests (`stm32h5_reset_values_match_silicon`,
+    # `test_i2c_reset_values`) pass unchanged.
+      # Re-stamped 2026-08-22 for the flash-size correction in this branch. The
+      # only model file that moved for this board is its chip descriptor, and the
+      # only field that changed is flash `size`, respelled from MB to KB because
+      # `parse_size` reads MB as 10^6 — the modelled part grows to the size of the
+      # real one. No register layout, reset value or peripheral behaviour is
+      # touched, which is what the silicon capture asserts, so the capture stands.
+    drift_ack: 2026-08-22
+    drift_ack_digest: 028d2a8a44b6f7a837f361181d2f5dcbd990c3502049aa245d20dcd148204da8
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/cpu/cortex_m.rs
@@ -1824,8 +2133,85 @@ boards:
     # attach path (DHT22, HC-SR04, rotary encoder, WS2812), and no silicon
     # capture covers any of those. No live re-capture owed for this change;
     # any re-capture already owed above still is.
-    drift_ack: 2026-08-13
-    drift_ack_digest: 6133dbb43b2146b106357d1b9b1c35b7f420507e2eb138247c262aca7640a2f1
+    # 2026-08-21: `crates/core/src/peripherals/rcc.rs` gained ONE method —
+    # `Peripheral::clock_gate_reg_offset`, which delegates to the existing
+    # `Rcc::rcc_reg_offset`. It is a seam change, not a model change: clock-gate
+    # resolution used to downcast the bus's clock controller to `rcc::Rcc`, which
+    # answered `None` for any other vendor's clock unit, so a Silicon Labs CMU
+    # could declare `clock:` gates that silently never resolved. No register
+    # offset, reset value, mask or behaviour on THIS board moved, and the
+    # existing STM32 gate resolution takes the identical path to the identical
+    # answer. No live re-capture owed for this change; any re-capture already
+    # owed above still is.
+    # 2026-08-21 (second change, same day): `peripherals/i2c.rs` gained an
+    # `Efr32s2I2c` FAMILY STRUCT and an `I2c::Efr32s2` enum variant, plus the
+    # dispatch arms the compiler demands for it. The file is on this board's
+    # models list, so its digest moved — but the STM32 register maps, state
+    # machines and timing in it are byte-identical: the new code is a sibling
+    # struct that this board's variant never reaches. `I2c::new()` still
+    # defaults to Stm32F1. No live re-capture owed for this change; any
+    # re-capture already owed above still is.
+    # 2026-08-21 (third change, same day): `peripherals/spi.rs` gained an
+    # `Efr32s2SpiRegs` struct, an `SpiRegs::Efr32s2Usart` variant and its
+    # dispatch arms, plus a `line_names()` that now answers per variant so the
+    # EFR32 path publishes no wire it cannot drive. The STM32 arms return
+    # `SPI_LINES` exactly as before and every STM32 register map, bit engine
+    # and timing in the file is byte-identical. No live re-capture owed for
+    # this change; any re-capture already owed above still is.
+    # 2026-08-21 (CPU): `cpu/cortex_m.rs` — a CORRECTNESS FIX, not a
+    # refactor, and it changes what firmware does. The nine 16-bit T1
+    # data-processing encodings ADC/AND/BIC/EOR/MUL/MVN/ORR/RSB/SBC set flags
+    # unconditionally; their `setflags` is `!InITBlock()`. Leaking them
+    # corrupted the CONDITION of every instruction still to run in the same IT
+    # block. Measured on real gcc output: an `orrls` before a `strls` in one
+    # `itt ls` cleared Z, so the store never ran and a peripheral register was
+    # silently never written. LSL and the arithmetic forms already carried the
+    # guard (with a note citing an earlier H563/WBA52 regression); these nine
+    # did not.
+    #
+    # Why no re-capture is owed: what this board's capture PINS is a cold-reset
+    # REGISTER dump, not an execution trace, and no register's reset value
+    # moved. The behaviour gates that DO execute firmware — firmware_survival
+    # (61 passed), board_io_button_stimulus, the tier-1 suites — are unchanged
+    # by it. A future live re-capture should agree BETTER than the last one,
+    # since the CPU now runs IT blocks the way the silicon that produced the
+    # capture does.
+    #
+    # Re-stamped again for the EFR32 silicon capture work: `i2c.rs` gained a
+    # `txc` and a `bus_idle_known` field and corrected `STATE`/`STATUS`/`IF`
+    # reset values — ALL inside `Efr32s2I2c`, whose variant these boards never
+    # construct. The STM32 arms are untouched; only the file's digest moved.
+    #
+    # Digest re-stamped the same day for a follow-up commit that is TEST-ONLY:
+    # a `!(x == 1)` simplification in the IT-block test itself, a feature-gated
+    # match arm in i2c.rs, and a doc comment moved back onto the enum it
+    # documents in spi.rs. No executable path moved, so nothing above changes.
+    #
+    # Re-stamped 2026-08-22 a THIRD time, for GPIO_TIMERROUTE. The shared
+    # pad-claim table moved out of the Nordic module (`NrfPinClaims` is now an
+    # alias for `PadClaims`) and `GpioPort`'s claim field was generalised, so
+    # `gpio.rs` and the nRF files moved. ⚠️ Behaviour on these boards is
+    # unchanged: the nRF52 pad tests, the STM32 AFR path and every `bus_
+    # visibility` row pass untouched — an STM32 pad still answers from its own
+    # AFR nibble and never consults a claim table.
+    #
+    # Re-stamped 2026-08-22 AGAIN, for the EFR32 I²C/SPI wire narration: both
+    # `i2c.rs` and `spi.rs` gained a `PadLines` cell and a narrator call on the
+    # `Efr32s2*` arms, plus `Efr32s2SpiRegs` fields. The STM32 arms are
+    # untouched, these boards never construct the EFR32 variants, and the STM32
+    # waveform gates (`stm32h5_reset_values_match_silicon`, the L4 I²C
+    # narration tests, `bus_visibility` for every stm32 row) pass unchanged.
+    #
+    # Re-stamped 2026-08-22 for the EFR32MG26 reset-value corrections. `i2c.rs`
+    # and `spi.rs` both moved, and both edits are confined to their `Efr32s2*`
+    # arms: the I2C IPVERSION constant, and in spi.rs a hand-written `Default`
+    # for `Efr32s2SpiRegs` plus a `txc` flag so `STATUS` stops asserting TXC
+    # before anything has been transmitted. `SpiRegs::Stm32*` and the STM32 I2C
+    # layouts are not touched — these boards never construct the EFR32 variant,
+    # and the STM32 reset-value tests (`stm32h5_reset_values_match_silicon`,
+    # `test_i2c_reset_values`) pass unchanged.
+    drift_ack: 2026-08-21
+    drift_ack_digest: 4f89a3042e273f1d36c9a99001466aa030c3b09f01f9afedd374623a740bb7b9
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/cpu/cortex_m.rs
@@ -2076,8 +2462,91 @@ boards:
     # attach path (DHT22, HC-SR04, rotary encoder, WS2812), and no silicon
     # capture covers any of those. No live re-capture owed for this change;
     # any re-capture already owed above still is.
-    drift_ack: 2026-08-13
-    drift_ack_digest: 231a8d9a589b5f73de9461a2828d731aa0ff43837dd1a0c174535ac0d8257c24
+    # 2026-08-21: `crates/core/src/peripherals/rcc.rs` gained ONE method —
+    # `Peripheral::clock_gate_reg_offset`, which delegates to the existing
+    # `Rcc::rcc_reg_offset`. It is a seam change, not a model change: clock-gate
+    # resolution used to downcast the bus's clock controller to `rcc::Rcc`, which
+    # answered `None` for any other vendor's clock unit, so a Silicon Labs CMU
+    # could declare `clock:` gates that silently never resolved. No register
+    # offset, reset value, mask or behaviour on THIS board moved, and the
+    # existing STM32 gate resolution takes the identical path to the identical
+    # answer. No live re-capture owed for this change; any re-capture already
+    # owed above still is.
+    # 2026-08-21 (second change, same day): `peripherals/i2c.rs` gained an
+    # `Efr32s2I2c` FAMILY STRUCT and an `I2c::Efr32s2` enum variant, plus the
+    # dispatch arms the compiler demands for it. The file is on this board's
+    # models list, so its digest moved — but the STM32 register maps, state
+    # machines and timing in it are byte-identical: the new code is a sibling
+    # struct that this board's variant never reaches. `I2c::new()` still
+    # defaults to Stm32F1. No live re-capture owed for this change; any
+    # re-capture already owed above still is.
+    # 2026-08-21 (third change, same day): `peripherals/spi.rs` gained an
+    # `Efr32s2SpiRegs` struct, an `SpiRegs::Efr32s2Usart` variant and its
+    # dispatch arms, plus a `line_names()` that now answers per variant so the
+    # EFR32 path publishes no wire it cannot drive. The STM32 arms return
+    # `SPI_LINES` exactly as before and every STM32 register map, bit engine
+    # and timing in the file is byte-identical. No live re-capture owed for
+    # this change; any re-capture already owed above still is.
+    # 2026-08-21 (CPU): `cpu/cortex_m.rs` — a CORRECTNESS FIX, not a
+    # refactor, and it changes what firmware does. The nine 16-bit T1
+    # data-processing encodings ADC/AND/BIC/EOR/MUL/MVN/ORR/RSB/SBC set flags
+    # unconditionally; their `setflags` is `!InITBlock()`. Leaking them
+    # corrupted the CONDITION of every instruction still to run in the same IT
+    # block. Measured on real gcc output: an `orrls` before a `strls` in one
+    # `itt ls` cleared Z, so the store never ran and a peripheral register was
+    # silently never written. LSL and the arithmetic forms already carried the
+    # guard (with a note citing an earlier H563/WBA52 regression); these nine
+    # did not.
+    #
+    # Why no re-capture is owed: what this board's capture PINS is a cold-reset
+    # REGISTER dump, not an execution trace, and no register's reset value
+    # moved. The behaviour gates that DO execute firmware — firmware_survival
+    # (61 passed), board_io_button_stimulus, the tier-1 suites — are unchanged
+    # by it. A future live re-capture should agree BETTER than the last one,
+    # since the CPU now runs IT blocks the way the silicon that produced the
+    # capture does.
+    #
+    # Re-stamped again for the EFR32 silicon capture work: `i2c.rs` gained a
+    # `txc` and a `bus_idle_known` field and corrected `STATE`/`STATUS`/`IF`
+    # reset values — ALL inside `Efr32s2I2c`, whose variant these boards never
+    # construct. The STM32 arms are untouched; only the file's digest moved.
+    #
+    # Digest re-stamped the same day for a follow-up commit that is TEST-ONLY:
+    # a `!(x == 1)` simplification in the IT-block test itself, a feature-gated
+    # match arm in i2c.rs, and a doc comment moved back onto the enum it
+    # documents in spi.rs. No executable path moved, so nothing above changes.
+    #
+    # Re-stamped 2026-08-22 a THIRD time, for GPIO_TIMERROUTE. The shared
+    # pad-claim table moved out of the Nordic module (`NrfPinClaims` is now an
+    # alias for `PadClaims`) and `GpioPort`'s claim field was generalised, so
+    # `gpio.rs` and the nRF files moved. ⚠️ Behaviour on these boards is
+    # unchanged: the nRF52 pad tests, the STM32 AFR path and every `bus_
+    # visibility` row pass untouched — an STM32 pad still answers from its own
+    # AFR nibble and never consults a claim table.
+    #
+    # Re-stamped 2026-08-22 AGAIN, for the EFR32 I²C/SPI wire narration: both
+    # `i2c.rs` and `spi.rs` gained a `PadLines` cell and a narrator call on the
+    # `Efr32s2*` arms, plus `Efr32s2SpiRegs` fields. The STM32 arms are
+    # untouched, these boards never construct the EFR32 variants, and the STM32
+    # waveform gates (`stm32h5_reset_values_match_silicon`, the L4 I²C
+    # narration tests, `bus_visibility` for every stm32 row) pass unchanged.
+    #
+    # Re-stamped 2026-08-22 for the EFR32MG26 reset-value corrections. `i2c.rs`
+    # and `spi.rs` both moved, and both edits are confined to their `Efr32s2*`
+    # arms: the I2C IPVERSION constant, and in spi.rs a hand-written `Default`
+    # for `Efr32s2SpiRegs` plus a `txc` flag so `STATUS` stops asserting TXC
+    # before anything has been transmitted. `SpiRegs::Stm32*` and the STM32 I2C
+    # layouts are not touched — these boards never construct the EFR32 variant,
+    # and the STM32 reset-value tests (`stm32h5_reset_values_match_silicon`,
+    # `test_i2c_reset_values`) pass unchanged.
+      # Re-stamped 2026-08-22 for the flash-size correction in this branch. The
+      # only model file that moved for this board is its chip descriptor, and the
+      # only field that changed is flash `size`, respelled from MB to KB because
+      # `parse_size` reads MB as 10^6 — the modelled part grows to the size of the
+      # real one. No register layout, reset value or peripheral behaviour is
+      # touched, which is what the silicon capture asserts, so the capture stands.
+    drift_ack: 2026-08-22
+    drift_ack_digest: f5554f202059a1ceacf23ec1014c9ceb2e2f7a07e55c9b5758169af15bd331de
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/cpu/cortex_m.rs
@@ -2288,8 +2757,91 @@ boards:
     # attach path (DHT22, HC-SR04, rotary encoder, WS2812), and no silicon
     # capture covers any of those. No live re-capture owed for this change;
     # any re-capture already owed above still is.
-    drift_ack: 2026-08-13
-    drift_ack_digest: 26750bfeb2971fa272d2c8aad85ffca4ca07b8b9bf6ca9b84e2b7a1732bdf995
+    # 2026-08-21: `crates/core/src/peripherals/rcc.rs` gained ONE method —
+    # `Peripheral::clock_gate_reg_offset`, which delegates to the existing
+    # `Rcc::rcc_reg_offset`. It is a seam change, not a model change: clock-gate
+    # resolution used to downcast the bus's clock controller to `rcc::Rcc`, which
+    # answered `None` for any other vendor's clock unit, so a Silicon Labs CMU
+    # could declare `clock:` gates that silently never resolved. No register
+    # offset, reset value, mask or behaviour on THIS board moved, and the
+    # existing STM32 gate resolution takes the identical path to the identical
+    # answer. No live re-capture owed for this change; any re-capture already
+    # owed above still is.
+    # 2026-08-21 (second change, same day): `peripherals/i2c.rs` gained an
+    # `Efr32s2I2c` FAMILY STRUCT and an `I2c::Efr32s2` enum variant, plus the
+    # dispatch arms the compiler demands for it. The file is on this board's
+    # models list, so its digest moved — but the STM32 register maps, state
+    # machines and timing in it are byte-identical: the new code is a sibling
+    # struct that this board's variant never reaches. `I2c::new()` still
+    # defaults to Stm32F1. No live re-capture owed for this change; any
+    # re-capture already owed above still is.
+    # 2026-08-21 (third change, same day): `peripherals/spi.rs` gained an
+    # `Efr32s2SpiRegs` struct, an `SpiRegs::Efr32s2Usart` variant and its
+    # dispatch arms, plus a `line_names()` that now answers per variant so the
+    # EFR32 path publishes no wire it cannot drive. The STM32 arms return
+    # `SPI_LINES` exactly as before and every STM32 register map, bit engine
+    # and timing in the file is byte-identical. No live re-capture owed for
+    # this change; any re-capture already owed above still is.
+    # 2026-08-21 (CPU): `cpu/cortex_m.rs` — a CORRECTNESS FIX, not a
+    # refactor, and it changes what firmware does. The nine 16-bit T1
+    # data-processing encodings ADC/AND/BIC/EOR/MUL/MVN/ORR/RSB/SBC set flags
+    # unconditionally; their `setflags` is `!InITBlock()`. Leaking them
+    # corrupted the CONDITION of every instruction still to run in the same IT
+    # block. Measured on real gcc output: an `orrls` before a `strls` in one
+    # `itt ls` cleared Z, so the store never ran and a peripheral register was
+    # silently never written. LSL and the arithmetic forms already carried the
+    # guard (with a note citing an earlier H563/WBA52 regression); these nine
+    # did not.
+    #
+    # Why no re-capture is owed: what this board's capture PINS is a cold-reset
+    # REGISTER dump, not an execution trace, and no register's reset value
+    # moved. The behaviour gates that DO execute firmware — firmware_survival
+    # (61 passed), board_io_button_stimulus, the tier-1 suites — are unchanged
+    # by it. A future live re-capture should agree BETTER than the last one,
+    # since the CPU now runs IT blocks the way the silicon that produced the
+    # capture does.
+    #
+    # Re-stamped again for the EFR32 silicon capture work: `i2c.rs` gained a
+    # `txc` and a `bus_idle_known` field and corrected `STATE`/`STATUS`/`IF`
+    # reset values — ALL inside `Efr32s2I2c`, whose variant these boards never
+    # construct. The STM32 arms are untouched; only the file's digest moved.
+    #
+    # Digest re-stamped the same day for a follow-up commit that is TEST-ONLY:
+    # a `!(x == 1)` simplification in the IT-block test itself, a feature-gated
+    # match arm in i2c.rs, and a doc comment moved back onto the enum it
+    # documents in spi.rs. No executable path moved, so nothing above changes.
+    #
+    # Re-stamped 2026-08-22 a THIRD time, for GPIO_TIMERROUTE. The shared
+    # pad-claim table moved out of the Nordic module (`NrfPinClaims` is now an
+    # alias for `PadClaims`) and `GpioPort`'s claim field was generalised, so
+    # `gpio.rs` and the nRF files moved. ⚠️ Behaviour on these boards is
+    # unchanged: the nRF52 pad tests, the STM32 AFR path and every `bus_
+    # visibility` row pass untouched — an STM32 pad still answers from its own
+    # AFR nibble and never consults a claim table.
+    #
+    # Re-stamped 2026-08-22 AGAIN, for the EFR32 I²C/SPI wire narration: both
+    # `i2c.rs` and `spi.rs` gained a `PadLines` cell and a narrator call on the
+    # `Efr32s2*` arms, plus `Efr32s2SpiRegs` fields. The STM32 arms are
+    # untouched, these boards never construct the EFR32 variants, and the STM32
+    # waveform gates (`stm32h5_reset_values_match_silicon`, the L4 I²C
+    # narration tests, `bus_visibility` for every stm32 row) pass unchanged.
+    #
+    # Re-stamped 2026-08-22 for the EFR32MG26 reset-value corrections. `i2c.rs`
+    # and `spi.rs` both moved, and both edits are confined to their `Efr32s2*`
+    # arms: the I2C IPVERSION constant, and in spi.rs a hand-written `Default`
+    # for `Efr32s2SpiRegs` plus a `txc` flag so `STATUS` stops asserting TXC
+    # before anything has been transmitted. `SpiRegs::Stm32*` and the STM32 I2C
+    # layouts are not touched — these boards never construct the EFR32 variant,
+    # and the STM32 reset-value tests (`stm32h5_reset_values_match_silicon`,
+    # `test_i2c_reset_values`) pass unchanged.
+      # Re-stamped 2026-08-22 for the flash-size correction in this branch. The
+      # only model file that moved for this board is its chip descriptor, and the
+      # only field that changed is flash `size`, respelled from MB to KB because
+      # `parse_size` reads MB as 10^6 — the modelled part grows to the size of the
+      # real one. No register layout, reset value or peripheral behaviour is
+      # touched, which is what the silicon capture asserts, so the capture stands.
+    drift_ack: 2026-08-22
+    drift_ack_digest: 5ee5241dca313ed484b6a2ca01255eb828208f68c6544d8e68ec16a72f730b8f
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     # 2026-08-12: chip yaml adds bxcan1 (type bxcan @ 0x40006400, APB1ENR bit 25) for
     # Arduino matrix L8 loopback. Existing BxCan model; no register-map change to
@@ -2311,7 +2863,7 @@ boards:
     doc: docs/boards/esp32s3.md
     chip: configs/chips/esp32s3.yaml
     tier: silicon-verified
-    note: "Deep model: 36 peripheral models + full Xtensa LX7 JIT; boots real firmware in sim (green e2e i2c_tmp102/hello_world/xtensa_exec/e-paper). WDEV Wi-Fi MAC at 0x60033000 attaches to wifi-ap. Silicon anchor is reset-state (9 regs) on the firmware-path bus. KNOWN GAPS: (1) broader register + behavioural silicon diff still future work; (2) declarative from_config path falls back to generic ARM peripherals for type:i2c — the coded S3 models only wire via configure_xtensa_esp32s3; (3) full-firmware bring-up still rides boot/ROM thunks (FIDELITY.md)."
+    note: "Deep model: 36 peripheral models + full Xtensa LX7 JIT; boots real firmware in sim (green e2e i2c_tmp102/hello_world/xtensa_exec/e-paper). WDEV Wi-Fi MAC at 0x60033000 attaches to wifi-ap, but see KNOWN GAPS (4) — that model is literally the C3's and is UNVERIFIED on S3 silicon. Silicon anchor is reset-state (9 regs) on the firmware-path bus. KNOWN GAPS: (1) broader register + behavioural silicon diff still future work; (2) declarative from_config path falls back to generic ARM peripherals for type:i2c — the coded S3 models only wire via configure_xtensa_esp32s3; (3) full-firmware bring-up still rides boot/ROM thunks (FIDELITY.md); (4) the Wi-Fi MAC is NOT an S3 model — peripherals/esp32s3/wifi_mac.rs re-exports Esp32c3WifiMac verbatim (tracked in the arch_chip_isolation ALLOWED list). The vendored esp32s3.svd carries no Wi-Fi MAC peripheral at all, every register offset (MAC-ready 0xD14, RX ring 0x88, event 0xC3C/0xC40, PLCP0 0xD08) was reverse-engineered on live C3 silicon, and captures/esp32s3/ holds no radio capture. Only interrupt-matrix source 0 is corroborated for the S3, from its own SVD. Treat S3 Wi-Fi as C3-derived and unmeasured until an S3 radio capture lands."
     offline_tests:
       - "esp32s3_reset_conformance (9 reset regs vs live silicon, firmware-path bus)"
       - "e2e_i2c_tmp102 / e2e_hello_world / xtensa_exec / e2e_esp32_epaper (sim)"
@@ -2694,7 +3246,26 @@ boards:
     # Serial on native-USB C3/S3 lands on this block, not UART0. Capture-path
     # only: no register map, reset values, or 9-reg silicon windows change.
     # Live re-capture still owed.
-    drift_ack: 2026-08-20
+    # 2026-08-20: DELETION of the dead `Peripheral::write_word_32` contract
+    # (#1021). This is the unusual case where the ack rests on proof of
+    # UNREACHABILITY rather than on a judgement that a behavioural change is
+    # harmless — nothing was re-modelled, because nothing was ever calling the
+    # code removed. The trait default was documented as "the bus calls this
+    # after performing the four byte writes"; the bus does not. A 32-bit MMIO
+    # store dispatches through `dev.write_u32(off, value)` at
+    # crates/core/src/bus/accessors.rs:653, and `write_word_32` appears nowhere
+    # in crates/core/src/bus/. Repo-wide the method had exactly one call site,
+    # inside `#[cfg(test)]`. The two files hashed here — esp32s3/aes.rs and
+    # esp32s3/sar_adc.rs — each lost only their no-op override of that dead
+    # method; every `read`/`write`/`write_u32` body, register map, reset value
+    # and base address is byte-identical. No modelled behaviour changed, so the
+    # 2026-08-09 silicon capture remains valid, and the 9-reg reset-state
+    # windows (UART0/GPIO/I2C0/RMT/MCPWM0/TIMG0/SYSTIMER/GDMA/SYSTEM/RTC_CNTL)
+    # are untouched. Evidence on this commit: 3121 lib tests pass and 3251 pass
+    # under --features event-scheduler (0 failed), clippy clean, fmt clean. No
+    # live re-capture, and this ack does not discharge the ones already owed
+    # above.
+    drift_ack: 2026-08-22
     # 2026-08-10: GP-SPI2 CPU W-buffer transactions now deliver MOSI bytes to
     # attached devices and return their MISO bytes; display D/C observes the S3
     # GPIO output; GPIO labels resolve against the S3 register bank. This is an
@@ -2715,17 +3286,105 @@ boards:
     # SYSTIMER/GDMA/SYSTEM/RTC_CNTL). Live re-capture still owed.
     # 2026-08-20: USB-Serial-JTAG generic UART sink tap. Additive capture
     # path; 9-reg reset-state windows untouched. Live re-capture still owed.
-    drift_ack_digest: 61660e987f8766e6e62395b62b2ab77ba2f9c3473cb91b3ef9ec1bf242f6f752
+    # 2026-08-20: the S3's core clock now comes from configs/chips/esp32s3.yaml
+    # (`cpu_hz: 240_000_000`) instead of an 80 MHz literal in Esp32s3Opts that
+    # nothing ever assigned. Unlike the entries above this one is NOT
+    # behaviour-neutral and does not claim to be: the SYSTIMER divides the CPU
+    # cycle stream by `cpu_clock_hz / 16 MHz`, so its divider goes 5 -> 15 and
+    # the S3's simulated wall clock — `sim_time_us`, what esp_timer and
+    # esp-hal's Delay read — slows by exactly 3x to real rate. It was fast by
+    # 3x before. MODELLED TIMING CHANGED. No register map, no reset value and
+    # none of the nine anchored reset registers move (the divider is runtime
+    # state, not a reset value), so esp32s3_reset_conformance is unaffected and
+    # still green; the anchor never covered rates in the first place. A live
+    # re-capture would not distinguish the two states — this defect is only
+    # observable against the datasheet, not against a reset-state read — so no
+    # re-capture is claimed here and the one already owed above still stands.
+    # Same commit adds system/xtensa/esp32s3.rs to `models:` below: the file
+    # that sets this clock and registers all 36 S3 peripherals was outside the
+    # watch list, so this very change would otherwise have moved the S3's time
+    # base with the drift gate green. Verified by control: editing it left the
+    # gate green; editing peripherals/esp32s3/systimer.rs turned it red.
+    # Evidence: cpu_hz_single_source 9/9 (incl. the new production-path
+    # SYSTIMER rate assertion), labwired-core --lib 3298/3298, and 20 S3
+    # targets green under --features jit,event-scheduler; the prebuilt Arduino
+    # flash image still boots and runs through the real BROM
+    # (e2e_esp32s3_flash_boot_no_elf 2/2, e2e_esp32s3_faithful_boot 1/1).
+    # 2026-08-20: dead `write_word_32` overrides deleted from esp32s3/aes.rs
+    # and esp32s3/sar_adc.rs (#1021). Removal of an unreachable no-op — the bus
+    # dispatches 32-bit stores via `write_u32` (bus/accessors.rs:653) and never
+    # called it. Register maps, reset values and the 9-reg anchor unchanged.
+    # 3121 + 3251 lib tests green. Live re-capture still owed.
+    # 2026-08-21: TEST-ONLY. The only change under `models` is a new #[cfg(test)]
+    # case in peripherals/esp32s3/flash_xip.rs
+    # (doom_wad_mmap_window_returns_planted_bytes), which reads the Doom IWAD
+    # mmap window through the existing MMU path. `git diff` over the watched
+    # paths shows 0 lines changed outside `mod tests`: no register map, no reset
+    # value, no bus behaviour, and nothing inside the nine captured windows
+    # (UART0/GPIO/I2C0/RMT/MCPWM0/TIMG0/SYSTIMER/GDMA/SYSTEM/RTC_CNTL) moves.
+    # Owner-acked without a live capture; the re-captures owed above are NOT
+    # discharged by this line and remain owed.
+    # 2026-08-21: IO_MUX FUN_WPU modelled, so INPUT_PULLUP reads high. Unlike
+    # most acks above this one DOES move reset values, and says so: the pad
+    # bank moves from offset 0 to 0x04 (SVD `GPIO%s`, dim 49 — the old model
+    # sat one register low across the whole bank, leaving IO_MUX_GPIO48_REG and
+    # DATE unreachable) and each pad's cold reset becomes 0x0000_0B00 instead
+    # of 0, per the SVD's resetValue for that array.
+    #
+    # IO_MUX is NOT one of the nine captured windows (UART0/GPIO/I2C0/RMT/
+    # MCPWM0/TIMG0/SYSTIMER/GDMA/SYSTEM/RTC_CNTL), so the 2026-08-09 live
+    # capture neither confirms nor contradicts these values — do not read this
+    # ack as silicon evidence. The authority is tests/fixtures/svd/esp32s3.svd,
+    # the same file svd_conformance and register_coverage already treat as the
+    # oracle for this block, and esp32s3_reset_conformance (the nine registers
+    # that ARE anchored to silicon) is unchanged and green.
+    #
+    # A live IO_MUX window read is now owed and is NOT covered by the
+    # re-captures listed above. Until someone runs it, the S3's pad reset state
+    # is SVD-verified, not silicon-verified.
+    #
+    # 2026-08-22: `InterruptFabric` seam (ledger row 6.6). The watched entry that
+    # moved is the DIRECTORY `crates/core/src/peripherals/esp32s3`, and exactly
+    # one file under it changed: `crosscore_ipi.rs`, and within it exactly one
+    # assertion, inside a `#[cfg(test)]` fn — `assert!(bus.esp32s3_irq_routing,
+    # ..)` becomes `assert!(bus.irq_fabric.esp32s3.routing, ..)` (rustfmt then
+    # wraps it across four lines). Same bool, same bus, same message. No
+    # production line under esp32s3/ changed at all.
+    # The intmatrix routing is untouched: per-core MAP tables, the routed
+    # `pending_cpu_irqs` slot bitmap, and the PRO_INTR_STATUS_REG_n mirror are
+    # computed by the same code from the same sources. No register, reset value
+    # or source ID changed, so the 9-register reset-state anchor from the
+    # 2026-08-09 capture is unaffected and no live re-capture is owed for this
+    # change. The IO_MUX window read owed above is still owed.
+      #
+      # Re-stamped 2026-08-22 for the EspI2cCore extraction in this branch: the ESP
+      # I2C models moved wholesale into a shared core, so every digest over them
+      # changes. Behaviour-preserving extraction, not a model correction —
+      # `pr-workspace-tests` green on all shards is what exercises this peripheral,
+      # so nothing the silicon capture asserts changed and the capture stands.
+    drift_ack_digest: 5de4805fa1b110ee03f6d82123ec65b7b50f979e2a132d4ce3355463d4531f52
     models:
       - crates/core/src/cpu/xtensa_lx7.rs
       - crates/core/src/decoder/xtensa.rs
       - crates/core/src/peripherals/esp32s3
       - crates/core/src/peripherals/esp_xtensa_common
+      # The S3's system glue: it registers all 36 peripheral models, owns the
+      # memory map, and carries the core clock the SYSTIMER divides down. It
+      # was unwatched until 2026-08-20, so an S3 timing change could land with
+      # this gate green.
+      - crates/core/src/system/xtensa/esp32s3.rs
       # Shared Espressif UART twin — this file IS the relocated esp32s3/uart.rs
       # (moved 2026-07-28 when the C3 started using the same IP), so the S3's
       # UART register map lived outside its own watch list from that date.
       - crates/core/src/peripherals/esp_uart.rs
       - crates/core/src/cpu/xtensa_jit
+      # The S3's peripheral registration itself. The models above can be
+      # perfectly correct and still not be on the bus: this file decides which
+      # ones are constructed and how they are wired to each other, so an edit
+      # that deletes a wiring call un-models a peripheral without touching any
+      # file the list already watched. Added 2026-08-21 with the IO_MUX pad
+      # sharing, whose only wiring call lives here.
+      - crates/core/src/system/xtensa/esp32s3.rs
       - configs/chips/esp32s3.yaml
       # Declarative descriptors the chip yaml wires; the 9-reg reset-state
       # anchor is asserted against their reset_values.
@@ -2790,7 +3449,29 @@ boards:
     # this ack names content a human actually read; no live re-capture owed for
     # this change, and any already owed above still is.
     drift_ack: 2026-08-13
-    drift_ack_digest: 3f48a4e4fa11c18b8db144e2aaf235e7ebd72859b467096433d8045103782c39
+    # 2026-08-20 (#1021): the dead `Peripheral::write_word_32` contract was
+    # deleted, taking with it the no-op override in
+    # crates/core/src/peripherals/rp2040/usb.rs — which this board watches as a
+    # directory, hence the moved digest. The override forwarded to
+    # `self.write_u32(offset, value)` and nothing ever invoked it: a 32-bit MMIO
+    # store dispatches through `dev.write_u32(off, value)` at
+    # crates/core/src/bus/accessors.rs:653, and `write_word_32` appears nowhere
+    # in crates/core/src/bus/. Deleting unreachable code cannot move a modelled
+    # value: no register read/write path, reset value, layout or base address
+    # changed, and the tier-1 fixture's clock/timer/gpio/spi/i2c PASS line is
+    # unaffected. This board is `structural` with no silicon bench, so as ever
+    # this is documentation rather than a re-capture claim. `drift_ack` moves to
+    # today because the digest is re-stamped today and the pair must name the
+    # same reading. Evidence: 3121 lib tests + 3251 under event-scheduler, 0
+    # failed; clippy and fmt clean.
+      # Re-stamped 2026-08-22 for the flash-size correction in this branch. The
+      # only model file that moved for this board is its chip descriptor, and the
+      # only field that changed is flash `size`, respelled from MB to KB because
+      # `parse_size` reads MB as 10^6 — the modelled part grows to the size of the
+      # real one. No register layout, reset value or peripheral behaviour is
+      # touched, which is what the silicon capture asserts, so the capture stands.
+    drift_ack: 2026-08-22
+    drift_ack_digest: 7862c68a44c27a503d02baad5a8ec795474c0a8c9c691e0e940be7c3fd5af062
     models:
       - crates/core/src/cpu/cortex_m.rs
       - crates/core/src/decoder/arm.rs
@@ -2875,7 +3556,7 @@ boards:
     # this ack names content a human actually read; no live re-capture owed for
     # this change, and any already owed above still is.
     drift_ack: 2026-08-13
-    drift_ack_digest: eea8419a6d3a49ec52cc39b6d441cbe559de825be0e0dc987230ea62f6aed871
+    drift_ack_digest: 1784454ab3aaa18d6cce5fd95ae54de633644ef7deb52b00f8097b5e78be31ab
     models:
       - crates/core/src/cpu/cortex_m.rs
       - crates/core/src/decoder/arm.rs
@@ -2946,7 +3627,7 @@ boards:
     # this ack names content a human actually read; no live re-capture owed for
     # this change, and any already owed above still is.
     drift_ack: 2026-08-13
-    drift_ack_digest: 851ef7f5751cd0330a6283dcb101d0f11f4dd791beeca2379c5ec0d92ab9c67c
+    drift_ack_digest: 0fb27d55c48c66a5483209c4f7fa029280227b36ea0b24b928d4527b74fceeed
     models:
       - crates/core/src/cpu/cortex_m.rs
       - crates/core/src/decoder/arm.rs
@@ -3022,7 +3703,7 @@ boards:
     # this ack names content a human actually read; no live re-capture owed for
     # this change, and any already owed above still is.
     drift_ack: 2026-08-13
-    drift_ack_digest: 851fdf6c3a317a0028b35c414e83799d0c3a1c9e249f7b52182eb14aa2dbfe79
+    drift_ack_digest: 3ab34d0f42e59464cff72293c291bc1af218bb8176e431d7638748772c1917d7
     models:
       - crates/core/src/cpu/cortex_m.rs
       - crates/core/src/decoder/arm.rs

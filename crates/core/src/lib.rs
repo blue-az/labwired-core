@@ -579,13 +579,6 @@ pub trait Peripheral: std::fmt::Debug + Send {
         self.write(offset + 3, ((value >> 24) & 0xFF) as u8)?;
         Ok(())
     }
-    /// Plan 2: word-granular write path. The bus calls this after performing
-    /// the four byte writes, giving peripherals a single coherent 32-bit
-    /// view of the write. Default: no-op. Peripherals with 32-bit word
-    /// triggers (e.g. declarative configs with WriteWord triggers) override.
-    fn write_word_32(&mut self, _offset: u64, _value: u32) -> SimResult<()> {
-        Ok(())
-    }
     /// Side-effect-free value probe used for debug/observer bookkeeping.
     /// Implementations should return `None` when such probing is not supported.
     fn peek(&self, _offset: u64) -> Option<u8> {
@@ -639,6 +632,21 @@ pub trait Peripheral: std::fmt::Debug + Send {
     /// not observe GPIO cannot have latched anything.
     fn observe_gpio_change(&mut self, _changes: &[(u8, u8, u8)]) -> bool {
         false
+    }
+
+    /// Clock-controller capability: resolve a symbolic clock-enable register
+    /// name from a peripheral's `clock:` declaration (`"apb1enr"`, `"clken2"`,
+    /// …) to its byte offset inside THIS peripheral.
+    ///
+    /// Only a chip's clock controller implements it. The alternative — the bus
+    /// downcasting to one concrete model — meant clock gating existed for
+    /// exactly the family that model belonged to, and a second vendor's clock
+    /// unit could not gate anything no matter what its yaml declared.
+    /// `None` for every other peripheral, and for a name this controller does
+    /// not have (which `resolve_clock_gates` turns into a hard config error
+    /// rather than a silently ungated peripheral).
+    fn clock_gate_reg_offset(&self, _name: &str) -> Option<u64> {
+        None
     }
 
     /// GPIO capability: read the firmware-visible input level for `pin`.
@@ -1111,6 +1119,55 @@ pub trait Peripheral: std::fmt::Debug + Send {
     /// that bypass the choke points keep the old exact semantics.
     fn attach_irq_line(&mut self, _irq: Option<u32>) {}
 
+    /// Tell the peripheral the clock its system's core runs at, in Hz — the
+    /// effective `SystemBus::cpu_hz`, i.e. the manifest override if there is
+    /// one and otherwise `ChipDescriptor::cpu_hz`. Called from the same attach
+    /// choke points as [`Peripheral::attach_cycle_clock`].
+    ///
+    /// For a model whose behaviour is specified in WALL time but driven in
+    /// CPU cycles — a BLE controller told to advertise every 100 ms, say —
+    /// this is the conversion factor. Taking it here rather than from a
+    /// per-peripheral `config:` key keeps
+    /// [`labwired_config::ChipDescriptor::cpu_hz`] the single source of the
+    /// core clock: a yaml that restated the frequency next to the peripheral
+    /// would be a second place to change it, and the two would diverge.
+    ///
+    /// Default no-op. A model that never receives it must have a usable
+    /// default, since hand-built buses bypass the choke points.
+    fn attach_cpu_hz(&mut self, _hz: u64) {}
+
+    /// Move this peripheral onto a lab's own BLE air, replacing whatever air it
+    /// was minted with. Called by [`crate::bus::SystemBus::attach_lab_air`] for
+    /// every peripheral in a multi-node world.
+    ///
+    /// A BLE controller built by the ordinary factory joins the process-global
+    /// air, because the factory has no lab identity to hand it. That is right
+    /// for a single lab and wrong for two: without this, two labs in one
+    /// process — two worker threads, or two tests — hear each other's
+    /// advertisements as peer traffic.
+    ///
+    /// An implementation must also re-join the cursor at the new air's current
+    /// sequence. A radio has no history buffer, and an air outlives a
+    /// simulation restart, so a controller that kept a stale cursor would
+    /// replay the previous run's backlog as live packets.
+    ///
+    /// Default no-op: a peripheral with no radio has no air to move.
+    fn attach_ble_air(&mut self, _air: crate::peripherals::ble_air::BleAirBus) {}
+
+    /// Drive the analog level, in millivolts, on one of this peripheral's ADC
+    /// input channels. Returns whether it took it.
+    ///
+    /// The seam a `system.yaml` analog source (a potentiometer, an NTC) uses
+    /// to move what firmware converts. `false` for a peripheral that is not an
+    /// ADC, and for a channel this one does not have.
+    ///
+    /// New ADC models implement this; the five that predate it are still found
+    /// by a downcast chain in `bus::sim_inputs`, which this is the replacement
+    /// for. See the note there.
+    fn set_adc_channel_input(&mut self, _channel: u8, _millivolts: u16) -> bool {
+        false
+    }
+
     /// Hand the peripheral the machine's ONE universal bus trace, plus the name
     /// it should stamp events with. Called from the same registration choke
     /// points as [`Peripheral::attach_cycle_clock`] and
@@ -1514,6 +1571,16 @@ pub struct Machine<C: Cpu> {
     /// `release_secondary_cpu_if_requested` so a core is never released
     /// without a stack.
     pub secondary_boot_sp: Option<u32>,
+    /// The secondary CPU has no ROM to boot: release it only on an explicit
+    /// entry point (`APPCPU_BOOT_ADDR`), never on the reset-release edge.
+    ///
+    /// A faithful ROM boot constructs core 1 sitting on its reset vector and
+    /// lets `SYSTEM_CORE_1_CONTROL_0.RESETING` 1->0 start it, exactly like
+    /// silicon. The fast-boot frontends do not: they replace the mask ROM with
+    /// a thunk harness, so that same vector holds no startup code and a core
+    /// released there executes the harness and collapses to PC 0. Those
+    /// frontends set this, and hand core 1 over at `call_start_cpu1` instead.
+    pub secondary_awaits_boot_addr: bool,
 
     // Debug state
     pub breakpoints: std::collections::HashSet<u32>,
@@ -2102,6 +2169,7 @@ impl<C: Cpu> Machine<C> {
             bus,
             observers: Vec::new(),
             secondary_boot_sp: None,
+            secondary_awaits_boot_addr: false,
             breakpoints: HashSet::new(),
             last_breakpoint: None,
             total_cycles: 0,
@@ -2850,7 +2918,7 @@ impl<C: Cpu> Machine<C> {
         // LEVEL-sensitive source at the exact firing cycle. Every MCU family
         // follows the same shape behind `deliver_scheduled_irq_levels`:
         //   * ESP32-C3 (RISC-V matrix)  → re-derive `matrix_irq_sources` into
-        //     `riscv_irq_lines`;
+        //     `irq_fabric.esp32c3.irq_lines`;
         //   * ESP32-S3 (Xtensa intmatrix) → re-derive into `pending_cpu_irqs` +
         //     the intmatrix INTR_STATUS mirror.
         // A matrix source ID must NEVER be pended as a Cortex-M NVIC exception

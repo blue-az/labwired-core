@@ -259,21 +259,11 @@ impl SystemBus {
             can_diagnostic_testers: Vec::new(),
             can_uds_testers: Vec::new(),
             can_log_players: Vec::new(),
-            esp32c3_irq_routing: false,
-            riscv_irq_lines: 0,
-            esp32c3_system_idx: None,
-            esp32c3_interrupt_core0_idx: None,
-            esp32c3_irq_cache: None,
-            esp32c3_asserted_sources: [0; 2],
-            esp32c3_sched_asserted_sources: [0; 2],
+            irq_fabric: InterruptFabric::default(),
             esp32c3_sensitive_idx: None,
             esp32c3_pms: None,
             pms_write_bypass: false,
             esp32c3_pms_armed: false,
-            esp32s3_irq_routing: false,
-            esp32s3_intmatrix_idx: None,
-            esp32s3_asserted_sources: [0; 2],
-            esp32s3_sched_asserted_sources: [0; 2],
             flash_models_ops: false,
             nordic_gpio_service: false,
             hcsr04_scheduling_disabled: false,
@@ -914,6 +904,11 @@ impl SystemBus {
         // `INPUT_PULLUP` changes the floating input level. No-op for every
         // other chip.
         bus.wire_esp32c3_pad_controls();
+        // Same for the ESP32-S3. (The S3's IO_MUX is registered by the coded
+        // `configure_xtensa_esp32s3` path rather than the chip yaml, which
+        // wires it there too; this keeps the declarative path honest if the
+        // peripheral is ever declared.)
+        bus.wire_esp32s3_pad_controls();
         // ESP32-C3: share the I²C0 bit engine's live SDA/SCL line levels with
         // the C3 GPIO model so matrix-routed pads carry the real waveform.
         // No-op for every other chip.
@@ -963,6 +958,11 @@ impl SystemBus {
         // publish which pin they claim and the port reads it. No-op for every
         // other chip.
         bus.wire_nrf52_pads();
+        // EFR32 Series 2: same shape as the Nordic pass above and for the same
+        // reason — the pad has no function register, so `GPIO_TIMERROUTE` names
+        // the pin and the port reads that claim. This is what makes
+        // `analogWrite` reach a pad. No-op for every other chip.
+        bus.wire_efr32_timer_pads();
         // Resolve declared per-peripheral RCC clock-gates now that every
         // peripheral (incl. the RCC, needed to map reg-name → offset) is on the
         // bus. Peripherals without a `clock:` field stay ungated.

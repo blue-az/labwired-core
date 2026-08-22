@@ -122,10 +122,11 @@ where
 /// A bare byte count says exactly one thing and `parse_size` reads it back
 /// unchanged.
 ///
-/// (The same asymmetry is a live fidelity bug in the committed chips: nine of
-/// them spell flash in `MB`, so e.g. esp32s3 models 16_000_000 bytes where the
-/// part has 16 MiB = 16_777_216. Not changed here — this commit is a refactor,
-/// and moving a flash boundary belongs with its own tests.)
+/// (That asymmetry was also a live fidelity bug: nine committed chips spelled
+/// flash in `MB`, so e.g. esp32s3 modelled 16_000_000 bytes where the part has
+/// 16 MiB = 16_777_216. All nine have since been rewritten in `KB`, and
+/// `labwired_core::tests::chip_memory_sizes` fails the build if a new chip
+/// reintroduces the spelling.)
 fn serialize_size<S>(value: &u64, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: serde::Serializer,
@@ -255,6 +256,100 @@ pub struct PinLoc {
     pub bit: u8,
 }
 
+/// Which family's atomic register aliases a chip implements.
+///
+/// Both families alias every peripheral register three more times at a 0x1000
+/// stride inside the peripheral's window, and both let firmware do a bit-level
+/// read-modify-write with one store. They do NOT agree on which alias means
+/// what, and the two orders overlap enough that using the wrong one is silent:
+/// an RP2040 SET (`+0x2000`) is an EFR32 CLR, so a driver "enabling" a clock
+/// would disable it and every later access to that block would read zero.
+#[derive(Debug, Serialize, Clone, Copy, PartialEq, Eq, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum AtomicAliasFlavour {
+    /// No aliases. An alias address is ordinary (usually unmapped) MMIO.
+    #[default]
+    None,
+    /// RP2040 / RP2350: `+0x1000` XOR, `+0x2000` SET, `+0x3000` CLR
+    /// (`hw_xor_bits` / `hw_set_bits` / `hw_clear_bits`, pico-sdk
+    /// `hardware/address_mapped.h`). The HAL drives nearly all register setup
+    /// through them, so without this an unmodified image faults on the first
+    /// `hw_set_bits`.
+    Rp2040,
+    /// Silicon Labs EFR32/EFM32 Series 2: `+0x1000` SET, `+0x2000` CLR,
+    /// `+0x3000` TGL (EFR32xG26 Reference Manual rev 1.0, "Peripheral Bit Set
+    /// and Clear"; `emlib` writes `PERIPH->REG_SET = mask`). Series-2 emlib and
+    /// the Gecko SDK use the aliases for essentially every enable bit — CMU
+    /// clock gating, GPIO ROUTEEN, USART/EUSART enables — so a Series-2 image
+    /// cannot configure a single peripheral without them.
+    Efr32s2,
+}
+
+impl AtomicAliasFlavour {
+    /// The op an alias index (`(addr >> 12) & 0x3`) means for this family, or
+    /// `None` for index 0 (the register itself) and for a chip with no aliases.
+    #[inline]
+    pub fn op_for_index(self, index: u64) -> Option<AtomicAliasOp> {
+        match (self, index) {
+            (Self::None, _) | (_, 0) => None,
+            (Self::Rp2040, 1) => Some(AtomicAliasOp::Xor),
+            (Self::Rp2040, 2) => Some(AtomicAliasOp::Set),
+            (Self::Rp2040, _) => Some(AtomicAliasOp::Clr),
+            (Self::Efr32s2, 1) => Some(AtomicAliasOp::Set),
+            (Self::Efr32s2, 2) => Some(AtomicAliasOp::Clr),
+            (Self::Efr32s2, _) => Some(AtomicAliasOp::Xor),
+        }
+    }
+
+    /// Whether this chip decodes atomic aliases at all.
+    #[inline]
+    pub fn is_enabled(self) -> bool {
+        !matches!(self, Self::None)
+    }
+}
+
+/// The read-modify-write an atomic alias performs. `Xor` doubles as Series-2
+/// TGL: toggling IS an XOR of the written mask, and keeping one op spares the
+/// bus a second identical arm.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AtomicAliasOp {
+    /// Write XORs the bits (RP2040 `+0x1000`, EFR32 Series-2 TGL `+0x3000`).
+    Xor,
+    /// Write sets (ORs) the bits.
+    Set,
+    /// Write clears (AND-NOTs) the bits.
+    Clr,
+}
+
+/// `false` / `true` / `"none"` / `"rp2040"` / `"efr32s2"`. The bool spelling is
+/// what every RP2040 descriptor in the tree already carries; `true` keeps
+/// meaning RP2040 rather than becoming ambiguous the day a second family
+/// arrived.
+fn deserialize_atomic_alias_flavour<'de, D>(d: D) -> Result<AtomicAliasFlavour, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    use serde::de::Error as _;
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum BoolOrName {
+        Bool(bool),
+        Name(String),
+    }
+    match BoolOrName::deserialize(d)? {
+        BoolOrName::Bool(false) => Ok(AtomicAliasFlavour::None),
+        BoolOrName::Bool(true) => Ok(AtomicAliasFlavour::Rp2040),
+        BoolOrName::Name(name) => match name.trim().to_ascii_lowercase().as_str() {
+            "none" | "false" => Ok(AtomicAliasFlavour::None),
+            "rp2040" | "rp2350" | "true" => Ok(AtomicAliasFlavour::Rp2040),
+            "efr32s2" | "efm32s2" | "efr32_series2" | "efr32xg2" => Ok(AtomicAliasFlavour::Efr32s2),
+            other => Err(D::Error::custom(format!(
+                "unknown atomic_register_aliases '{other}'; expected false, true, rp2040 or efr32s2"
+            ))),
+        },
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ChipDescriptor {
     #[serde(default = "default_schema_version")]
@@ -300,15 +395,15 @@ pub struct ChipDescriptor {
     /// the real reset vector when the flash-base vectors are not valid.
     #[serde(default, deserialize_with = "deserialize_u64_lax")]
     pub reset_vector_offset: u64,
-    /// RP2040-style atomic register aliases. When true, every 0x1000-strided
-    /// alias of a peripheral register in the APB window decodes as an atomic
-    /// op on the base register: `+0x0000` normal, `+0x1000` XOR, `+0x2000`
-    /// SET (bitwise OR), `+0x3000` CLR (bitwise AND-NOT). The RP2040 HAL drives
-    /// nearly all of its register setup through these aliases (`hw_set_bits`,
-    /// `hw_clear_bits`), so without them an unmodified image faults on the
-    /// first `hw_set_bits`. Default `false` (other Cortex-M parts).
-    #[serde(default)]
-    pub atomic_register_aliases: bool,
+    /// Atomic register aliases: the 0x1000-strided aliases of every peripheral
+    /// register that a family's HAL uses for read-modify-write without a
+    /// critical section. Two families do this with the SAME stride and
+    /// DIFFERENT ops, so the key names which — see [`AtomicAliasFlavour`].
+    /// Accepts `false`/`true` (historical spelling: `true` == `rp2040`) or the
+    /// flavour name. Default: none, i.e. an alias address is unmapped MMIO and
+    /// faults, which is correct for STM32/nRF/etc.
+    #[serde(default, deserialize_with = "deserialize_atomic_alias_flavour")]
+    pub atomic_register_aliases: AtomicAliasFlavour,
     /// Extra CPU-visible memory windows beyond `flash`/`ram` (e.g. ESP32 IRAM
     /// and flash-DROM). Empty for chips with a simple two-region map.
     #[serde(default)]
@@ -2986,7 +3081,7 @@ impl From<labwired_ir::IrDevice> for ChipDescriptor {
             flash,
             ram,
             reset_vector_offset: 0,
-            atomic_register_aliases: false,
+            atomic_register_aliases: AtomicAliasFlavour::None,
             memory_regions: Vec::new(),
             peripherals: ir
                 .peripherals
@@ -4420,9 +4515,22 @@ impl EnvTestScript {
         // it checks, or it visibly checks nothing.
 
         for (index, assertion) in self.assertions.iter().enumerate() {
+            // UART assertions carry no node id, so there is no node rule to
+            // enforce here. The world runner evaluates them against every
+            // node's captured stream.
+            if matches!(
+                assertion,
+                TestAssertion::UartContains(_)
+                    | TestAssertion::UartRegex(_)
+                    | TestAssertion::UartOrdered(_)
+            ) {
+                continue;
+            }
             let TestAssertion::MemoryValue(memory) = assertion else {
                 anyhow::bail!(
-                    "Environment test scripts support only memory_value assertions (assertions[{index}])"
+                    "Environment test scripts support only uart_contains / uart_regex / \
+                     uart_ordered and node-qualified memory_value assertions (assertions[{index}]); \
+                     the world runner cannot observe the others"
                 );
             };
             let has_node =
@@ -5961,18 +6069,6 @@ assertions:
     fn env_script_requires_memory_assertions_with_nodes() {
         for (name, yaml, diagnostic) in [
             (
-                "no-assertions",
-                r#"
-schema_version: "1.0"
-inputs: { env: "twonode-env.yaml" }
-limits: { max_steps: 10 }
-assertions:
-  - memory_value: { node: tester, address: 0x20010000, expected_value: 1 }
-  - uart_contains: "PASS"
-"#,
-                "memory_value",
-            ),
-            (
                 "missing-node",
                 r#"
 schema_version: "1.0"
@@ -5995,20 +6091,64 @@ assertions:
                 "node",
             ),
             (
+                // Still unsupported, and still refused: the world runner has no
+                // per-node stop reason to compare against. The refusal must
+                // survive UART assertions becoming legal, or admitting those
+                // would have quietly admitted everything.
                 "unsupported-assertion",
                 r#"
 schema_version: "1.0"
 inputs: { env: "twonode-env.yaml" }
 limits: { max_steps: 10 }
 assertions:
-  - uart_contains: "PASS"
+  - expected_stop_reason: max_steps
 "#,
-                "memory_value",
+                "cannot observe",
             ),
         ] {
             let script_path = write_temp_file(name, yaml);
             let err = load_test_script(&script_path).unwrap_err().to_string();
             assert!(err.contains(diagnostic), "unexpected error: {err}");
+        }
+    }
+
+    /// UART assertions carry no node id, so the node rules above do not apply
+    /// to them; they are satisfied by any node printing the text. They load
+    /// alone and alongside a node-qualified `memory_value`.
+    #[test]
+    fn env_script_accepts_uart_assertions() {
+        for (name, yaml) in [
+            (
+                "uart-only",
+                r#"
+schema_version: "1.0"
+inputs: { env: "twonode-env.yaml" }
+limits: { max_steps: 10 }
+assertions:
+  - uart_contains: "PASS"
+  - uart_regex: "PA+SS"
+  - uart_ordered: ["boot", "PASS"]
+"#,
+            ),
+            (
+                "uart-and-memory",
+                r#"
+schema_version: "1.0"
+inputs: { env: "twonode-env.yaml" }
+limits: { max_steps: 10 }
+assertions:
+  - memory_value: { node: tester, address: 0x20010000, expected_value: 1 }
+  - uart_contains: "PASS"
+"#,
+            ),
+        ] {
+            let script_path = write_temp_file(name, yaml);
+            let script = load_test_script(&script_path)
+                .unwrap_or_else(|error| panic!("{name} must load: {error}"));
+            assert!(
+                matches!(script, LoadedTestScript::Env(_)),
+                "{name} must load as an environment script"
+            );
         }
     }
 
@@ -6191,8 +6331,17 @@ mod memory_size_tests {
     }
 
     /// KB is BINARY and MB is DECIMAL, in the same parser. Pinned here because
-    /// it is the opposite of what the spelling suggests, it is load-bearing for
-    /// nine committed chips, and nothing else states it.
+    /// it is the opposite of what the spelling suggests and nothing else states
+    /// it.
+    ///
+    /// No committed chip relies on the `MB` arm any more. Nine of them used to,
+    /// and every one modelled less flash than its part has; esp32s3 was
+    /// rewritten to `"16384KB"` first, and the remaining eight (esp32c3,
+    /// rp2040, rp2350, stm32f103/f405/f407/f767/l476, plus the C3's DROM
+    /// window) followed. The multipliers still cannot move — they are the wire
+    /// format every out-of-tree descriptor and every hosted manifest was
+    /// written against — so the spelling is policed instead, over the shipped
+    /// corpus, by `labwired_core::tests::chip_memory_sizes`.
     #[test]
     fn kb_is_1024_and_mb_is_1000000() {
         assert_eq!(chip("1KB", "1KB").unwrap().flash.size, 1024);

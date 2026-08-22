@@ -263,7 +263,14 @@ fn run_s3_rom_boot_no_elf(
         // like `labwired run` and the Wasm constructor do. Falling back to the
         // 4 MiB default makes the ROM reject every N8/N16 image before app_main.
         flash_size: esp32s3_rom_boot_flash_size(system),
-        ..Esp32s3Opts::default()
+        // Core clock from the same resolved descriptor: `cpu_hz:` in the chip
+        // YAML is the one home for it, and it is what the SYSTIMER divides the
+        // CPU cycle stream by to keep `esp_timer` time.
+        ..system
+            .chip()
+            .as_ref()
+            .map(Esp32s3Opts::for_chip)
+            .unwrap_or_default()
     };
     let wiring = configure_xtensa_esp32s3(&mut bus, &opts);
     // Wire matrix kits (INA219, OLED, …) the same way the ELF arm does.
@@ -1454,6 +1461,10 @@ pub(crate) fn run_test(
                     app_cpu.set_sp(0x3FCD_8000);
                     let mut machine =
                         labwired_core::Machine::new(pro_cpu, bus).with_secondary_cpu(app_cpu);
+                    // Fast boot: the mask ROM is a thunk harness, so core 1's
+                    // reset vector holds no startup code. Wait for
+                    // `ets_set_appcpu_boot_addr`.
+                    machine.secondary_awaits_boot_addr = true;
                     machine.observers.push(metrics.clone());
                     eprintln!(
                         "labwired-cli test: ESP32-S3 fast-boot entry=0x{:08x} (dual-core APP_CPU)",
@@ -1826,7 +1837,7 @@ pub(crate) fn run_test(
             // Instruction batching freezes peripheral tick / IRQ delivery
             // across large step batches and strands the scheduler — same
             // reason rom-boot forces cycle-accurate stepping.
-            if machine.bus.esp32c3_irq_routing {
+            if machine.bus.irq_fabric.esp32c3.routing {
                 machine.config.batch_mode_enabled = false;
             }
             if let Err(e) = machine.load_firmware(&program) {
@@ -2180,7 +2191,7 @@ pub(crate) fn run_test(
                 // C3 has no standard CLINT (line 7 is an ESP matrix line).
                 // Default mtimecmp=0 self-pends MTIP and breaks FreeRTOS first
                 // yield via FROM_CPU — same disable as rom-boot.
-                if bus.esp32c3_irq_routing {
+                if bus.irq_fabric.esp32c3.routing {
                     cpu.mtimecmp = u64::MAX;
                 }
                 setup_and_run!(cpu)
