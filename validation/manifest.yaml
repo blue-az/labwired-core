@@ -330,7 +330,28 @@ boards:
     # layouts are not touched — these boards never construct the EFR32 variant,
     # and the STM32 reset-value tests (`stm32h5_reset_values_match_silicon`,
     # `test_i2c_reset_values`) pass unchanged.
-    drift_ack: 2026-08-21
+    #
+    # Re-stamped 2026-08-22 for explicit wrapping ops on GUEST arithmetic.
+    # `cortex_m.rs` and `riscv.rs` replace `+`/`<<` with `wrapping_add`/`wrapping_shl`
+    # at sites where the guest ISA specifies modulo-2^32 behaviour: exception entry
+    # and return stacking (`frame_ptr + 4..32`), branch target `pc + 4 + offset`,
+    # `vtor + n*4`, the BL link address, and the RISC-V vectored trap base and
+    # SLLI/SRLI/SRAI shifts (shamt is masked to 5 bits at decode).
+    #
+    # `a + b` and `a.wrapping_add(b)` differ ONLY when the op overflows, which under
+    # `overflow-checks = true` was a PANIC, never a wrong value. So no silicon-anchored
+    # register can have moved: every input that used to produce a number still produces
+    # the same number. Four inputs that used to CRASH the simulator now wrap the way the
+    # part does — see the four new tests (`armv7m_exception_entry/return_wraps_the_stack
+    # _frame`, `armv7m_branch_wraps_at_the_signed_pc_boundary`,
+    # `riscv_vectored_trap_wraps_at_the_top_of_the_address_space`). Confirmed by
+    # restoring one site to `+`: it panics at cortex_m.rs:1367 `attempt to add with
+    # overflow`.
+    #
+    # Ran: labwired-core --lib 3260 pass / 0 fail, and nrf52_timer_walk_differential,
+    # stm32f401/stm32l476_walk_differential, kw41z_walk_free_differential. This is an
+    # ack, not a capture — no live re-capture was made.
+    drift_ack: 2026-08-22
     # 2026-08-22: the Thumb-2 decoder gained SMLABB/BT/TB/TT and SMULBB/BT/TB/TT
     # (ARMv7-M A7.7.166/171). They were UNDECODED, which in this core means a
     # silent no-op — `digitalWrite` on EFR32MG26 computes its port base with
@@ -347,7 +368,7 @@ boards:
     # golden trace (crates/wasm/tests/fixtures/motor-parity-native.json) still
     # matches. No other pinned firmware on any board reaches the encoding, so
     # nothing a silicon capture asserts moved. No live re-capture is evidenced here.
-    drift_ack_digest: 4ed1cf55f5ca29eb38d3db073a84f283ea389b624259166352c9fe132b284fe1
+    drift_ack_digest: 38977d62ae07157d9312bc6767a3a608e91dcae2521dd092369ec2bf95b2ad5c
     models:
       - crates/core/src/cpu/cortex_m.rs
       - crates/core/src/decoder/arm.rs
@@ -555,7 +576,28 @@ boards:
     # layouts are not touched — these boards never construct the EFR32 variant,
     # and the STM32 reset-value tests (`stm32h5_reset_values_match_silicon`,
     # `test_i2c_reset_values`) pass unchanged.
-    drift_ack: 2026-08-21
+    #
+    # Re-stamped 2026-08-22 for explicit wrapping ops on GUEST arithmetic.
+    # `cortex_m.rs` and `riscv.rs` replace `+`/`<<` with `wrapping_add`/`wrapping_shl`
+    # at sites where the guest ISA specifies modulo-2^32 behaviour: exception entry
+    # and return stacking (`frame_ptr + 4..32`), branch target `pc + 4 + offset`,
+    # `vtor + n*4`, the BL link address, and the RISC-V vectored trap base and
+    # SLLI/SRLI/SRAI shifts (shamt is masked to 5 bits at decode).
+    #
+    # `a + b` and `a.wrapping_add(b)` differ ONLY when the op overflows, which under
+    # `overflow-checks = true` was a PANIC, never a wrong value. So no silicon-anchored
+    # register can have moved: every input that used to produce a number still produces
+    # the same number. Four inputs that used to CRASH the simulator now wrap the way the
+    # part does — see the four new tests (`armv7m_exception_entry/return_wraps_the_stack
+    # _frame`, `armv7m_branch_wraps_at_the_signed_pc_boundary`,
+    # `riscv_vectored_trap_wraps_at_the_top_of_the_address_space`). Confirmed by
+    # restoring one site to `+`: it panics at cortex_m.rs:1367 `attempt to add with
+    # overflow`.
+    #
+    # Ran: labwired-core --lib 3260 pass / 0 fail, and nrf52_timer_walk_differential,
+    # stm32f401/stm32l476_walk_differential, kw41z_walk_free_differential. This is an
+    # ack, not a capture — no live re-capture was made.
+    drift_ack: 2026-08-22
     # 2026-08-22: the Thumb-2 decoder gained SMLABB/BT/TB/TT and SMULBB/BT/TB/TT
     # (ARMv7-M A7.7.166/171). They were UNDECODED, which in this core means a
     # silent no-op — `digitalWrite` on EFR32MG26 computes its port base with
@@ -572,7 +614,7 @@ boards:
     # golden trace (crates/wasm/tests/fixtures/motor-parity-native.json) still
     # matches. No other pinned firmware on any board reaches the encoding, so
     # nothing a silicon capture asserts moved. No live re-capture is evidenced here.
-    drift_ack_digest: 4ed1cf55f5ca29eb38d3db073a84f283ea389b624259166352c9fe132b284fe1
+    drift_ack_digest: 38977d62ae07157d9312bc6767a3a608e91dcae2521dd092369ec2bf95b2ad5c
     models:
       - crates/core/src/cpu/cortex_m.rs
       - crates/core/src/decoder/arm.rs
@@ -933,8 +975,29 @@ boards:
     # from this change. Ran: `labwired-core --lib` 3255 pass / 0 fail, and the 126
     # GPIO tests, all unchanged. This is an ack, not a capture — no live re-capture
     # was made this session.
+    #
+    # Re-stamped 2026-08-22 for explicit wrapping ops on GUEST arithmetic.
+    # `cortex_m.rs` and `riscv.rs` replace `+`/`<<` with `wrapping_add`/`wrapping_shl`
+    # at sites where the guest ISA specifies modulo-2^32 behaviour: exception entry
+    # and return stacking (`frame_ptr + 4..32`), branch target `pc + 4 + offset`,
+    # `vtor + n*4`, the BL link address, and the RISC-V vectored trap base and
+    # SLLI/SRLI/SRAI shifts (shamt is masked to 5 bits at decode).
+    #
+    # `a + b` and `a.wrapping_add(b)` differ ONLY when the op overflows, which under
+    # `overflow-checks = true` was a PANIC, never a wrong value. So no silicon-anchored
+    # register can have moved: every input that used to produce a number still produces
+    # the same number. Four inputs that used to CRASH the simulator now wrap the way the
+    # part does — see the four new tests (`armv7m_exception_entry/return_wraps_the_stack
+    # _frame`, `armv7m_branch_wraps_at_the_signed_pc_boundary`,
+    # `riscv_vectored_trap_wraps_at_the_top_of_the_address_space`). Confirmed by
+    # restoring one site to `+`: it panics at cortex_m.rs:1367 `attempt to add with
+    # overflow`.
+    #
+    # Ran: labwired-core --lib 3260 pass / 0 fail, and nrf52_timer_walk_differential,
+    # stm32f401/stm32l476_walk_differential, kw41z_walk_free_differential. This is an
+    # ack, not a capture — no live re-capture was made.
     drift_ack: 2026-08-22
-    drift_ack_digest: 7ec3b6b08e01804a74fec0f5414bb6226c9d541243bfd298434ae1b2e213280c
+    drift_ack_digest: bf17c75035af9f39852c7758c55c1a3bdf94beac1a3e41dbc11c2fa42179ea8b
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/cpu/cortex_m.rs
@@ -1052,6 +1115,27 @@ boards:
       # `parse_size` reads MB as 10^6 — the modelled part grows to the size of the
       # real one. No register layout, reset value or peripheral behaviour is
       # touched, which is what the silicon capture asserts, so the capture stands.
+    #
+    # Re-stamped 2026-08-22 for explicit wrapping ops on GUEST arithmetic.
+    # `cortex_m.rs` and `riscv.rs` replace `+`/`<<` with `wrapping_add`/`wrapping_shl`
+    # at sites where the guest ISA specifies modulo-2^32 behaviour: exception entry
+    # and return stacking (`frame_ptr + 4..32`), branch target `pc + 4 + offset`,
+    # `vtor + n*4`, the BL link address, and the RISC-V vectored trap base and
+    # SLLI/SRLI/SRAI shifts (shamt is masked to 5 bits at decode).
+    #
+    # `a + b` and `a.wrapping_add(b)` differ ONLY when the op overflows, which under
+    # `overflow-checks = true` was a PANIC, never a wrong value. So no silicon-anchored
+    # register can have moved: every input that used to produce a number still produces
+    # the same number. Four inputs that used to CRASH the simulator now wrap the way the
+    # part does — see the four new tests (`armv7m_exception_entry/return_wraps_the_stack
+    # _frame`, `armv7m_branch_wraps_at_the_signed_pc_boundary`,
+    # `riscv_vectored_trap_wraps_at_the_top_of_the_address_space`). Confirmed by
+    # restoring one site to `+`: it panics at cortex_m.rs:1367 `attempt to add with
+    # overflow`.
+    #
+    # Ran: labwired-core --lib 3260 pass / 0 fail, and nrf52_timer_walk_differential,
+    # stm32f401/stm32l476_walk_differential, kw41z_walk_free_differential. This is an
+    # ack, not a capture — no live re-capture was made.
     drift_ack: 2026-08-22
       #
       # Re-stamped 2026-08-22 for the EspI2cCore extraction in this branch: the ESP
@@ -1059,7 +1143,7 @@ boards:
       # changes. Behaviour-preserving extraction, not a model correction —
       # `pr-workspace-tests` green on all shards is what exercises this peripheral,
       # so nothing the silicon capture asserts changed and the capture stands.
-    drift_ack_digest: f1e2477dfe90c1110a6c7bb7e9ffbd75eae35cbd145be807d3080d27376c380b
+    drift_ack_digest: c973ed6df35e75c599d163f114cbe648d73606d710f82858692050e1f9e9f15b
     models:
       - crates/core/src/cpu/riscv.rs
       - crates/core/src/decoder/riscv.rs
@@ -2008,6 +2092,27 @@ boards:
     # from this change. Ran: `labwired-core --lib` 3255 pass / 0 fail, and the 126
     # GPIO tests, all unchanged. This is an ack, not a capture — no live re-capture
     # was made this session.
+    #
+    # Re-stamped 2026-08-22 for explicit wrapping ops on GUEST arithmetic.
+    # `cortex_m.rs` and `riscv.rs` replace `+`/`<<` with `wrapping_add`/`wrapping_shl`
+    # at sites where the guest ISA specifies modulo-2^32 behaviour: exception entry
+    # and return stacking (`frame_ptr + 4..32`), branch target `pc + 4 + offset`,
+    # `vtor + n*4`, the BL link address, and the RISC-V vectored trap base and
+    # SLLI/SRLI/SRAI shifts (shamt is masked to 5 bits at decode).
+    #
+    # `a + b` and `a.wrapping_add(b)` differ ONLY when the op overflows, which under
+    # `overflow-checks = true` was a PANIC, never a wrong value. So no silicon-anchored
+    # register can have moved: every input that used to produce a number still produces
+    # the same number. Four inputs that used to CRASH the simulator now wrap the way the
+    # part does — see the four new tests (`armv7m_exception_entry/return_wraps_the_stack
+    # _frame`, `armv7m_branch_wraps_at_the_signed_pc_boundary`,
+    # `riscv_vectored_trap_wraps_at_the_top_of_the_address_space`). Confirmed by
+    # restoring one site to `+`: it panics at cortex_m.rs:1367 `attempt to add with
+    # overflow`.
+    #
+    # Ran: labwired-core --lib 3260 pass / 0 fail, and nrf52_timer_walk_differential,
+    # stm32f401/stm32l476_walk_differential, kw41z_walk_free_differential. This is an
+    # ack, not a capture — no live re-capture was made.
     drift_ack: 2026-08-22
     # 2026-08-22: the Thumb-2 decoder gained SMLABB/BT/TB/TT and SMULBB/BT/TB/TT
     # (ARMv7-M A7.7.166/171). They were UNDECODED, which in this core means a
@@ -2026,7 +2131,7 @@ boards:
     # matches. No other pinned firmware on any board reaches the encoding, so
     # nothing a silicon capture asserts moved. No live re-capture is evidenced here.
     drift_ack: 2026-08-22
-    drift_ack_digest: 223bd47e640a63f1c8bd6f75b31246af518c6319408a542f2b7c174376c5dda4
+    drift_ack_digest: 43e40c14337f3567f33c0676403d6d8d4143da00e7c8bbd96510793229837d99
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/cpu/cortex_m.rs
@@ -2330,8 +2435,29 @@ boards:
     # from this change. Ran: `labwired-core --lib` 3255 pass / 0 fail, and the 126
     # GPIO tests, all unchanged. This is an ack, not a capture — no live re-capture
     # was made this session.
+    #
+    # Re-stamped 2026-08-22 for explicit wrapping ops on GUEST arithmetic.
+    # `cortex_m.rs` and `riscv.rs` replace `+`/`<<` with `wrapping_add`/`wrapping_shl`
+    # at sites where the guest ISA specifies modulo-2^32 behaviour: exception entry
+    # and return stacking (`frame_ptr + 4..32`), branch target `pc + 4 + offset`,
+    # `vtor + n*4`, the BL link address, and the RISC-V vectored trap base and
+    # SLLI/SRLI/SRAI shifts (shamt is masked to 5 bits at decode).
+    #
+    # `a + b` and `a.wrapping_add(b)` differ ONLY when the op overflows, which under
+    # `overflow-checks = true` was a PANIC, never a wrong value. So no silicon-anchored
+    # register can have moved: every input that used to produce a number still produces
+    # the same number. Four inputs that used to CRASH the simulator now wrap the way the
+    # part does — see the four new tests (`armv7m_exception_entry/return_wraps_the_stack
+    # _frame`, `armv7m_branch_wraps_at_the_signed_pc_boundary`,
+    # `riscv_vectored_trap_wraps_at_the_top_of_the_address_space`). Confirmed by
+    # restoring one site to `+`: it panics at cortex_m.rs:1367 `attempt to add with
+    # overflow`.
+    #
+    # Ran: labwired-core --lib 3260 pass / 0 fail, and nrf52_timer_walk_differential,
+    # stm32f401/stm32l476_walk_differential, kw41z_walk_free_differential. This is an
+    # ack, not a capture — no live re-capture was made.
     drift_ack: 2026-08-22
-    drift_ack_digest: 4ea15df2185a50fc6b31db7945f4a43775984f3b0c912c1d22649483e64a856f
+    drift_ack_digest: b72b145c9a17f4437dc04b684a055b0ec4d09e76f985efd9d9ca138b9eb9a1b1
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/cpu/cortex_m.rs
@@ -2678,6 +2804,27 @@ boards:
     # from this change. Ran: `labwired-core --lib` 3255 pass / 0 fail, and the 126
     # GPIO tests, all unchanged. This is an ack, not a capture — no live re-capture
     # was made this session.
+    #
+    # Re-stamped 2026-08-22 for explicit wrapping ops on GUEST arithmetic.
+    # `cortex_m.rs` and `riscv.rs` replace `+`/`<<` with `wrapping_add`/`wrapping_shl`
+    # at sites where the guest ISA specifies modulo-2^32 behaviour: exception entry
+    # and return stacking (`frame_ptr + 4..32`), branch target `pc + 4 + offset`,
+    # `vtor + n*4`, the BL link address, and the RISC-V vectored trap base and
+    # SLLI/SRLI/SRAI shifts (shamt is masked to 5 bits at decode).
+    #
+    # `a + b` and `a.wrapping_add(b)` differ ONLY when the op overflows, which under
+    # `overflow-checks = true` was a PANIC, never a wrong value. So no silicon-anchored
+    # register can have moved: every input that used to produce a number still produces
+    # the same number. Four inputs that used to CRASH the simulator now wrap the way the
+    # part does — see the four new tests (`armv7m_exception_entry/return_wraps_the_stack
+    # _frame`, `armv7m_branch_wraps_at_the_signed_pc_boundary`,
+    # `riscv_vectored_trap_wraps_at_the_top_of_the_address_space`). Confirmed by
+    # restoring one site to `+`: it panics at cortex_m.rs:1367 `attempt to add with
+    # overflow`.
+    #
+    # Ran: labwired-core --lib 3260 pass / 0 fail, and nrf52_timer_walk_differential,
+    # stm32f401/stm32l476_walk_differential, kw41z_walk_free_differential. This is an
+    # ack, not a capture — no live re-capture was made.
     drift_ack: 2026-08-22
     # 2026-08-22: the Thumb-2 decoder gained SMLABB/BT/TB/TT and SMULBB/BT/TB/TT
     # (ARMv7-M A7.7.166/171). They were UNDECODED, which in this core means a
@@ -2696,7 +2843,7 @@ boards:
     # matches. No other pinned firmware on any board reaches the encoding, so
     # nothing a silicon capture asserts moved. No live re-capture is evidenced here.
     drift_ack: 2026-08-22
-    drift_ack_digest: 4dedf6a08c8ce02125db67aaa0f3feefd38a65d61680a836bdcb4f0e7db92d9e
+    drift_ack_digest: be87a841db2f192f8e3b93e2a4477658f892d89ce329214633f54cb66c183735
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/cpu/cortex_m.rs
@@ -3003,6 +3150,27 @@ boards:
     # from this change. Ran: `labwired-core --lib` 3255 pass / 0 fail, and the 126
     # GPIO tests, all unchanged. This is an ack, not a capture — no live re-capture
     # was made this session.
+    #
+    # Re-stamped 2026-08-22 for explicit wrapping ops on GUEST arithmetic.
+    # `cortex_m.rs` and `riscv.rs` replace `+`/`<<` with `wrapping_add`/`wrapping_shl`
+    # at sites where the guest ISA specifies modulo-2^32 behaviour: exception entry
+    # and return stacking (`frame_ptr + 4..32`), branch target `pc + 4 + offset`,
+    # `vtor + n*4`, the BL link address, and the RISC-V vectored trap base and
+    # SLLI/SRLI/SRAI shifts (shamt is masked to 5 bits at decode).
+    #
+    # `a + b` and `a.wrapping_add(b)` differ ONLY when the op overflows, which under
+    # `overflow-checks = true` was a PANIC, never a wrong value. So no silicon-anchored
+    # register can have moved: every input that used to produce a number still produces
+    # the same number. Four inputs that used to CRASH the simulator now wrap the way the
+    # part does — see the four new tests (`armv7m_exception_entry/return_wraps_the_stack
+    # _frame`, `armv7m_branch_wraps_at_the_signed_pc_boundary`,
+    # `riscv_vectored_trap_wraps_at_the_top_of_the_address_space`). Confirmed by
+    # restoring one site to `+`: it panics at cortex_m.rs:1367 `attempt to add with
+    # overflow`.
+    #
+    # Ran: labwired-core --lib 3260 pass / 0 fail, and nrf52_timer_walk_differential,
+    # stm32f401/stm32l476_walk_differential, kw41z_walk_free_differential. This is an
+    # ack, not a capture — no live re-capture was made.
     drift_ack: 2026-08-22
     # 2026-08-22: the Thumb-2 decoder gained SMLABB/BT/TB/TT and SMULBB/BT/TB/TT
     # (ARMv7-M A7.7.166/171). They were UNDECODED, which in this core means a
@@ -3021,7 +3189,7 @@ boards:
     # matches. No other pinned firmware on any board reaches the encoding, so
     # nothing a silicon capture asserts moved. No live re-capture is evidenced here.
     drift_ack: 2026-08-22
-    drift_ack_digest: 90973fe04efe024b4ac47fa82929e63b3069e89d60ad31ca0b8d3d9c86e7ff04
+    drift_ack_digest: 4492f70d355dd855b22e667d1cbbe89ab26016f588fa747b9a12844f868e7a73
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     # 2026-08-12: chip yaml adds bxcan1 (type bxcan @ 0x40006400, APB1ENR bit 25) for
     # Arduino matrix L8 loopback. Existing BxCan model; no register-map change to
