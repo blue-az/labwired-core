@@ -331,7 +331,23 @@ boards:
     # and the STM32 reset-value tests (`stm32h5_reset_values_match_silicon`,
     # `test_i2c_reset_values`) pass unchanged.
     drift_ack: 2026-08-21
-    drift_ack_digest: 762bfb5d5ab8f5193ec539eadbbc338ee97e5d77faa33d16e743c3c9a2f536a9
+    # 2026-08-22: the Thumb-2 decoder gained SMLABB/BT/TB/TT and SMULBB/BT/TB/TT
+    # (ARMv7-M A7.7.166/171). They were UNDECODED, which in this core means a
+    # silent no-op — `digitalWrite` on EFR32MG26 computes its port base with
+    # SMLABB and was writing to a garbage address, so blink did not blink.
+    # Purely additive: one new `else if` in decoder/arm.rs and one new match arm
+    # in cortex_m.rs; `git diff` removes no existing line, so every encoding that
+    # decoded before decodes identically now.
+    # ⚠ MEASURED, NOT ASSUMED, because a newly-decoded instruction genuinely does
+    # change behaviour for firmware that executes it — this is the one drift note
+    # in this file where "additive" is not by itself an argument. All 96 committed
+    # ELF fixtures were disassembled: exactly ONE contains the family, the
+    # `smulbb r0, r1, r0` divide-by-3 in
+    # crates/wasm/tests/fixtures/firmware-l476-bldc-six-step.elf, and its committed
+    # golden trace (crates/wasm/tests/fixtures/motor-parity-native.json) still
+    # matches. No other pinned firmware on any board reaches the encoding, so
+    # nothing a silicon capture asserts moved. No live re-capture is evidenced here.
+    drift_ack_digest: 4ed1cf55f5ca29eb38d3db073a84f283ea389b624259166352c9fe132b284fe1
     models:
       - crates/core/src/cpu/cortex_m.rs
       - crates/core/src/decoder/arm.rs
@@ -540,7 +556,23 @@ boards:
     # and the STM32 reset-value tests (`stm32h5_reset_values_match_silicon`,
     # `test_i2c_reset_values`) pass unchanged.
     drift_ack: 2026-08-21
-    drift_ack_digest: 762bfb5d5ab8f5193ec539eadbbc338ee97e5d77faa33d16e743c3c9a2f536a9
+    # 2026-08-22: the Thumb-2 decoder gained SMLABB/BT/TB/TT and SMULBB/BT/TB/TT
+    # (ARMv7-M A7.7.166/171). They were UNDECODED, which in this core means a
+    # silent no-op — `digitalWrite` on EFR32MG26 computes its port base with
+    # SMLABB and was writing to a garbage address, so blink did not blink.
+    # Purely additive: one new `else if` in decoder/arm.rs and one new match arm
+    # in cortex_m.rs; `git diff` removes no existing line, so every encoding that
+    # decoded before decodes identically now.
+    # ⚠ MEASURED, NOT ASSUMED, because a newly-decoded instruction genuinely does
+    # change behaviour for firmware that executes it — this is the one drift note
+    # in this file where "additive" is not by itself an argument. All 96 committed
+    # ELF fixtures were disassembled: exactly ONE contains the family, the
+    # `smulbb r0, r1, r0` divide-by-3 in
+    # crates/wasm/tests/fixtures/firmware-l476-bldc-six-step.elf, and its committed
+    # golden trace (crates/wasm/tests/fixtures/motor-parity-native.json) still
+    # matches. No other pinned firmware on any board reaches the encoding, so
+    # nothing a silicon capture asserts moved. No live re-capture is evidenced here.
+    drift_ack_digest: 4ed1cf55f5ca29eb38d3db073a84f283ea389b624259166352c9fe132b284fe1
     models:
       - crates/core/src/cpu/cortex_m.rs
       - crates/core/src/decoder/arm.rs
@@ -872,6 +904,22 @@ boards:
     # layouts are not touched — these boards never construct the EFR32 variant,
     # and the STM32 reset-value tests (`stm32h5_reset_values_match_silicon`,
     # `test_i2c_reset_values`) pass unchanged.
+    # 2026-08-22: the Thumb-2 decoder gained SMLABB/BT/TB/TT and SMULBB/BT/TB/TT
+    # (ARMv7-M A7.7.166/171). They were UNDECODED, which in this core means a
+    # silent no-op — `digitalWrite` on EFR32MG26 computes its port base with
+    # SMLABB and was writing to a garbage address, so blink did not blink.
+    # Purely additive: one new `else if` in decoder/arm.rs and one new match arm
+    # in cortex_m.rs; `git diff` removes no existing line, so every encoding that
+    # decoded before decodes identically now.
+    # ⚠ MEASURED, NOT ASSUMED, because a newly-decoded instruction genuinely does
+    # change behaviour for firmware that executes it — this is the one drift note
+    # in this file where "additive" is not by itself an argument. All 96 committed
+    # ELF fixtures were disassembled: exactly ONE contains the family, the
+    # `smulbb r0, r1, r0` divide-by-3 in
+    # crates/wasm/tests/fixtures/firmware-l476-bldc-six-step.elf, and its committed
+    # golden trace (crates/wasm/tests/fixtures/motor-parity-native.json) still
+    # matches. No other pinned firmware on any board reaches the encoding, so
+    # nothing a silicon capture asserts moved. No live re-capture is evidenced here.
     #
     # Re-stamped 2026-08-22 for the per-tick GPIO port read. `gpio.rs` gained ONE
     # method, `read_gpio_input_word`, and changed nothing else: no register layout,
@@ -886,7 +934,7 @@ boards:
     # GPIO tests, all unchanged. This is an ack, not a capture — no live re-capture
     # was made this session.
     drift_ack: 2026-08-22
-    drift_ack_digest: cd39900713b2ac399b54a89acc2408ae843a0a0f776ecbbd99b5f19dd84b1ba7
+    drift_ack_digest: 7ec3b6b08e01804a74fec0f5414bb6226c9d541243bfd298434ae1b2e213280c
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/cpu/cortex_m.rs
@@ -1961,7 +2009,24 @@ boards:
     # GPIO tests, all unchanged. This is an ack, not a capture — no live re-capture
     # was made this session.
     drift_ack: 2026-08-22
-    drift_ack_digest: 241eb14be794adf9dec508bbcb9367678a1a37eacd3dddac21999c00464b7656
+    # 2026-08-22: the Thumb-2 decoder gained SMLABB/BT/TB/TT and SMULBB/BT/TB/TT
+    # (ARMv7-M A7.7.166/171). They were UNDECODED, which in this core means a
+    # silent no-op — `digitalWrite` on EFR32MG26 computes its port base with
+    # SMLABB and was writing to a garbage address, so blink did not blink.
+    # Purely additive: one new `else if` in decoder/arm.rs and one new match arm
+    # in cortex_m.rs; `git diff` removes no existing line, so every encoding that
+    # decoded before decodes identically now.
+    # ⚠ MEASURED, NOT ASSUMED, because a newly-decoded instruction genuinely does
+    # change behaviour for firmware that executes it — this is the one drift note
+    # in this file where "additive" is not by itself an argument. All 96 committed
+    # ELF fixtures were disassembled: exactly ONE contains the family, the
+    # `smulbb r0, r1, r0` divide-by-3 in
+    # crates/wasm/tests/fixtures/firmware-l476-bldc-six-step.elf, and its committed
+    # golden trace (crates/wasm/tests/fixtures/motor-parity-native.json) still
+    # matches. No other pinned firmware on any board reaches the encoding, so
+    # nothing a silicon capture asserts moved. No live re-capture is evidenced here.
+    drift_ack: 2026-08-22
+    drift_ack_digest: 223bd47e640a63f1c8bd6f75b31246af518c6319408a542f2b7c174376c5dda4
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/cpu/cortex_m.rs
@@ -2236,6 +2301,22 @@ boards:
     # layouts are not touched — these boards never construct the EFR32 variant,
     # and the STM32 reset-value tests (`stm32h5_reset_values_match_silicon`,
     # `test_i2c_reset_values`) pass unchanged.
+    # 2026-08-22: the Thumb-2 decoder gained SMLABB/BT/TB/TT and SMULBB/BT/TB/TT
+    # (ARMv7-M A7.7.166/171). They were UNDECODED, which in this core means a
+    # silent no-op — `digitalWrite` on EFR32MG26 computes its port base with
+    # SMLABB and was writing to a garbage address, so blink did not blink.
+    # Purely additive: one new `else if` in decoder/arm.rs and one new match arm
+    # in cortex_m.rs; `git diff` removes no existing line, so every encoding that
+    # decoded before decodes identically now.
+    # ⚠ MEASURED, NOT ASSUMED, because a newly-decoded instruction genuinely does
+    # change behaviour for firmware that executes it — this is the one drift note
+    # in this file where "additive" is not by itself an argument. All 96 committed
+    # ELF fixtures were disassembled: exactly ONE contains the family, the
+    # `smulbb r0, r1, r0` divide-by-3 in
+    # crates/wasm/tests/fixtures/firmware-l476-bldc-six-step.elf, and its committed
+    # golden trace (crates/wasm/tests/fixtures/motor-parity-native.json) still
+    # matches. No other pinned firmware on any board reaches the encoding, so
+    # nothing a silicon capture asserts moved. No live re-capture is evidenced here.
     #
     # Re-stamped 2026-08-22 for the per-tick GPIO port read. `gpio.rs` gained ONE
     # method, `read_gpio_input_word`, and changed nothing else: no register layout,
@@ -2250,7 +2331,7 @@ boards:
     # GPIO tests, all unchanged. This is an ack, not a capture — no live re-capture
     # was made this session.
     drift_ack: 2026-08-22
-    drift_ack_digest: 95f58ca5548e9749655a1aa86209a806cf5c696d8d2245acd35f04e833f2bdb2
+    drift_ack_digest: 4ea15df2185a50fc6b31db7945f4a43775984f3b0c912c1d22649483e64a856f
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/cpu/cortex_m.rs
@@ -2598,7 +2679,24 @@ boards:
     # GPIO tests, all unchanged. This is an ack, not a capture — no live re-capture
     # was made this session.
     drift_ack: 2026-08-22
-    drift_ack_digest: b4835788f233443813c43e8a4035725dd0bb3cdfdd59c0ff2f02c0045cae5889
+    # 2026-08-22: the Thumb-2 decoder gained SMLABB/BT/TB/TT and SMULBB/BT/TB/TT
+    # (ARMv7-M A7.7.166/171). They were UNDECODED, which in this core means a
+    # silent no-op — `digitalWrite` on EFR32MG26 computes its port base with
+    # SMLABB and was writing to a garbage address, so blink did not blink.
+    # Purely additive: one new `else if` in decoder/arm.rs and one new match arm
+    # in cortex_m.rs; `git diff` removes no existing line, so every encoding that
+    # decoded before decodes identically now.
+    # ⚠ MEASURED, NOT ASSUMED, because a newly-decoded instruction genuinely does
+    # change behaviour for firmware that executes it — this is the one drift note
+    # in this file where "additive" is not by itself an argument. All 96 committed
+    # ELF fixtures were disassembled: exactly ONE contains the family, the
+    # `smulbb r0, r1, r0` divide-by-3 in
+    # crates/wasm/tests/fixtures/firmware-l476-bldc-six-step.elf, and its committed
+    # golden trace (crates/wasm/tests/fixtures/motor-parity-native.json) still
+    # matches. No other pinned firmware on any board reaches the encoding, so
+    # nothing a silicon capture asserts moved. No live re-capture is evidenced here.
+    drift_ack: 2026-08-22
+    drift_ack_digest: 4dedf6a08c8ce02125db67aaa0f3feefd38a65d61680a836bdcb4f0e7db92d9e
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/cpu/cortex_m.rs
@@ -2906,7 +3004,24 @@ boards:
     # GPIO tests, all unchanged. This is an ack, not a capture — no live re-capture
     # was made this session.
     drift_ack: 2026-08-22
-    drift_ack_digest: c9eb08492ab5abde613b3c867b742911379cd1e33cbefc74b9e90b935689778c
+    # 2026-08-22: the Thumb-2 decoder gained SMLABB/BT/TB/TT and SMULBB/BT/TB/TT
+    # (ARMv7-M A7.7.166/171). They were UNDECODED, which in this core means a
+    # silent no-op — `digitalWrite` on EFR32MG26 computes its port base with
+    # SMLABB and was writing to a garbage address, so blink did not blink.
+    # Purely additive: one new `else if` in decoder/arm.rs and one new match arm
+    # in cortex_m.rs; `git diff` removes no existing line, so every encoding that
+    # decoded before decodes identically now.
+    # ⚠ MEASURED, NOT ASSUMED, because a newly-decoded instruction genuinely does
+    # change behaviour for firmware that executes it — this is the one drift note
+    # in this file where "additive" is not by itself an argument. All 96 committed
+    # ELF fixtures were disassembled: exactly ONE contains the family, the
+    # `smulbb r0, r1, r0` divide-by-3 in
+    # crates/wasm/tests/fixtures/firmware-l476-bldc-six-step.elf, and its committed
+    # golden trace (crates/wasm/tests/fixtures/motor-parity-native.json) still
+    # matches. No other pinned firmware on any board reaches the encoding, so
+    # nothing a silicon capture asserts moved. No live re-capture is evidenced here.
+    drift_ack: 2026-08-22
+    drift_ack_digest: 90973fe04efe024b4ac47fa82929e63b3069e89d60ad31ca0b8d3d9c86e7ff04
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     # 2026-08-12: chip yaml adds bxcan1 (type bxcan @ 0x40006400, APB1ENR bit 25) for
     # Arduino matrix L8 loopback. Existing BxCan model; no register-map change to
@@ -3536,7 +3651,23 @@ boards:
       # real one. No register layout, reset value or peripheral behaviour is
       # touched, which is what the silicon capture asserts, so the capture stands.
     drift_ack: 2026-08-22
-    drift_ack_digest: 7862c68a44c27a503d02baad5a8ec795474c0a8c9c691e0e940be7c3fd5af062
+    # 2026-08-22: the Thumb-2 decoder gained SMLABB/BT/TB/TT and SMULBB/BT/TB/TT
+    # (ARMv7-M A7.7.166/171). They were UNDECODED, which in this core means a
+    # silent no-op — `digitalWrite` on EFR32MG26 computes its port base with
+    # SMLABB and was writing to a garbage address, so blink did not blink.
+    # Purely additive: one new `else if` in decoder/arm.rs and one new match arm
+    # in cortex_m.rs; `git diff` removes no existing line, so every encoding that
+    # decoded before decodes identically now.
+    # ⚠ MEASURED, NOT ASSUMED, because a newly-decoded instruction genuinely does
+    # change behaviour for firmware that executes it — this is the one drift note
+    # in this file where "additive" is not by itself an argument. All 96 committed
+    # ELF fixtures were disassembled: exactly ONE contains the family, the
+    # `smulbb r0, r1, r0` divide-by-3 in
+    # crates/wasm/tests/fixtures/firmware-l476-bldc-six-step.elf, and its committed
+    # golden trace (crates/wasm/tests/fixtures/motor-parity-native.json) still
+    # matches. No other pinned firmware on any board reaches the encoding, so
+    # nothing a silicon capture asserts moved. No live re-capture is evidenced here.
+    drift_ack_digest: 79ff1ba649399fc628090cbea5aeeb0ce59ed36b99d17117c72ef9fdd989ce31
     models:
       - crates/core/src/cpu/cortex_m.rs
       - crates/core/src/decoder/arm.rs
@@ -3621,6 +3752,22 @@ boards:
     # this ack names content a human actually read; no live re-capture owed for
     # this change, and any already owed above still is.
     drift_ack: 2026-08-13
+    # 2026-08-22: the Thumb-2 decoder gained SMLABB/BT/TB/TT and SMULBB/BT/TB/TT
+    # (ARMv7-M A7.7.166/171). They were UNDECODED, which in this core means a
+    # silent no-op — `digitalWrite` on EFR32MG26 computes its port base with
+    # SMLABB and was writing to a garbage address, so blink did not blink.
+    # Purely additive: one new `else if` in decoder/arm.rs and one new match arm
+    # in cortex_m.rs; `git diff` removes no existing line, so every encoding that
+    # decoded before decodes identically now.
+    # ⚠ MEASURED, NOT ASSUMED, because a newly-decoded instruction genuinely does
+    # change behaviour for firmware that executes it — this is the one drift note
+    # in this file where "additive" is not by itself an argument. All 96 committed
+    # ELF fixtures were disassembled: exactly ONE contains the family, the
+    # `smulbb r0, r1, r0` divide-by-3 in
+    # crates/wasm/tests/fixtures/firmware-l476-bldc-six-step.elf, and its committed
+    # golden trace (crates/wasm/tests/fixtures/motor-parity-native.json) still
+    # matches. No other pinned firmware on any board reaches the encoding, so
+    # nothing a silicon capture asserts moved. No live re-capture is evidenced here.
     drift_ack_digest: 1784454ab3aaa18d6cce5fd95ae54de633644ef7deb52b00f8097b5e78be31ab
     models:
       - crates/core/src/cpu/cortex_m.rs
@@ -3692,6 +3839,22 @@ boards:
     # this ack names content a human actually read; no live re-capture owed for
     # this change, and any already owed above still is.
     drift_ack: 2026-08-13
+    # 2026-08-22: the Thumb-2 decoder gained SMLABB/BT/TB/TT and SMULBB/BT/TB/TT
+    # (ARMv7-M A7.7.166/171). They were UNDECODED, which in this core means a
+    # silent no-op — `digitalWrite` on EFR32MG26 computes its port base with
+    # SMLABB and was writing to a garbage address, so blink did not blink.
+    # Purely additive: one new `else if` in decoder/arm.rs and one new match arm
+    # in cortex_m.rs; `git diff` removes no existing line, so every encoding that
+    # decoded before decodes identically now.
+    # ⚠ MEASURED, NOT ASSUMED, because a newly-decoded instruction genuinely does
+    # change behaviour for firmware that executes it — this is the one drift note
+    # in this file where "additive" is not by itself an argument. All 96 committed
+    # ELF fixtures were disassembled: exactly ONE contains the family, the
+    # `smulbb r0, r1, r0` divide-by-3 in
+    # crates/wasm/tests/fixtures/firmware-l476-bldc-six-step.elf, and its committed
+    # golden trace (crates/wasm/tests/fixtures/motor-parity-native.json) still
+    # matches. No other pinned firmware on any board reaches the encoding, so
+    # nothing a silicon capture asserts moved. No live re-capture is evidenced here.
     drift_ack_digest: 0fb27d55c48c66a5483209c4f7fa029280227b36ea0b24b928d4527b74fceeed
     models:
       - crates/core/src/cpu/cortex_m.rs
@@ -3768,7 +3931,23 @@ boards:
     # this ack names content a human actually read; no live re-capture owed for
     # this change, and any already owed above still is.
     drift_ack: 2026-08-13
-    drift_ack_digest: 3ab34d0f42e59464cff72293c291bc1af218bb8176e431d7638748772c1917d7
+    # 2026-08-22: the Thumb-2 decoder gained SMLABB/BT/TB/TT and SMULBB/BT/TB/TT
+    # (ARMv7-M A7.7.166/171). They were UNDECODED, which in this core means a
+    # silent no-op — `digitalWrite` on EFR32MG26 computes its port base with
+    # SMLABB and was writing to a garbage address, so blink did not blink.
+    # Purely additive: one new `else if` in decoder/arm.rs and one new match arm
+    # in cortex_m.rs; `git diff` removes no existing line, so every encoding that
+    # decoded before decodes identically now.
+    # ⚠ MEASURED, NOT ASSUMED, because a newly-decoded instruction genuinely does
+    # change behaviour for firmware that executes it — this is the one drift note
+    # in this file where "additive" is not by itself an argument. All 96 committed
+    # ELF fixtures were disassembled: exactly ONE contains the family, the
+    # `smulbb r0, r1, r0` divide-by-3 in
+    # crates/wasm/tests/fixtures/firmware-l476-bldc-six-step.elf, and its committed
+    # golden trace (crates/wasm/tests/fixtures/motor-parity-native.json) still
+    # matches. No other pinned firmware on any board reaches the encoding, so
+    # nothing a silicon capture asserts moved. No live re-capture is evidenced here.
+    drift_ack_digest: 9c339cd43758ed9795889960668582a8f27a562b558411116395955894983887
     models:
       - crates/core/src/cpu/cortex_m.rs
       - crates/core/src/decoder/arm.rs
