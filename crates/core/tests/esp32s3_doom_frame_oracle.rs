@@ -5,9 +5,10 @@
 // This software is released under the MIT License.
 // See the LICENSE file in the project root for full license information.
 
-//! Frame-1 pixel oracle for the ESP32-S3 Doom lab.
+//! Pixel oracles for the ESP32-S3 Doom lab: frame 1, and the dual-core steady
+//! state at frame 180.
 //!
-//! # What this gate is for
+//! # What these gates are for
 //!
 //! Real Doom (doomgeneric + the shareware DOOM1.WAD) runs on a physical
 //! ESP32-S3-N16R8, in this native simulator, and in the browser. The firmware
@@ -22,16 +23,34 @@
 //! a speed change that alters a single rendered pixel moves this hash, and this
 //! test goes red.
 //!
+//! # Why frame 1 alone is not enough
+//!
+//! Frame 1 is a STATIC title screen, reached while core 1 has spent most of the
+//! run parked in `waiti`. Measured here (the `S3_DOOM_ORACLE core1_…` lines):
+//! the APP_CPU leaves reset at step 8,898,394 and is idle-parked from roughly
+//! step 16M to 52M, so frame 1 says very little about the dual-core rendering
+//! pipeline the surrounding performance work is actually changing.
+//!
+//! It is blind in a second way too. The firmware prints the SAME hash
+//! `0xec236c72` at frames 1, 60 and 120 — Doom is still on its title page. The
+//! first logged frame whose pixels have moved is frame 180
+//! ([`ORACLE_STEADY_FNV1A32`] = `0xb05338b8`), by which point the attract-mode
+//! demo is playing and both cores are executing.
+//! `esp32s3_doom_steady_state_matches_recorded_oracle` runs that far and
+//! asserts there too.
+//!
 //! # Why the step/cycle counts here are REPORTED, not asserted
 //!
 //! This is the point of the gate and the one thing that must not be got wrong.
 //! An optimisation is *supposed* to change how many host instructions, batches
-//! and simulated cycles it takes to reach frame 1. If those numbers were golden
+//! and simulated cycles it takes to reach a frame. If those numbers were golden
 //! the gate would fail on every legitimate speed-up and would be turned off
 //! within a week. So the only golden values here are the ones that describe
 //! **pixels and inputs**:
 //!
-//!   * the firmware-computed frame-1 FNV-1a (the oracle),
+//!   * the firmware-computed frame-1 FNV-1a (the hardware oracle),
+//!   * the firmware-computed frame-180 FNV-1a (the recorded steady-state
+//!     oracle — see the caveat on [`ORACLE_STEADY_FNV1A32`]),
 //!   * the flash image the ROM loads (digest-pinned),
 //!   * the boot ROM images (digest-pinned).
 //!
@@ -63,9 +82,9 @@
 //!     same one, not merely an equivalent one.
 //!
 //! ROM boot costs a lot of simulated instructions before `app_main` runs (frame
-//! 1 lands at step 73,781,248), which is part of why this test is `#[ignore]`d —
-//! see the attribute on the test for the measured cost and for where it still
-//! has to be wired.
+//! 1 lands at step 73,781,248), which is part of why these tests are
+//! `#[ignore]`d — see the attributes for the measured cost and for where they
+//! still have to be wired.
 //!
 //! # Why no debug ELF is required
 //!
@@ -75,6 +94,13 @@
 //! a scratch directory would make this gate rot the first time that directory
 //! is cleaned. The flash image, which is a committed playground asset, is the
 //! only firmware input, and it is digest-pinned below.
+//!
+//! The price of being ELF-less is that core-1 activity is reported as PC
+//! buckets rather than function names: `cmap_to_fb` / `doom_display_frame`
+//! cannot be named from inside this test. What IS asserted is symbol-free and
+//! harder to fake than a name lookup — that the APP_CPU left reset on the real
+//! hardware edge, and that it is out of `waiti` for most of the steady-state
+//! window rather than idling through it.
 
 use labwired_config::{Arch, ChipDescriptor, SystemManifest};
 use labwired_core::boot::esp32s3_rom::{provision_rom_images, RomImages};
@@ -83,7 +109,8 @@ use labwired_core::cpu::xtensa_lx7::XtensaLx7;
 use labwired_core::system::xtensa::{
     attach_esp32_external_devices, configure_xtensa_esp32s3, Esp32s3BootMode, Esp32s3Opts,
 };
-use labwired_core::{Cpu, Machine};
+use labwired_core::{AdvanceRequest, Cpu, Machine};
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
@@ -91,6 +118,36 @@ use std::time::Instant;
 /// The oracle. Frame-1 FNV-1a-32 of the ARGB8888 Doom screen buffer, identical
 /// on ESP32-S3-N16R8 silicon, in this native simulator, and in the browser.
 const ORACLE_FRAME1_FNV1A32: u32 = 0xec23_6c72;
+
+/// The dual-core steady-state oracle: the firmware's own FNV-1a-32 at
+/// [`STEADY_FRAME`], RECORDED in this simulator. Nobody has read a frame-180
+/// hash off a board, so this one does not carry the frame-1 oracle's
+/// three-way (silicon / native / browser) provenance.
+///
+/// It is a weaker provenance and a STRICTER gate, and both facts matter:
+///
+///   * Frames 1, 60 and 120 all hash to `0xec236c72` — Doom is on its static
+///     title page. Frame 180 is the first logged frame whose pixels have moved,
+///     so it is the first one that cannot be satisfied by a stale frame-1
+///     buffer.
+///   * Which demo frame Doom is showing at its own frame 180 depends on how
+///     many game tics of SIMULATED time have elapsed. So unlike the frame-1
+///     oracle, this hash is sensitive to changes in simulated-cycle accounting
+///     (idle fast-forward, peripheral cost models, batch boundaries) and not
+///     only to changes in rendered pixels. A speed change that leaves pixels
+///     alone but moves simulated time WILL move this hash.
+///
+/// If this moves while frame 1 stays green, that is the signal to look at what
+/// the change did to simulated timing, and then to re-record deliberately —
+/// with the frame-1 oracle as the proof that pixels themselves are unharmed.
+const ORACLE_STEADY_FNV1A32: u32 = 0xb053_38b8;
+
+/// The frame the steady-state gate stops on. The firmware logs every 60th
+/// frame; 180 is the first logged frame after the title screen stops being
+/// static. Raising it covers more of the demo at roughly 1.15 M steps per
+/// frame: frame 300 was measured at 1,083,641,856 steps (~224 s release) and
+/// frame 480 at 1,779,945,472 (~352 s).
+const STEADY_FRAME: u32 = 180;
 
 /// FNV-1a-64 of the curated Doom flash image. Pinned so that swapping the
 /// asset fails HERE, with a clear message, rather than silently moving the
@@ -105,18 +162,21 @@ const GOLDEN_FLASH_LEN: usize = 8_455_860;
 const GOLDEN_ROM_IROM_FNV1A64: u64 = 0xb848_45dd_0ee7_03ab;
 const GOLDEN_ROM_DROM_FNV1A64: u64 = 0xdc81_1ae1_a604_0f0e;
 
-/// The firmware's own frame-1 console line, e.g.
-/// `I (12345) doom_video: frame 1  0.030 fps  hash 0xec236c72  ink 12.3%`.
-/// `doom_display.c` formats `frame %PRIu32 "  "`, so the two trailing spaces
-/// make this match frame 1 and never frame 10/100/1000.
-const FRAME1_MARKER: &str = "doom_video: frame 1  ";
-
-/// Upper bound on primary scheduling quanta. NOT a golden: it exists only so a
-/// wedged run terminates with a readable message instead of hanging a lane.
-/// Frame 1 was measured at 73,781,248 steps, so this leaves ~13x headroom.
-/// Raise it if a legitimate engine change genuinely needs more — never lower it
-/// to "tighten" the gate, that would turn a slow engine into a pixel failure.
+/// Upper bound on primary scheduling quanta for the frame-1 gate. NOT a golden:
+/// it exists only so a wedged run terminates with a readable message instead of
+/// hanging a lane. Frame 1 was measured at 73,781,248 steps, so this leaves
+/// ~13x headroom. Raise it if a legitimate engine change genuinely needs more —
+/// never lower it to "tighten" the gate, that would turn a slow engine into a
+/// pixel failure.
 const MAX_STEPS: u64 = 1_000_000_000;
+
+/// The same loose bound for the steady-state gate. Frame 180 was measured at
+/// 627,408,896 steps, which leaves ~4.8x headroom.
+const MAX_STEPS_STEADY: u64 = 3_000_000_000;
+
+/// How often the console is re-read and core 1 is sampled. A multi-billion-step
+/// run must not re-read the whole transcript on every instruction.
+const SAMPLE_EVERY: u64 = 4096;
 
 /// The core repository root (`crates/core/../..`). Chip descriptor and system
 /// manifest both live inside the core checkout, so this resolves in a
@@ -133,6 +193,15 @@ fn fnv1a_64(bytes: &[u8]) -> u64 {
     bytes.iter().fold(0xcbf2_9ce4_8422_2325, |hash, byte| {
         (hash ^ u64::from(*byte)).wrapping_mul(0x0000_0100_0000_01b3)
     })
+}
+
+/// The firmware's own periodic stats line for `frame n`, e.g.
+/// `I (12345) doom_video: frame 1  0.030 fps  hash 0xec236c72  ink 12.3%`.
+/// `doom_display.c` formats `frame %PRIu32 "  "`, so the two trailing spaces
+/// make `frame 1` match frame 1 and never frame 10/100/1000, and keep this
+/// clear of the `frame 300:` detail block the firmware also prints.
+fn frame_marker(frame: u32) -> String {
+    format!("doom_video: frame {frame}  ")
 }
 
 /// Resolve the curated Doom flash image.
@@ -276,14 +345,22 @@ fn build_doom_machine(
     let serial = Arc::new(Mutex::new(Vec::new()));
     bus.attach_uart_tx_sink(serial.clone(), false);
 
-    // The S3 is a DUAL-core chip and an SMP ESP-IDF build's `start_other_core`
-    // spins waiting for core 1 before it ever reaches app_main, so a
-    // single-core machine stalls in the mask ROM and prints only the banner.
-    // This particular Doom image never releases core 1 (the run loop's
-    // `appcpu_released_at_step` line does not appear — it is a unicore build),
-    // but the APP_CPU is attached anyway so the machine shape matches
-    // `labwired run --rom-boot` and the wasm constructor rather than being a
-    // reduced one that happens to work for this firmware.
+    // The S3 is a DUAL-core chip and this Doom image is a DUAL-core ESP-IDF
+    // build: the bootloader prints `cpu_start: Multicore app`, the PRO_CPU
+    // clears SYSTEM_CORE_1_CONTROL_0.RESETING at step 8,898,394, and core 1
+    // then boots the real ROM and goes on to execute application text.
+    //
+    // Nothing in THIS file releases it, and nothing here may: the release is
+    // the firmware's own store, turned into an unhalt by `Machine::advance`
+    // (`crates/core/src/machine/advance.rs`, the `APPCPU_RESET_RELEASED` block
+    // at the top of the advance loop) for every frontend at once. A
+    // frontend-side `.take()` of that flag — which both this file and
+    // `crates/cli/src/commands/run.rs` used to carry — can never win the race:
+    // `Machine::step()` is `advance(AdvanceRequest::single())`, and advance
+    // re-checks the flag at the top of its second iteration, before it returns
+    // on the fuel limit. So the engine owns the bring-up; this gate only
+    // observes it, in `DoomRun::core1_release_step`, which is asserted rather
+    // than merely printed.
     let mut app_cpu = XtensaLx7::new_app_cpu();
     app_cpu.faithful_windows = true;
     let mut machine = Machine::new(cpu, bus).with_secondary_cpu(app_cpu);
@@ -294,41 +371,197 @@ fn build_doom_machine(
     (machine, serial)
 }
 
-/// Parse `hash 0x........` out of the firmware's own frame-1 line.
-fn parse_frame1_hash(line: &str) -> u32 {
+/// Parse `hash 0x........` out of one of the firmware's frame stats lines.
+fn parse_frame_hash(line: &str) -> u32 {
     let rest = line
         .split_once("hash 0x")
-        .unwrap_or_else(|| panic!("frame-1 line has no `hash 0x` field: {line:?}"))
+        .unwrap_or_else(|| panic!("frame line has no `hash 0x` field: {line:?}"))
         .1;
     let hex: String = rest.chars().take_while(|c| c.is_ascii_hexdigit()).collect();
     u32::from_str_radix(&hex, 16)
-        .unwrap_or_else(|e| panic!("frame-1 hash {hex:?} is not hex ({e}): {line:?}"))
+        .unwrap_or_else(|e| panic!("frame hash {hex:?} is not hex ({e}): {line:?}"))
 }
 
-/// Boot the ESP32-S3 Doom lab through the real mask ROM and assert that the
-/// firmware's own frame-1 pixel hash is still the hardware oracle.
-///
-/// `#[ignore]`d for two reasons, both measured rather than assumed:
-///
-///   1. Reaching frame 1 takes 73,781,248 interpreted Xtensa steps — the real
-///      mask ROM, the 2nd-stage bootloader, ESP-IDF bring-up, the WAD load and
-///      a full title-screen render. That is 25.8 s of wall clock in `--release`
-///      on a heavily loaded machine (load avg ~59), and minutes in `debug`.
-///   2. Its firmware input is an 8.5 MB flash image that lives in the
-///      MONOREPO's `packages/playground/public/wasm/`, not in this repo, so a
-///      core-only checkout cannot supply it without
-///      `LABWIRED_ESP32S3_DOOM_FLASH`.
-///
-/// **Nothing runs this automatically.** Until it is wired into a lane it is a
-/// gate nobody pulls. It belongs as an `-- --ignored` step in
-/// `.github/workflows/core-nightly.yml` (next to the "WiFi thunk bring-up
-/// harness" step, which exists for exactly this reason), with
-/// `LABWIRED_ESP32S3_DOOM_FLASH` pointed at a checked-out copy of the image.
-/// See also the `NIGHTLY_ONLY` entry for this file in
-/// `crates/core/src/tests/scheduler_lane_coverage.rs`.
-#[test]
-#[ignore = "ROM-boots the S3 Doom lab to frame 1 (73.8M steps, ~26s release) and needs the monorepo's Doom flash image; run with --release --ignored"]
-fn esp32s3_doom_frame1_matches_hardware_oracle() {
+/// A booted Doom machine plus the console cursor and the dual-core
+/// observations, so one run can be driven to several frames in turn.
+struct DoomRun {
+    machine: Machine<XtensaLx7>,
+    serial: Arc<Mutex<Vec<u8>>>,
+    scanned: usize,
+    steps: u64,
+    /// The step at which `Machine::advance` unhalted the APP_CPU, i.e. the
+    /// first step after the PRO_CPU cleared `SYSTEM_CORE_1_CONTROL_0.RESETING`.
+    core1_release_step: Option<u64>,
+    core1_samples: u64,
+    core1_running_samples: u64,
+    core1_pc_buckets: BTreeMap<u32, u64>,
+}
+
+impl DoomRun {
+    fn new(chip: &ChipDescriptor, manifest: &SystemManifest) -> Self {
+        let (flash_path, flash) = doom_flash_image();
+        eprintln!(
+            "S3_DOOM_ORACLE flash={} bytes={} fnv1a64=0x{:016x}",
+            flash_path.display(),
+            flash.len(),
+            fnv1a_64(&flash),
+        );
+        let rom_images = pinned_rom_images();
+        let (machine, serial) = build_doom_machine(chip, manifest, flash, rom_images);
+        Self {
+            machine,
+            serial,
+            scanned: 0,
+            steps: 0,
+            core1_release_step: None,
+            core1_samples: 0,
+            core1_running_samples: 0,
+            core1_pc_buckets: BTreeMap::new(),
+        }
+    }
+
+    /// Advance until the firmware prints the stats line for `frame`, and return
+    /// that line. Panics with the console transcript if `max_steps` is reached.
+    ///
+    /// Advances exactly the way `labwired run` does — `Machine::step()`, i.e.
+    /// `advance(AdvanceRequest::single())`: one primary quantum, then the
+    /// secondary, then one peripheral boundary. `AdvanceRequest::run()` is a
+    /// different path (BatchPolicy::Auto + idle fast-forward) and a batched
+    /// advance can hide a faulting core 1, so the gate does not use it.
+    fn run_to_frame(&mut self, frame: u32, max_steps: u64) -> String {
+        let marker = frame_marker(frame);
+        loop {
+            assert!(
+                self.steps < max_steps,
+                "the Doom lab did not print its frame-{frame} line within {max_steps} steps \
+                 ({} simulated cycles). Console so far ({} bytes):\n{}",
+                self.machine.total_cycles,
+                self.serial.lock().unwrap().len(),
+                String::from_utf8_lossy(&self.serial.lock().unwrap()),
+            );
+
+            self.machine
+                .advance(AdvanceRequest::single())
+                .unwrap_or_else(|e| {
+                    panic!(
+                        "simulator error at step {} (pc=0x{:08x}): {e}",
+                        self.steps,
+                        self.machine.cpu.get_pc()
+                    )
+                });
+            self.steps += 1;
+
+            // Observe — never drive — the APP_CPU's release from reset.
+            if self.core1_release_step.is_none()
+                && self
+                    .machine
+                    .cpu_secondary
+                    .as_ref()
+                    .is_some_and(|core1| !core1.halted)
+            {
+                self.core1_release_step = Some(self.steps);
+                eprintln!("S3_DOOM_ORACLE core1_released_at_step={}", self.steps);
+            }
+
+            if !self.steps.is_multiple_of(SAMPLE_EVERY) {
+                continue;
+            }
+
+            if let Some(core1) = self.machine.cpu_secondary.as_ref() {
+                self.core1_samples += 1;
+                if !core1.halted && !core1.is_parked_idle() {
+                    self.core1_running_samples += 1;
+                    *self
+                        .core1_pc_buckets
+                        .entry(core1.get_pc() & !0xfff)
+                        .or_default() += 1;
+                }
+            }
+
+            // The frame stats line carries the hash AFTER the marker, so wait
+            // for the line to be terminated before reading it — stopping on the
+            // marker alone can catch a half-emitted line and parse a truncated
+            // hash. Scan forward from a cursor over whole lines only, so a
+            // multi-billion-step run never re-reads the whole transcript and a
+            // marker split across two scans is still found.
+            let console = self.serial.lock().unwrap();
+            if console.len() <= self.scanned {
+                continue;
+            }
+            let text = String::from_utf8_lossy(&console[self.scanned..]);
+            let mut consumed = 0usize;
+            let mut hit: Option<String> = None;
+            for line in text.split_inclusive('\n') {
+                if !line.ends_with('\n') {
+                    break;
+                }
+                consumed += line.len();
+                if hit.is_none() && line.contains(marker.as_str()) {
+                    hit = Some(line.trim_end().to_string());
+                }
+            }
+            self.scanned += consumed;
+            drop(console);
+            if let Some(line) = hit {
+                return line;
+            }
+        }
+    }
+
+    /// Fraction of sampled steps on which core 1 was out of reset and NOT
+    /// parked in `waiti` — i.e. actually retiring instructions.
+    fn core1_running_fraction(&self) -> f64 {
+        if self.core1_samples == 0 {
+            return 0.0;
+        }
+        self.core1_running_samples as f64 / self.core1_samples as f64
+    }
+
+    /// The busiest 4 KiB code buckets core 1 was seen in, most-sampled first.
+    /// Reported, never asserted: this file has no ELF and therefore no symbols,
+    /// so these are the raw evidence of where core 1 spent the window.
+    fn core1_hot_buckets(&self, top: usize) -> Vec<(u32, u64)> {
+        let mut buckets: Vec<(u32, u64)> = self
+            .core1_pc_buckets
+            .iter()
+            .map(|(pc, count)| (*pc, *count))
+            .collect();
+        buckets.sort_by_key(|bucket| std::cmp::Reverse(bucket.1));
+        buckets.truncate(top);
+        buckets
+    }
+
+    /// Assert the ILI9341 actually received pixels, and report its digest.
+    ///
+    /// The firmware's oracle is computed over its OWN ARGB buffer, so it says
+    /// nothing about whether those pixels ever reached the panel. The
+    /// LCD_CAM -> GDMA -> i80 -> ILI9341 path is a second pixel pipeline that a
+    /// speed change can break with the oracle still green. Assert its LIVENESS
+    /// (speed-independent) and report its digest rather than pinning it: how
+    /// much of an async DMA push has landed at the instant the firmware logs
+    /// its line legitimately moves when the engine's timing moves.
+    fn assert_panel_live(&self, observed: u32) -> (usize, usize, u64) {
+        let panel = &self.machine.bus.ili9341_parallel[0];
+        let panel_fb = panel.oriented_framebuffer();
+        let panel_ink = panel_fb.iter().filter(|&&byte| byte != 0).count();
+        let digest = fnv1a_64(&panel_fb);
+        assert!(
+            panel.display_on(),
+            "the ILI9341 never left sleep/display-off: the firmware's frame hash is right \
+             but nothing was ever shown. Panel digest 0x{digest:016x}.",
+        );
+        assert!(
+            panel_ink > panel_fb.len() / 10,
+            "the ILI9341 framebuffer holds only {panel_ink}/{} non-zero bytes. \
+             The firmware rendered the right pixels (0x{observed:08x}) but the \
+             LCD_CAM -> GDMA -> i80 -> panel path did not deliver them.",
+            panel_fb.len(),
+        );
+        (panel_fb.len(), panel_ink, digest)
+    }
+}
+
+fn doom_inputs() -> (ChipDescriptor, SystemManifest) {
     let root = core_root();
     let chip_yaml = root.join("configs/chips/esp32s3.yaml");
     let system_yaml = root.join("examples/esp32s3-i80-doom/system.yaml");
@@ -342,104 +575,58 @@ fn esp32s3_doom_frame1_matches_hardware_oracle() {
         "missing Doom system manifest {}",
         system_yaml.display()
     );
-    let chip = ChipDescriptor::from_file(&chip_yaml).expect("parse S3 chip descriptor");
-    let manifest = SystemManifest::from_file(&system_yaml).expect("parse Doom system manifest");
+    (
+        ChipDescriptor::from_file(&chip_yaml).expect("parse S3 chip descriptor"),
+        SystemManifest::from_file(&system_yaml).expect("parse Doom system manifest"),
+    )
+}
 
-    let (flash_path, flash) = doom_flash_image();
-    eprintln!(
-        "S3_DOOM_ORACLE flash={} bytes={} fnv1a64=0x{:016x}",
-        flash_path.display(),
-        flash.len(),
-        fnv1a_64(&flash),
-    );
-    let rom_images = pinned_rom_images();
-    let (mut machine, serial) = build_doom_machine(&chip, &manifest, flash, rom_images);
+/// Boot the ESP32-S3 Doom lab through the real mask ROM and assert that the
+/// firmware's own frame-1 pixel hash is still the hardware oracle.
+///
+/// `#[ignore]`d for two reasons, both measured rather than assumed:
+///
+///   1. Reaching frame 1 takes 73,781,248 interpreted Xtensa steps — the real
+///      mask ROM, the 2nd-stage bootloader, ESP-IDF bring-up, the WAD load and
+///      a full title-screen render. That is 18 s of wall clock in `--release`
+///      on an M-series Mac, and minutes in `debug`.
+///   2. Its firmware input is an 8.5 MB flash image that lives in the
+///      MONOREPO's `packages/playground/public/wasm/`, not in this repo, so a
+///      core-only checkout cannot supply it without
+///      `LABWIRED_ESP32S3_DOOM_FLASH`.
+///
+/// **Nothing runs this automatically.** Until it is wired into a lane it is a
+/// gate nobody pulls. It belongs as an `-- --ignored` step in
+/// `.github/workflows/core-nightly.yml` (next to the "WiFi thunk bring-up
+/// harness" step, which exists for exactly this reason), with
+/// `LABWIRED_ESP32S3_DOOM_FLASH` pointed at a checked-out copy of the image.
+/// See also the `NIGHTLY_ONLY` entry for this file in
+/// `crates/core/src/tests/scheduler_lane_coverage.rs`.
+#[test]
+#[ignore = "ROM-boots the S3 Doom lab to frame 1 (73.8M steps, ~18s release) and needs the monorepo's Doom flash image; run with --release --ignored"]
+fn esp32s3_doom_frame1_matches_hardware_oracle() {
+    let (chip, manifest) = doom_inputs();
+    let mut run = DoomRun::new(&chip, &manifest);
 
-    // Advance exactly the way `labwired run` does — `Machine::step()`, i.e.
-    // `advance(AdvanceRequest::single())`: one primary quantum, then the
-    // secondary, then one peripheral boundary. `AdvanceRequest::run()` is a
-    // different path (BatchPolicy::Auto + idle fast-forward) and a batched
-    // advance can hide a faulting core 1, so the gate does not use it.
     let started = Instant::now();
-    let mut steps: u64 = 0;
-    let mut scanned: usize = 0;
-    let mut appcpu_released = false;
-    let frame1_line = loop {
-        assert!(
-            steps < MAX_STEPS,
-            "the Doom lab did not print its frame-1 line within {MAX_STEPS} steps \
-             ({} simulated cycles). Console so far ({} bytes):\n{}",
-            machine.total_cycles,
-            serial.lock().unwrap().len(),
-            String::from_utf8_lossy(&serial.lock().unwrap()),
-        );
-
-        // Release the APP_CPU on the real hardware edge: the PRO_CPU clearing
-        // CORE_1_RESETING, surfaced by SYSTEM_CORE_1_CONTROL. Same edge the
-        // CLI's rom-boot loop acts on; no firmware-symbol hooks.
-        if !appcpu_released
-            && labwired_core::peripherals::esp_xtensa_common::rom_thunks::APPCPU_RESET_RELEASED
-                .with(|slot| slot.take())
-        {
-            appcpu_released = true;
-            if let Some(core1) = machine.cpu_secondary.as_mut() {
-                core1.halted = false;
-            }
-            eprintln!("S3_DOOM_ORACLE appcpu_released_at_step={steps}");
-        }
-
-        machine.step().unwrap_or_else(|e| {
-            panic!(
-                "simulator error at step {steps} (pc=0x{:08x}): {e}",
-                machine.cpu.get_pc()
-            )
-        });
-        steps += 1;
-
-        // Scan the console in slices from a cursor so a multi-billion-step run
-        // does not re-read the whole transcript every instruction. The frame-1
-        // stats line carries the hash AFTER the marker, so wait for the line to
-        // be terminated before reading it — stopping on the marker alone can
-        // catch a half-emitted line and parse a truncated hash.
-        if steps % 4096 != 0 {
-            continue;
-        }
-        let console = serial.lock().unwrap();
-        if console.len() <= scanned {
-            continue;
-        }
-        let text = String::from_utf8_lossy(&console);
-        if let Some(at) = text[scanned..].find(FRAME1_MARKER) {
-            let line_start = scanned + at;
-            if let Some(end) = text[line_start..].find('\n') {
-                break text[line_start..line_start + end].trim_end().to_string();
-            }
-            // Marker present but the line is still being emitted: keep the
-            // cursor before it so the next pass re-finds it.
-            continue;
-        }
-        // Keep the tail so a marker split across two scans is still found.
-        scanned = console.len().saturating_sub(FRAME1_MARKER.len());
-    };
+    let frame1_line = run.run_to_frame(1, MAX_STEPS);
     let elapsed = started.elapsed();
-
-    let observed = parse_frame1_hash(&frame1_line);
+    let observed = parse_frame_hash(&frame1_line);
 
     // Observations, NOT goldens. An optimisation is meant to change these.
-    let panel = &machine.bus.ili9341_parallel[0];
-    let panel_fb = panel.oriented_framebuffer();
-    let panel_ink = panel_fb.iter().filter(|&&b| b != 0).count();
+    let (panel_bytes, panel_ink, panel_digest) = run.assert_panel_live(observed);
     eprintln!(
         "S3_DOOM_ORACLE frame1_line={frame1_line:?}\n\
          S3_DOOM_ORACLE frame1_fnv1a32=0x{observed:08x} oracle=0x{ORACLE_FRAME1_FNV1A32:08x} \
-         steps={steps} total_cycles={} wall_ms={} panel_display_on={} panel_fb_bytes={} \
-         panel_ink_bytes={panel_ink} panel_fnv1a64=0x{:016x} console_bytes={}",
-        machine.total_cycles,
+         steps={} total_cycles={} wall_ms={} panel_fb_bytes={panel_bytes} \
+         panel_ink_bytes={panel_ink} panel_fnv1a64=0x{panel_digest:016x} console_bytes={} \
+         core1_release_step={:?} core1_running_fraction={:.3}",
+        run.steps,
+        run.machine.total_cycles,
         elapsed.as_millis(),
-        panel.display_on(),
-        panel_fb.len(),
-        fnv1a_64(&panel_fb),
-        serial.lock().unwrap().len(),
+        run.serial.lock().unwrap().len(),
+        run.core1_release_step,
+        run.core1_running_fraction(),
     );
 
     // THE GATE.
@@ -454,24 +641,113 @@ fn esp32s3_doom_frame1_matches_hardware_oracle() {
          hardware does. It is NOT allowed to be updated to make a speed change pass."
     );
 
-    // The oracle above is computed by the FIRMWARE over its own ARGB buffer, so
-    // it says nothing about whether those pixels ever reached the panel. The
-    // LCD_CAM -> GDMA -> i80 -> ILI9341 path is a second pixel pipeline that a
-    // speed change can break with the oracle still green. Assert its LIVENESS
-    // (speed-independent) and report its digest rather than pinning it: how much
-    // of an async DMA push has landed at the instant the firmware logs its line
-    // legitimately moves when the engine's timing moves.
+    // The APP_CPU must have left reset on its own. Nothing in this file
+    // releases it: the firmware writes SYSTEM_CORE_1_CONTROL_0, the
+    // core1_control peripheral raises APPCPU_RESET_RELEASED on the RESETING
+    // 1->0 edge, and `Machine::advance` unhalts the secondary. If that chain
+    // breaks, a dual-core ESP-IDF image runs half a machine and this gate has
+    // to say so rather than quietly measuring a unicore run.
     assert!(
-        panel.display_on(),
-        "the ILI9341 never left sleep/display-off: the firmware's frame-1 hash is right \
-         but nothing was ever shown. Panel digest 0x{:016x}.",
-        fnv1a_64(&panel_fb),
+        run.core1_release_step.is_some(),
+        "the APP_CPU never left reset before frame 1. The Doom image is a DUAL-core \
+         ESP-IDF build (`cpu_start: Multicore app`); core 1 was measured leaving reset at \
+         step 8,898,394. A frame-1 hash produced without core 1 is not the machine the \
+         oracle was taken on."
     );
+}
+
+/// Run the same machine on into the DUAL-CORE steady state and assert the
+/// firmware's pixel hash there too.
+///
+/// This is the gate the frame-1 one cannot be: by [`STEADY_FRAME`] the attract
+/// demo is playing, the screen contents have moved off the title page, and core
+/// 1 is executing application text rather than sitting in `waiti`. It
+/// deliberately re-asserts frame 1 on the way through, so a failure that is
+/// really a frame-1 regression is reported as one.
+///
+/// `#[ignore]`d for the same two reasons as the frame-1 gate, with a much
+/// bigger first one: frame 180 is 627,408,896 steps, measured at 128 s of wall
+/// clock in `--release` on an M-series Mac — 8.5x the frame-1 gate. That is a
+/// nightly cost, not a per-PR one.
+#[test]
+#[ignore = "ROM-boots the S3 Doom lab into dual-core steady state (frame 180, 627M steps, ~128s release) and needs the monorepo's Doom flash image; run with --release --ignored"]
+fn esp32s3_doom_steady_state_matches_recorded_oracle() {
+    let (chip, manifest) = doom_inputs();
+    let mut run = DoomRun::new(&chip, &manifest);
+
+    let started = Instant::now();
+    let frame1_line = run.run_to_frame(1, MAX_STEPS);
+    let frame1_hash = parse_frame_hash(&frame1_line);
+    let frame1_steps = run.steps;
+    assert_eq!(
+        frame1_hash, ORACLE_FRAME1_FNV1A32,
+        "frame-1 pixels changed; fix that before reading the steady-state result. \
+         observed 0x{frame1_hash:08x}, hardware oracle 0x{ORACLE_FRAME1_FNV1A32:08x}\n\
+         firmware line: {frame1_line}"
+    );
+    // Restart the core-1 activity census at frame 1 so the reported fraction
+    // describes the STEADY state and is not diluted by the long boot that
+    // precedes it, during which core 1 is legitimately in reset or parked.
+    run.core1_samples = 0;
+    run.core1_running_samples = 0;
+    run.core1_pc_buckets.clear();
+
+    let steady_line = run.run_to_frame(STEADY_FRAME, MAX_STEPS_STEADY);
+    let elapsed = started.elapsed();
+    let observed = parse_frame_hash(&steady_line);
+
+    let (panel_bytes, panel_ink, panel_digest) = run.assert_panel_live(observed);
+    let hot: Vec<String> = run
+        .core1_hot_buckets(6)
+        .into_iter()
+        .map(|(pc, count)| format!("0x{pc:08x}:{count}"))
+        .collect();
+    let hot = hot.join(",");
+    eprintln!(
+        "S3_DOOM_ORACLE steady_line={steady_line:?}\n\
+         S3_DOOM_ORACLE steady_frame={STEADY_FRAME} steady_fnv1a32=0x{observed:08x} \
+         oracle=0x{ORACLE_STEADY_FNV1A32:08x} steps={} frame1_steps={frame1_steps} \
+         total_cycles={} wall_ms={} panel_fb_bytes={panel_bytes} panel_ink_bytes={panel_ink} \
+         panel_fnv1a64=0x{panel_digest:016x} console_bytes={} core1_release_step={:?} \
+         core1_running_fraction={:.3} core1_hot_pc_4k={hot}",
+        run.steps,
+        run.machine.total_cycles,
+        elapsed.as_millis(),
+        run.serial.lock().unwrap().len(),
+        run.core1_release_step,
+        run.core1_running_fraction(),
+    );
+
+    // THE GATE.
+    assert_eq!(
+        observed, ORACLE_STEADY_FNV1A32,
+        "ESP32-S3 Doom frame-{STEADY_FRAME} pixels CHANGED.\n\
+         observed 0x{observed:08x}, recorded oracle 0x{ORACLE_STEADY_FNV1A32:08x}\n\
+         firmware line: {steady_line}\n\
+         frame 1 was still 0x{frame1_hash:08x} (correct), so the rendered pixels themselves \
+         are intact and this is the DUAL-CORE steady state moving. Two things can do that: \
+         a real rendering difference on core 1, or a change in SIMULATED timing that puts \
+         Doom's attract demo on a different game tic at its own frame {STEADY_FRAME}. \
+         Work out which before re-recording."
+    );
+
+    // Core 1 must have been doing real work through the window this gate
+    // covers, otherwise the hash above came from the same single core that
+    // produced frame 1 and this test adds nothing over the cheaper one.
     assert!(
-        panel_ink > panel_fb.len() / 10,
-        "the ILI9341 framebuffer holds only {panel_ink}/{} non-zero bytes at frame 1. \
-         The firmware rendered the right pixels (0x{observed:08x}) but the \
-         LCD_CAM -> GDMA -> i80 -> panel path did not deliver them.",
-        panel_fb.len(),
+        run.core1_release_step.is_some(),
+        "the APP_CPU never left reset; see the frame-1 gate's message."
+    );
+    let running = run.core1_running_fraction();
+    assert!(
+        running > 0.25,
+        "core 1 was out of `waiti` on only {:.1}% of samples between frame 1 and frame \
+         {STEADY_FRAME} ({}/{} samples). This gate exists to cover the DUAL-core steady \
+         state; if the APP_CPU is parked for nearly all of it, the steady-state hash is \
+         just a longer single-core run, and the real regression is that core 1 stopped \
+         doing rendering work. Hot core-1 PC buckets (4 KiB): {hot}",
+        running * 100.0,
+        run.core1_running_samples,
+        run.core1_samples,
     );
 }
