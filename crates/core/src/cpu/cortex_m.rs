@@ -595,17 +595,17 @@ impl CortexM {
         let frame_ptr = if frame_on_psp { self.psp } else { self.msp };
 
         self.r0 = bus.read_u32(frame_ptr as u64)?;
-        self.r1 = bus.read_u32((frame_ptr + 4) as u64)?;
-        self.r2 = bus.read_u32((frame_ptr + 8) as u64)?;
-        self.r3 = bus.read_u32((frame_ptr + 12) as u64)?;
-        self.r12 = bus.read_u32((frame_ptr + 16) as u64)?;
-        self.lr = bus.read_u32((frame_ptr + 20) as u64)?;
-        self.pc = bus.read_u32((frame_ptr + 24) as u64)? & !1;
-        self.xpsr = bus.read_u32((frame_ptr + 28) as u64)?;
+        self.r1 = bus.read_u32(frame_ptr.wrapping_add(4) as u64)?;
+        self.r2 = bus.read_u32(frame_ptr.wrapping_add(8) as u64)?;
+        self.r3 = bus.read_u32(frame_ptr.wrapping_add(12) as u64)?;
+        self.r12 = bus.read_u32(frame_ptr.wrapping_add(16) as u64)?;
+        self.lr = bus.read_u32(frame_ptr.wrapping_add(20) as u64)?;
+        self.pc = bus.read_u32(frame_ptr.wrapping_add(24) as u64)? & !1;
+        self.xpsr = bus.read_u32(frame_ptr.wrapping_add(28) as u64)?;
         self.it_state = Self::itstate_from_xpsr(self.xpsr);
 
         // Advance the bank the frame was popped from.
-        let new_sp = frame_ptr + 32;
+        let new_sp = frame_ptr.wrapping_add(32);
         if frame_on_psp {
             self.psp = new_sp;
         } else {
@@ -1361,13 +1361,18 @@ impl CortexM {
                     // data-access fault, and escalating it would re-enter this
                     // same broken stack forever. See `CortexM::bus_load`.
                     Self::bus_store(bus, frame_ptr, AccessWidth::Word, self.r0)?;
-                    Self::bus_store(bus, frame_ptr + 4, AccessWidth::Word, self.r1)?;
-                    Self::bus_store(bus, frame_ptr + 8, AccessWidth::Word, self.r2)?;
-                    Self::bus_store(bus, frame_ptr + 12, AccessWidth::Word, self.r3)?;
-                    Self::bus_store(bus, frame_ptr + 16, AccessWidth::Word, self.r12)?;
-                    Self::bus_store(bus, frame_ptr + 20, AccessWidth::Word, self.lr)?;
-                    Self::bus_store(bus, frame_ptr + 24, AccessWidth::Word, self.pc)?;
-                    Self::bus_store(bus, frame_ptr + 28, AccessWidth::Word, save_xpsr)?;
+                    Self::bus_store(bus, frame_ptr.wrapping_add(4), AccessWidth::Word, self.r1)?;
+                    Self::bus_store(bus, frame_ptr.wrapping_add(8), AccessWidth::Word, self.r2)?;
+                    Self::bus_store(bus, frame_ptr.wrapping_add(12), AccessWidth::Word, self.r3)?;
+                    Self::bus_store(bus, frame_ptr.wrapping_add(16), AccessWidth::Word, self.r12)?;
+                    Self::bus_store(bus, frame_ptr.wrapping_add(20), AccessWidth::Word, self.lr)?;
+                    Self::bus_store(bus, frame_ptr.wrapping_add(24), AccessWidth::Word, self.pc)?;
+                    Self::bus_store(
+                        bus,
+                        frame_ptr.wrapping_add(28),
+                        AccessWidth::Word,
+                        save_xpsr,
+                    )?;
 
                     // Bank the preempted stack pointer into its bank (PSP or MSP)
                     // BEFORE entering Handler mode, then switch the live `sp` to MSP.
@@ -1397,7 +1402,7 @@ impl CortexM {
 
                     // Jump to ISR handler
                     let vtor = self.vtor.load(Ordering::SeqCst);
-                    let vector_addr = vtor + (exception_num * 4);
+                    let vector_addr = vtor.wrapping_add(exception_num.wrapping_mul(4));
                     if trace_exc_enabled() {
                         eprintln!(
                             "EXC take num={} vtor=0x{:08X} vec=0x{:08X} fetch={:?}",
@@ -1446,7 +1451,7 @@ impl CortexM {
             let is_32bit = (h1 & 0xE000) == 0xE000 && (h1 & 0x1800) != 0;
 
             let (instr, op, pincr, cyc) = if is_32bit {
-                let h2 = bus.read_u16((fetch_pc + 2) as u64)?;
+                let h2 = bus.read_u16(fetch_pc.wrapping_add(2) as u64)?;
                 let instr = decode_thumb_32(h1, h2);
                 let op = ((h1 as u32) << 16) | h2 as u32;
                 (instr, op, 4, 2)
@@ -2582,7 +2587,7 @@ impl CortexM {
                     }
                 }
                 Instruction::Branch { offset } => {
-                    let target = (self.pc as i32 + 4 + offset) as u32;
+                    let target = (self.pc as i32).wrapping_add(4).wrapping_add(offset) as u32;
                     self.pc = target;
                     pc_increment = 0;
                 }
@@ -3049,7 +3054,7 @@ impl CortexM {
                 }
 
                 Instruction::LdrLit { rt, imm } => {
-                    let pc_val = (self.pc & !3) + 4;
+                    let pc_val = (self.pc & !3).wrapping_add(4);
                     let addr = pc_val.wrapping_add(imm as u32);
                     let val = self.load(bus, addr, AccessWidth::Word)?;
                     self.write_reg(rt, val);
@@ -3070,7 +3075,7 @@ impl CortexM {
                     self.write_reg(rd, res);
                 }
                 Instruction::Adr { rd, imm } => {
-                    let pc_val = (self.pc & !3) + 4;
+                    let pc_val = (self.pc & !3).wrapping_add(4);
                     let res = pc_val.wrapping_add(imm as u32);
                     self.write_reg(rd, res);
                 }
@@ -3380,15 +3385,15 @@ impl CortexM {
                 Instruction::Bl { offset } => {
                     // BL: Branch with Link.
                     // LR = Next Instruction Address | 1 (Thumb bit)
-                    let _next_pc = self.pc + 4; // 32-bit instruction size for BL?
-                                                // Wait. BL is decoded as 32-bit.
-                                                // If we assume decode_thumb_16 handled a 32-bit stream, then PC increment should be adjusted?
-                                                // Or does `decode_thumb_16` return `BlPrefix` and then we handle it?
-                                                // The current `decoder` returns `Bl` with full offset if it sees the pair??
-                                                // NO. My decoder implementation for BL (in previous turn) was:
-                                                // `Instruction::Bl { offset: offset << 1 }`
-                                                // But `decode_thumb_16` ONLY sees 16 bits. It cannot see the second half!
-                                                // Real decoding of BL requires fetching 32 bits.
+                    let _next_pc = self.pc.wrapping_add(4); // 32-bit instruction size for BL?
+                                                            // Wait. BL is decoded as 32-bit.
+                                                            // If we assume decode_thumb_16 handled a 32-bit stream, then PC increment should be adjusted?
+                                                            // Or does `decode_thumb_16` return `BlPrefix` and then we handle it?
+                                                            // The current `decoder` returns `Bl` with full offset if it sees the pair??
+                                                            // NO. My decoder implementation for BL (in previous turn) was:
+                                                            // `Instruction::Bl { offset: offset << 1 }`
+                                                            // But `decode_thumb_16` ONLY sees 16 bits. It cannot see the second half!
+                                                            // Real decoding of BL requires fetching 32 bits.
 
                     // CRITICAL CORRECTION: `decode_thumb_16` is 16-bit.
                     // BL is 32-bit (encoded as two 16-bit halves).
@@ -3402,14 +3407,14 @@ impl CortexM {
                     // For now, let's just implement the execution stub assuming the decoder *somehow* gave us the full BL.
                     // But since the decoder only sees 16 bits, we need to handle the prefix state in the CPU loop!
 
-                    self.lr = (self.pc + 4) | 1;
-                    let target = (self.pc as i32 + 4 + offset) as u32;
+                    self.lr = self.pc.wrapping_add(4) | 1;
+                    let target = (self.pc as i32).wrapping_add(4).wrapping_add(offset) as u32;
                     self.pc = target;
                     pc_increment = 0;
                 }
                 Instruction::BranchCond { cond, offset } => {
                     if self.check_condition(cond) {
-                        let target = (self.pc as i32 + 4 + offset) as u32;
+                        let target = (self.pc as i32).wrapping_add(4).wrapping_add(offset) as u32;
                         self.pc = target;
                         pc_increment = 0;
                     }
@@ -6109,6 +6114,98 @@ mod tests {
                 machine.step_profile().cpu_instructions < 10,
                 "boxed CPU path should still leave the batch loop at WFI"
             );
+        }
+    }
+
+    /// Exception entry with a stack pointer near zero must WRAP the frame, not
+    /// panic.
+    ///
+    /// `frame_ptr = sp.wrapping_sub(32)` already wraps — it always has. The
+    /// eight stacking stores then computed `frame_ptr + 4 .. + 28` with plain
+    /// `+`, so a frame pointer that has wrapped past 0 overflowed `u32` on the
+    /// fifth store. Under `[profile.release] overflow-checks = true` that is a
+    /// PANIC inside the simulator on perfectly legal guest input: any firmware
+    /// whose SP has run down past the bottom of its stack (0x10 here) and then
+    /// takes an exception. Real hardware wraps the address and faults on the
+    /// access, or writes wherever the wrapped address lands; it does not stop
+    /// the machine.
+    #[test]
+    fn armv7m_exception_entry_wraps_the_stack_frame_instead_of_overflowing() {
+        let mut bus = MockBus::new();
+        let mut cpu = CortexM::new();
+        cpu.pc = 0x1000;
+        // A stack pointer 0x10 above zero: the 32-byte frame does not fit
+        // below it, so `frame_ptr` wraps to 0xFFFF_FFF0.
+        cpu.sp = 0x10;
+        cpu.r0 = 0xA0A0_A0A0;
+        cpu.r12 = 0xCCCC_CCCC;
+        // PendSV (exception 14): priority 0 from SHPR3, no NVIC ISPR to consult.
+        cpu.pending_exceptions[0] = 1 << 14;
+        // Vector table entry for PendSV.
+        bus.write_u32(0x38, 0x2001).unwrap();
+
+        let config = bus.config.clone();
+        cpu.step_internal(&mut bus, &[], &config).unwrap();
+
+        assert_eq!(
+            cpu.msp, 0xFFFF_FFF0,
+            "frame pointer must wrap, not saturate"
+        );
+        // R0 lands below the wrap, R12 lands above it: 0xFFFF_FFF0 + 16 == 0.
+        assert_eq!(bus.read_u32(0xFFFF_FFF0).unwrap(), 0xA0A0_A0A0);
+        assert_eq!(bus.read_u32(0x0000_0000).unwrap(), 0xCCCC_CCCC);
+        assert_eq!(cpu.pc, 0x2000, "PendSV handler must be entered");
+    }
+
+    /// The matching unstacking path: exception return from a frame whose
+    /// pointer is near the top of the address space.
+    ///
+    /// `frame_ptr + 4 .. + 32` had the same plain `+`. The stack pointer being
+    /// restored is whatever the guest put in MSP/PSP, so this is reachable
+    /// from a single `MSR MSP, Rn` — or from the wrapped frame the entry path
+    /// above leaves behind.
+    #[test]
+    fn armv7m_exception_return_wraps_the_stack_frame_instead_of_overflowing() {
+        let mut bus = MockBus::new();
+        let mut cpu = CortexM::new();
+        cpu.active_exception = 14;
+        cpu.sp = 0xFFFF_FFF0;
+        bus.write_u32(0xFFFF_FFF0, 0x1111_1111).unwrap(); // r0
+        bus.write_u32(0x0000_0000, 0x2222_2222).unwrap(); // r12, after the wrap
+        bus.write_u32(0x0000_0008, 0x0000_3001).unwrap(); // stacked PC
+
+        // 0xFFFF_FFF9 = return to Thread mode on MSP.
+        cpu.exception_return(0xFFFF_FFF9, &mut bus).unwrap();
+
+        assert_eq!(cpu.r0, 0x1111_1111);
+        assert_eq!(cpu.r12, 0x2222_2222);
+        assert_eq!(cpu.pc, 0x0000_3000);
+        assert_eq!(cpu.msp, 0x0000_0010, "SP must advance by 32 with a wrap");
+    }
+
+    /// A branch executed from the top of the low half of the address space.
+    ///
+    /// The target was computed as `(self.pc as i32 + 4 + offset) as u32`. At
+    /// PC 0x7FFF_FFFC the `+ 4` alone overflows `i32`, so the instruction
+    /// panicked before the offset was even applied. 0x6000_0000-0x9FFF_FFFF is
+    /// ordinary executable external RAM in the ARMv7-M memory map, so this is
+    /// legal guest code, and the ARM result is the wrapped 32-bit address.
+    #[test]
+    fn armv7m_branch_wraps_at_the_signed_pc_boundary() {
+        for (name, encoding, pc, expected) in [
+            // B #0 at the i32 boundary: 0x7FFF_FFFC + 4 + 0.
+            ("b", 0xE000u16, 0x7FFF_FFFCu32, 0x8000_0000u32),
+            // BEQ #0 with Z set, same boundary.
+            ("beq", 0xD000u16, 0x7FFF_FFFCu32, 0x8000_0000u32),
+        ] {
+            let mut bus = MockBus::new();
+            let mut cpu = CortexM::new();
+            cpu.pc = pc;
+            cpu.xpsr |= 1 << 30; // Z = 1, so the conditional branch is taken.
+            bus.write_u16(pc as u64, encoding).unwrap();
+            let config = bus.config.clone();
+            cpu.step_internal(&mut bus, &[], &config).unwrap();
+            assert_eq!(cpu.pc, expected, "{name} must wrap to {expected:#010x}");
         }
     }
 }
