@@ -143,11 +143,32 @@ const ORACLE_FRAME1_FNV1A32: u32 = 0xec23_6c72;
 const ORACLE_STEADY_FNV1A32: u32 = 0xb053_38b8;
 
 /// The frame the steady-state gate stops on. The firmware logs every 60th
-/// frame; 180 is the first logged frame after the title screen stops being
-/// static. Raising it covers more of the demo at roughly 1.15 M steps per
-/// frame: frame 300 was measured at 1,083,641,856 steps (~224 s release) and
-/// frame 480 at 1,779,945,472 (~352 s).
-const STEADY_FRAME: u32 = 180;
+/// frame.
+///
+/// # Why 420 and not 180
+///
+/// This was 180, recorded before `12fe74e76` (#1026) fixed the S3 core clock.
+/// `Esp32s3Opts::cpu_clock_hz` had defaulted to 80 MHz while every chip
+/// descriptor declared 240 MHz, and SYSTIMER divides the CPU cycle stream by
+/// `cpu_clock_hz / 16 MHz` — so the divider was 5 where the part needs 15 and
+/// the S3's simulated wall clock ran exactly 3x too fast.
+///
+/// Doom's attract demo advances on GAME time, so a firmware that now measures
+/// time correctly renders more frames before reaching the same demo tic. The
+/// pixel value below did not change: `0xb053_38b8` was the hash at frame 180
+/// on the broken clock and is the hash at frame 420 on the correct one
+/// (420/180 = 2.33). Only the frame INDEX moved. Measured on the corrected
+/// clock, at 1,803,251,712 steps:
+///
+/// | frame | hash | note |
+/// |---|---|---|
+/// | 300 | `0xec236c72` | still the static title page |
+/// | 360 | `0x97960091` | first logged frame off the title page |
+/// | 420 | `0xb05338b8` | this gate — same pixels as old frame 180 |
+///
+/// That the constant survived a 3x clock correction unchanged is the evidence
+/// it describes rendered PIXELS and not an accident of pacing.
+const STEADY_FRAME: u32 = 420;
 
 /// FNV-1a-64 of the curated Doom flash image. Pinned so that swapping the
 /// asset fails HERE, with a clear message, rather than silently moving the
@@ -670,7 +691,7 @@ fn esp32s3_doom_frame1_matches_hardware_oracle() {
 /// clock in `--release` on an M-series Mac — 8.5x the frame-1 gate. That is a
 /// nightly cost, not a per-PR one.
 #[test]
-#[ignore = "ROM-boots the S3 Doom lab into dual-core steady state (frame 180, 627M steps, ~128s release) and needs the monorepo's Doom flash image; run with --release --ignored"]
+#[ignore = "ROM-boots the S3 Doom lab into dual-core steady state (frame 420, 1.80B steps, ~495 s release) and needs the monorepo's Doom flash image; run with --release --ignored"]
 fn esp32s3_doom_steady_state_matches_recorded_oracle() {
     let (chip, manifest) = doom_inputs();
     let mut run = DoomRun::new(&chip, &manifest);
