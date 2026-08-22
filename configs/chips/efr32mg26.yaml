@@ -31,6 +31,9 @@
 #   mapped.
 #
 # Known divergences from silicon (honest list, L1 smoke target):
+#   - (FIXED) `analogWrite`'s waveform reaches a PAD. `GPIO_TIMERROUTE` is a
+#     real model, so a TIMER compare output is connected to the pin its route
+#     names — the last of the three gaps this board's onboarding note listed.
 #   - (FIXED) CMU and TIMER0 were `type: stub`. Both are real models now, and
 #     the clock gates gate. See `peripherals/efr32/{cmu,timer}.rs`.
 #   - Every register in the seven windows this part's silicon capture covers
@@ -206,12 +209,19 @@ peripherals:
   #     ROUTEEN   +0x00   CC0ROUTE +0x04   CC1ROUTE +0x08   CC2ROUTE +0x0C
   #     CDTI0ROUTE +0x10  CDTI1ROUTE +0x14  CDTI2ROUTE +0x18
   #
-  # Modelling it is what would make `analogWrite` drive a pad and a PWM trace
-  # measurable. The duty IS already programmed into real TIMER1 CC registers
-  # and is correct on silicon once a route is set; what is missing is the
-  # route, not the timer. Deliberately not modelled here yet — the offsets are
-  # recorded so the next attempt does not re-derive them, and re-deriving is
-  # where a wrong number would come from.
+  # (FIXED) That block is modelled now — `gpio_timerroute` above. `analogWrite`
+  # drives a pad, proven end to end in crates/core/tests/efr32mg26_pwm_pad.rs
+  # against this very yaml. What remains a stub here is USARTROUTE, whose
+  # writes still decode and read back zero.
+  # The TIMER route block: REAL, not a stub. This is what makes a timer's
+  # compare output reach a pin — `analogWrite` programmed the correct duty into
+  # real CC registers and lit nothing until this existed.
+  - id: "gpio_timerroute"
+    type: "efr32s2_timerroute"
+    clock: { reg: "clken0", bit: 26 }
+    base_address: 0x4003C6E0
+    size: "320B"
+
   - id: "gpio_route"
     type: "stub"
     # Same GPIO clock as the port structs — the ROUTE registers live in the
