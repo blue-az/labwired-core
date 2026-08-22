@@ -68,7 +68,7 @@
 //!   so an edge narrower than one snapshot interval is not seen. A real EXTI
 //!   latches asynchronously and would catch it.
 
-use crate::{Peripheral, PeripheralTickResult, SimResult};
+use crate::{CycleClock, Peripheral, PeripheralTickResult, SimResult};
 
 /// Window base: `GPIO_S_BASE + 0x400`. Offsets below are relative to THAT, not
 /// to the GPIO block, so `0x00` here is `GPIO_EXTIPSELL`.
@@ -106,6 +106,16 @@ pub struct Efr32s2GpioExti {
     ien: u32,
     em4wuen: u32,
     em4wupol: u32,
+
+    /// Bus-published cycle clock, attached by `SystemBus::add_peripheral`.
+    /// `Some` selects scheduler mode; `None` keeps the legacy per-cycle walk
+    /// (feature off, or a hand-built test bus that bypasses the registration
+    /// choke).
+    clock: Option<CycleClock>,
+    /// In-flight singleton guard (cancellation contract layer 2): true while a
+    /// held-level re-emit event is queued for this model, so a second MMIO
+    /// write does not stack a duplicate wake on top of the live chain.
+    chain_live: bool,
 }
 
 impl Default for Efr32s2GpioExti {
@@ -125,6 +135,8 @@ impl Efr32s2GpioExti {
             ien: 0,
             em4wuen: 0,
             em4wupol: 0,
+            clock: None,
+            chain_live: false,
         }
     }
 
@@ -183,6 +195,62 @@ impl Efr32s2GpioExti {
             IRQ_GPIO_ODD
         }
     }
+
+    /// The set of NVIC lines the held level asserts right now — exactly the
+    /// list the legacy walk re-emits on every tick. ONE derivation, shared by
+    /// the walk and the event chain, so the two routes cannot drift apart.
+    fn pending_irqs(&self) -> Vec<u32> {
+        let active = self.iflag & self.ien & 0xFFFF;
+        if active == 0 {
+            return Vec::new();
+        }
+        // Even and odd lines are two different vectors, and a firmware installs
+        // two different handlers. Raise exactly the ones that have a flag.
+        let mut irqs = Vec::new();
+        for line in 0..EXTI_LINES {
+            if active & (1 << line) == 0 {
+                continue;
+            }
+            let irq = Self::irq_for(line);
+            if !irqs.contains(&irq) {
+                irqs.push(irq);
+            }
+        }
+        irqs
+    }
+
+    /// True while any unmasked flag is latched. Outside this window the walk
+    /// emits nothing, so the event chain may stop and let the batcher run.
+    fn active(&self) -> bool {
+        self.iflag & self.ien & 0xFFFF != 0
+    }
+
+    /// The level-triggered tick result the legacy walk produces. Shared with
+    /// the hardware-oracle forced walk so neither can drift from the other.
+    fn level_tick_result(&self) -> PeripheralTickResult {
+        let irqs = self.pending_irqs();
+        PeripheralTickResult {
+            explicit_irqs: (!irqs.is_empty()).then_some(irqs),
+            ..Default::default()
+        }
+    }
+
+    /// True when the event scheduler owns this model's IRQ re-emission (the
+    /// `event-scheduler` feature AND a bus clock attached at registration).
+    /// Every drive-mode branch reads this ONE predicate so the two paths can
+    /// never mix.
+    #[inline]
+    fn scheduler_mode(&self) -> bool {
+        cfg!(feature = "event-scheduler") && self.clock.is_some()
+    }
+
+    /// Test/differential knob: detach the clock, pinning the model to the
+    /// legacy walk. This is how the walk-vs-scheduler differential builds its
+    /// reference lane out of the same bus assembly.
+    pub fn force_legacy_walk(&mut self) {
+        self.clock = None;
+        self.chain_live = false;
+    }
 }
 
 impl Peripheral for Efr32s2GpioExti {
@@ -212,11 +280,72 @@ impl Peripheral for Efr32s2GpioExti {
         self.read(offset).ok()
     }
 
-    /// Pure register state between edges; the work happens in
-    /// `observe_gpio_change` and `tick_elapsed`, and neither needs a per-cycle
-    /// visit of its own.
+    fn uses_scheduler(&self) -> bool {
+        self.scheduler_mode()
+    }
+
+    /// Everything `tick_elapsed` can ever do is re-assert a HELD level derived
+    /// from `IF & IEN` — no accumulated state, nothing that decays. That is
+    /// exactly what the event chain below re-emits, cycle for cycle, so in
+    /// scheduler mode the walk has nothing left to contribute. In legacy mode
+    /// (feature off / no clock) the walk is still the only thing that raises
+    /// the interrupt and the conservative `true` stands.
     fn needs_legacy_walk(&self) -> bool {
-        true
+        !self.scheduler_mode()
+    }
+
+    fn attach_cycle_clock(&mut self, clock: CycleClock) {
+        self.clock = Some(clock);
+    }
+
+    /// Nothing accumulates between observations: `IF` is latched by
+    /// `observe_gpio_change` and cleared by an MMIO write, and `IEN` only
+    /// changes under a write. There is no lazy state to bring forward.
+    fn sync_to(&mut self, _now_cycle: u64) {}
+
+    /// Arm the held-level re-emit chain the moment the model becomes active.
+    ///
+    /// Two paths reach this, and BOTH matter:
+    ///
+    /// * an MMIO write — firmware setting `IEN` over an already-latched `IF`,
+    ///   or writing `IF_SET` — which the bus drains through
+    ///   `collect_scheduled_events` after every write; and
+    /// * a GPIO edge, which is a CROSS-peripheral activation no write choke
+    ///   ever sees. The bus harvests here too, but only from the models whose
+    ///   `observe_gpio_change` returned `true` — which is why this model's
+    ///   returns whether it latched anything.
+    ///
+    /// delay-0 → deadline `current_cycle + 1`, which is the cycle the walk's
+    /// next tick would have emitted on.
+    fn take_scheduled_events(&mut self) -> Vec<(u64, u32)> {
+        if self.scheduler_mode() && self.active() && !self.chain_live {
+            self.chain_live = true;
+            vec![(0u64, 0u32)]
+        } else {
+            Vec::new()
+        }
+    }
+
+    fn on_event(
+        &mut self,
+        _event_token: u32,
+        _sched: &mut crate::sched::EventScheduler,
+        _bus: &mut dyn crate::Bus,
+    ) -> crate::sched::EventResult {
+        if !self.scheduler_mode() {
+            return crate::sched::EventResult::default();
+        }
+        // Re-emit the held level every cycle while any unmasked flag stays
+        // latched — the event-path equivalent of the walk's per-tick
+        // `explicit_irqs`. Stop when firmware clears IF (write-1-to-clear) or
+        // masks IEN, which is what lets the batcher run again.
+        let active = self.active();
+        self.chain_live = active;
+        crate::sched::EventResult {
+            explicit_irqs: self.pending_irqs(),
+            reschedule_delay: active.then_some(1),
+            ..Default::default()
+        }
     }
 
     /// The bus hands every GPIO TRANSITION here. This is the whole model: an
@@ -232,6 +361,13 @@ impl Peripheral for Efr32s2GpioExti {
     /// breaks the model: the bus reports each transition exactly once, so a
     /// local baseline swallows the FIRST edge of every pad — measured, on a
     /// button whose only press never fired.
+    /// This model consumes GPIO edges, so the bus must keep its per-cycle
+    /// edge-detection pass alive even on a walk-free fast path. See
+    /// [`crate::Peripheral::observes_gpio_edges`].
+    fn observes_gpio_edges(&self) -> bool {
+        true
+    }
+
     fn observe_gpio_change(&mut self, changes: &[(u8, u8, u8)]) -> bool {
         let mut latched = false;
         for &(port, pin, level) in changes {
@@ -258,28 +394,37 @@ impl Peripheral for Efr32s2GpioExti {
     }
 
     fn tick_elapsed(&mut self, _cycles: u64) -> PeripheralTickResult {
-        let mut result = PeripheralTickResult::default();
-        let active = self.iflag & self.ien & 0xFFFF;
-        if active == 0 {
-            return result;
+        // A scheduler-mode instance is walk-skipped and the event chain owns
+        // the held-level re-emission; the guard is here to keep a stray direct
+        // call from double-raising the line.
+        if self.scheduler_mode() {
+            return PeripheralTickResult::default();
         }
-        // Even and odd lines are two different vectors, and a firmware installs
-        // two different handlers. Raise exactly the ones that have a flag.
-        let mut irqs = Vec::new();
-        for line in 0..EXTI_LINES {
-            if active & (1 << line) == 0 {
-                continue;
-            }
-            let irq = Self::irq_for(line);
-            if !irqs.contains(&irq) {
-                irqs.push(irq);
-            }
-        }
-        result.explicit_irqs = Some(irqs);
-        result
+        self.level_tick_result()
+    }
+
+    /// The bare-CPU hardware oracle freezes the CPU and deliberately asks for
+    /// the pre-scheduler one-tick level emission, so the `scheduler_mode()`
+    /// no-op in [`Self::tick_elapsed`] must NOT apply here — that guard exists
+    /// to catch a stray walk call in production, and a forced tick is the
+    /// opposite of stray. Same contract the STM32 `Exti` and the DMA models
+    /// already carry, and for the same reason: without it the oracle sees NO
+    /// interrupt at all, and only under `cargo test --workspace` (where Cargo
+    /// unifies `event-scheduler` on for a crate that never asked for it).
+    fn tick_elapsed_forced(&mut self, _cycles: u64) -> PeripheralTickResult {
+        self.level_tick_result()
     }
 
     fn as_any(&self) -> Option<&dyn std::any::Any> {
+        Some(self)
+    }
+
+    /// ⚠️ The mutable accessor DEFAULTS TO `None`. The differential harness
+    /// reaches this model mutably to pin it back onto the walk; implementing
+    /// only the shared accessor compiles, passes every unit test, and silently
+    /// makes the reference lane identical to the candidate lane — a
+    /// differential that can no longer fail.
+    fn as_any_mut(&mut self) -> Option<&mut dyn std::any::Any> {
         Some(self)
     }
 }

@@ -634,6 +634,30 @@ pub trait Peripheral: std::fmt::Debug + Send {
         false
     }
 
+    /// True if this peripheral CONSUMES GPIO edges — i.e. its
+    /// [`Self::observe_gpio_change`] does real work.
+    ///
+    /// ⚠️ This is what keeps the per-cycle GPIO edge-detection pass alive on a
+    /// walk-free bus. That pass lives inside the phase-1 body which
+    /// [`SystemBus::per_cycle_tick_is_trivial`] skips wholesale, and its old
+    /// guard was "is there a peripheral NAMED `gpio0`/`gpio1`" — a Nordic
+    /// spelling. A Silicon Labs part names its ports `gpioa`..`gpiod`, so the
+    /// guard answered "nothing to scan" and the fast path would have deleted
+    /// the only path by which an EXTI line ever sees a pad move: a button press
+    /// would set no flag, run no ISR, and nothing anywhere would say so.
+    ///
+    /// Answering the question directly instead of by port name is what makes
+    /// the guard mean what it says. It is deliberately NOT derived from having
+    /// GPIO ports: an STM32 bus has four of them and no edge consumer at all
+    /// (its EXTI is driven by MMIO, not by the pad snapshot), and such a bus
+    /// must keep the fast path.
+    ///
+    /// Default `false`: a model that does not override `observe_gpio_change`
+    /// cannot consume an edge.
+    fn observes_gpio_edges(&self) -> bool {
+        false
+    }
+
     /// Clock-controller capability: resolve a symbolic clock-enable register
     /// name from a peripheral's `clock:` declaration (`"apb1enr"`, `"clken2"`,
     /// …) to its byte offset inside THIS peripheral.

@@ -864,6 +864,7 @@ jobs:
           -p labwired-core --features event-scheduler
           --test esp32c3_bt_event_residency_gate
           --test esp32s3_smp_yield_latency
+          --test efr32mg26_walk_differential
           --test nrf52_timer_walk_differential
           --test nrf52_easydma_tick512_fidelity
           --test nrf52840_timer_machine_gate
@@ -1302,6 +1303,7 @@ jobs:
           --test stm32_timer_walk_differential
           --test stm32_dma_walk_differential
           --test kw41z_walk_free_differential
+          --test efr32mg26_walk_differential
           --test nrf52_timer_walk_differential
           --test nrf52_easydma_tick512_fidelity
           --test nrf52840_timer_machine_gate

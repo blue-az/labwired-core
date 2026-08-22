@@ -375,11 +375,22 @@ impl SystemBus {
                 .is_some()
         });
         self.irq_fabric.esp32s3.routing = self.irq_fabric.esp32s3.intmatrix_idx.is_some();
-        // Cache whether the per-cycle GPIO-edge/GPIOTE service pass has any
-        // Nordic port to scan, so `tick_peripherals_fully` can early-out on
-        // walk-free buses without scanning peripherals by name every cycle.
+        // Cache whether the per-cycle GPIO-edge service pass has anything to
+        // do, so `tick_peripherals_fully` can early-out on walk-free buses
+        // without scanning peripherals every cycle.
+        //
+        // ⚠️ Two arms, and the second one is the load-bearing half. The name
+        // check is the historical Nordic one (a `gpio0`/`gpio1` port implies
+        // the GPIOTE service path). It is a SPELLING, and it silently answered
+        // "nothing to scan" for every part that letters its ports — which is
+        // every Silicon Labs one. On such a bus the fast path would delete the
+        // pass that feeds `observe_gpio_change`, and an EXTI line would never
+        // see a pad move again. Asking the peripherals whether any of them
+        // actually consumes edges is the question the guard was always trying
+        // to ask. See `Peripheral::observes_gpio_edges`.
         self.nordic_gpio_service = self.find_peripheral_index_by_name("gpio0").is_some()
-            || self.find_peripheral_index_by_name("gpio1").is_some();
+            || self.find_peripheral_index_by_name("gpio1").is_some()
+            || self.peripherals.iter().any(|p| p.dev.observes_gpio_edges());
     }
 
     pub(crate) fn rebuild_esp32c3_irq_cache(&mut self) {

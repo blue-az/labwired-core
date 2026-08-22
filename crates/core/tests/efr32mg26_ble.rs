@@ -128,12 +128,21 @@ fn pop(bus: &mut SystemBus) -> Vec<u8> {
 /// the interval IS the step size. Setting it per call keeps the advance exact
 /// at any granularity — which the interval test needs, since it checks the
 /// boundary one cycle either side and a rounded step would prove nothing.
+///
+/// ⚠️ `_forced`, not the plain tick. This harness has no `Machine`, so nothing
+/// drains the event scheduler — and under `--features event-scheduler` the
+/// controller is scheduler-driven, which means the ordinary walk deliberately
+/// skips it and this loop would advance NOTHING. `tick_peripherals_fully_forced`
+/// is the documented boundary for exactly this shape of harness: settle
+/// peripherals through their historical per-tick path with the CPU frozen. The
+/// scheduler lane is proved separately, against this same behaviour, by
+/// `efr32mg26_walk_differential`.
 fn advance(bus: &mut SystemBus, cycles: u64) {
     let mut left = cycles;
     while left > 0 {
         let step = left.min(1 << 20);
         bus.config.peripheral_tick_interval = step as u32;
-        bus.tick_peripherals_fully();
+        bus.tick_peripherals_fully_forced();
         left -= step;
     }
 }

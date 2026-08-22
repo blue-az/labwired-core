@@ -8,6 +8,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **The EFR32MG26 (BRD2709A) runs walk-free.** Every peripheral on that bus now
+  either rides the event scheduler or provably does nothing on the per-cycle
+  walk, so `SystemBus::derive_walk_deletable()` is true with no hand flag and
+  the board reaches the recommended tick interval instead of executing one
+  instruction per batch. Fifteen models moved: the ten `TIMER` instances (lazy
+  counter advanced in closed form, with interrupt and PWM-pad wakes scheduled at
+  their exact cycles), the four `I2C` instances and the `IADC`, the GPIO
+  external-interrupt block, and the `virtual_ble` controller. Behaviour is
+  pinned against the pre-migration per-cycle walk by
+  `crates/core/tests/efr32mg26_walk_differential.rs`, which runs the committed
+  BRD2709A firmware both ways and compares the full architectural state, the
+  NVIC pending latch, the migrated peripherals' registers and the board LED pad
+  levels after **every retired instruction**.
+- **A compare on the EFR32 TIMER no longer fires when `OC == CNT`.** The wrapped
+  branch of the counter advance latched every channel whose `OC` was at or above
+  the current count, so an advance that wrapped flagged a compare the counter was
+  *leaving* rather than arriving at. It is now the value the counter actually
+  takes, which is also what makes a lumped advance latch exactly what the same
+  number of single steps latch — the property the scheduler path depends on.
+- **`Peripheral::observes_gpio_edges()`** — the bus's per-cycle GPIO
+  edge-detection pass is kept alive by asking the peripherals whether any of them
+  consumes edges, instead of by looking for a peripheral named `gpio0`/`gpio1`.
+  That name is a Nordic spelling; a part that letters its ports answered "nothing
+  to scan", so on a walk-free bus the fast path would have deleted the only route
+  by which a pad movement reaches an external-interrupt line.
 - **`labwired run` exits 3 on a RISC-V simulation fault too.** v0.22.1 below
   announces that "`labwired run` exits 3 when the run ends on a simulation
   fault"; the change only landed on ARM. Both RISC-V loops kept

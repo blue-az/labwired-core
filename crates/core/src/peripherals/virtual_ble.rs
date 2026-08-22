@@ -187,6 +187,16 @@ pub struct VirtualBle {
     queued: std::collections::VecDeque<BleAirFrame>,
     /// Cycles since the last advertising burst.
     since_adv: u64,
+
+    /// Bus-published cycle clock, attached by `SystemBus::add_peripheral`.
+    /// `Some` selects scheduler mode; `None` keeps the legacy per-cycle walk.
+    clock: Option<crate::CycleClock>,
+    /// The absolute cycle `since_adv` was last brought forward to. Owned by
+    /// [`VirtualBle::advance_to`]; the legacy walk never touches it.
+    anchor: u64,
+    /// In-flight singleton guard (cancellation contract layer 2): true while a
+    /// service event is queued for this controller.
+    chain_live: bool,
 }
 
 impl VirtualBle {
@@ -215,6 +225,9 @@ impl VirtualBle {
             iflag: 0,
             queued: std::collections::VecDeque::new(),
             since_adv: 0,
+            clock: None,
+            anchor: 0,
+            chain_live: false,
         }
     }
 
@@ -382,6 +395,89 @@ impl VirtualBle {
             self.transmit_on(ch);
         }
     }
+
+    // ── Drive-mode plumbing (walk vs event scheduler) ──────────────────────
+
+    /// True when the event scheduler owns this controller's periodic service:
+    /// the `event-scheduler` feature AND a [`crate::CycleClock`] attached by
+    /// the bus registration choke.
+    #[inline]
+    fn scheduler_mode(&self) -> bool {
+        cfg!(feature = "event-scheduler") && self.clock.is_some()
+    }
+
+    /// Test/differential knob: detach the clock, pinning the controller to the
+    /// legacy walk so a differential can build its reference lane from the same
+    /// bus assembly.
+    pub fn force_legacy_walk(&mut self) {
+        self.clock = None;
+        self.chain_live = false;
+    }
+
+    /// One legacy walk tick: age the advertising interval, transmit if it came
+    /// due, drain the air and report the held IRQ level. Shared by the walk,
+    /// the hardware-oracle forced walk and the event chain, so the three cannot
+    /// drift apart.
+    fn service(&mut self, cycles: u64) -> PeripheralTickResult {
+        let mut result = PeripheralTickResult::default();
+
+        if self.ctrl & CTRL_ADV_EN != 0 {
+            self.since_adv = self.since_adv.saturating_add(cycles);
+            let period = self.adv_period_cycles();
+            if self.since_adv >= period {
+                self.since_adv -= period;
+                self.advertise_burst();
+            }
+        }
+
+        if self.drain_air() {
+            self.iflag |= RX_AVAIL;
+        }
+        if self.ien & RX_AVAIL != 0 && self.iflag & RX_AVAIL != 0 {
+            result.irq = true;
+        }
+        result
+    }
+
+    /// Bring the controller forward to absolute cycle `now`. Idempotent; a
+    /// `now` at or behind the anchor is ignored.
+    fn advance_to(&mut self, now: u64) -> PeripheralTickResult {
+        if now <= self.anchor {
+            return PeripheralTickResult::default();
+        }
+        let elapsed = now - self.anchor;
+        self.anchor = now;
+        self.service(elapsed)
+    }
+
+    /// CORE clocks until this controller next needs the CPU, or `None` when it
+    /// is idle and the chain may die.
+    ///
+    /// ⚠️ Scanning re-arms at **1**, which is not a poll rate this model picks
+    /// — it is the walk's cadence, reproduced. The air is a broadcast medium
+    /// written by ANOTHER machine, so nothing in this one can raise an event
+    /// when a peer transmits; the only faithful answer is to look as often as
+    /// the walk looked. The drain loop delivers one such event per scheduler
+    /// drain, so on a batched bus this costs one heap operation per peripheral
+    /// tick, not one per cycle, and RX latency quantises to the tick interval
+    /// exactly like every other level-triggered model on the bus.
+    ///
+    /// A controller with neither bit set — which is every lab that does not use
+    /// BLE at all, including every bus that merely has this block mapped — arms
+    /// nothing.
+    fn cycles_to_next_service(&self) -> Option<u64> {
+        let scanning = self.ctrl & CTRL_SCAN_EN != 0;
+        let advertising = self.ctrl & CTRL_ADV_EN != 0;
+        match (scanning, advertising) {
+            (true, _) => Some(1),
+            (false, true) => Some(
+                self.adv_period_cycles()
+                    .saturating_sub(self.since_adv)
+                    .max(1),
+            ),
+            (false, false) => None,
+        }
+    }
 }
 
 fn word_from(buf: &[u8; BUF_LEN], at: usize) -> u32 {
@@ -429,31 +525,89 @@ impl crate::Peripheral for VirtualBle {
         self.read(offset).ok()
     }
 
+    fn uses_scheduler(&self) -> bool {
+        self.scheduler_mode()
+    }
+
     /// The controller has to be visited: advertising is periodic and the air
-    /// has to be drained even while firmware is busy elsewhere.
+    /// has to be drained even while firmware is busy elsewhere. In scheduler
+    /// mode the event chain is what visits it — at the advertising deadline,
+    /// and at the walk's own cadence while scanning (see
+    /// [`VirtualBle::cycles_to_next_service`]) — so the walk has nothing left
+    /// to do. Without a clock the walk is the only thing that drains the air
+    /// and the conservative `true` stands.
     fn needs_legacy_walk(&self) -> bool {
-        true
+        !self.scheduler_mode()
+    }
+
+    fn attach_cycle_clock(&mut self, clock: crate::CycleClock) {
+        self.anchor = clock.now();
+        self.clock = Some(clock);
+    }
+
+    /// Bring the advertising interval forward before an MMIO write observes the
+    /// controller, so a `CTRL` rewrite or an `RXCMD` pop sees the same state the
+    /// walk would have left at this cycle.
+    fn sync_to(&mut self, now_cycle: u64) {
+        if self.scheduler_mode() {
+            // The IRQ verdict is dropped deliberately: a write path cannot pend
+            // a line. The chain re-derives the held level on its next visit,
+            // exactly as the walk's next tick would.
+            let _ = self.advance_to(now_cycle);
+        }
+    }
+
+    /// Arm the service chain when a write leaves the controller with work —
+    /// enabling advertising or scanning. delay-0 → deadline
+    /// `current_cycle + 1`, the cycle the walk's next tick would have run on;
+    /// the chain then perpetuates itself from `on_event`.
+    fn take_scheduled_events(&mut self) -> Vec<(u64, u32)> {
+        if !self.scheduler_mode() || self.chain_live {
+            return Vec::new();
+        }
+        match self.cycles_to_next_service() {
+            Some(d) => {
+                self.chain_live = true;
+                vec![(d - 1, 0u32)]
+            }
+            None => Vec::new(),
+        }
+    }
+
+    fn on_event(
+        &mut self,
+        _event_token: u32,
+        sched: &mut crate::sched::EventScheduler,
+        _bus: &mut dyn crate::Bus,
+    ) -> crate::sched::EventResult {
+        if !self.scheduler_mode() {
+            return crate::sched::EventResult::default();
+        }
+        let irq = self.advance_to(sched.now()).irq;
+        let delay = self.cycles_to_next_service();
+        self.chain_live = delay.is_some();
+        crate::sched::EventResult {
+            raise_own_irq: irq,
+            reschedule_delay: delay,
+            ..Default::default()
+        }
     }
 
     fn tick_elapsed(&mut self, cycles: u64) -> PeripheralTickResult {
-        let mut result = PeripheralTickResult::default();
+        // A scheduler-mode instance is walk-skipped and the event chain owns
+        // the service; the guard keeps a stray direct call from advertising
+        // twice.
+        if self.scheduler_mode() {
+            return PeripheralTickResult::default();
+        }
+        self.service(cycles)
+    }
 
-        if self.ctrl & CTRL_ADV_EN != 0 {
-            self.since_adv = self.since_adv.saturating_add(cycles);
-            let period = self.adv_period_cycles();
-            if self.since_adv >= period {
-                self.since_adv -= period;
-                self.advertise_burst();
-            }
-        }
-
-        if self.drain_air() {
-            self.iflag |= RX_AVAIL;
-        }
-        if self.ien & RX_AVAIL != 0 && self.iflag & RX_AVAIL != 0 {
-            result.irq = true;
-        }
-        result
+    /// The bare-CPU hardware oracle freezes the CPU and deliberately asks for
+    /// the pre-scheduler one-tick service, so the `scheduler_mode()` no-op in
+    /// [`Self::tick_elapsed`] must NOT apply here.
+    fn tick_elapsed_forced(&mut self, cycles: u64) -> PeripheralTickResult {
+        self.service(cycles)
     }
 
     /// `ADVINTERVAL` is specified in 625 µs units, so the controller needs the
@@ -474,6 +628,13 @@ impl crate::Peripheral for VirtualBle {
     }
 
     fn as_any(&self) -> Option<&dyn std::any::Any> {
+        Some(self)
+    }
+
+    /// ⚠️ The mutable accessor DEFAULTS TO `None`, and the walk-vs-scheduler
+    /// differential reaches this model mutably to pin it back onto the walk.
+    /// Without it the reference lane silently becomes the candidate lane.
+    fn as_any_mut(&mut self) -> Option<&mut dyn std::any::Any> {
         Some(self)
     }
 }
