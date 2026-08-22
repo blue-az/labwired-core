@@ -330,7 +330,27 @@ boards:
     # layouts are not touched — these boards never construct the EFR32 variant,
     # and the STM32 reset-value tests (`stm32h5_reset_values_match_silicon`,
     # `test_i2c_reset_values`) pass unchanged.
-    drift_ack: 2026-08-21
+    #
+    # Re-stamped 2026-08-22 for the EFR32 walk-free migration. Two files these
+    # boards watch moved, and neither moves a register they anchor:
+    #
+    #   * `i2c.rs` — `scheduler_mode()` was hardcoded false for the SHARED model.
+    #     Now switchable; the STM32 arms keep the walk-driven mode they had, pinned
+    #     by `the_efr32_i2c_drive_mode_is_switchable_in_both_directions`.
+    #   * `bus/routing.rs` — the per-cycle GPIO-edge pass was guarded by a peripheral
+    #     NAMED `gpio0`/`gpio1`, a Nordic spelling. The guard now also asks
+    #     `Peripheral::observes_gpio_edges()`. The change is additive (`||`), so no bus
+    #     that ran the pass can stop running it; it only reaches parts that letter
+    #     their ports. On an EFR32 the fast path would otherwise have deleted the only
+    #     route from a pad movement to an EXTI line — a button press latching nothing.
+    #
+    # `nrf52/gpiote.rs` gains only the `observes_gpio_edges()` override that keeps the
+    # Nordic behaviour explicit rather than name-derived.
+    #
+    # Ran: labwired-core --lib, nrf52_timer_walk_differential, stm32f401/stm32l476
+    # walk differentials, bus_visibility and logic_wire_channels_cross_family under
+    # (none) / event-scheduler / jit,event-scheduler. This is an ack, not a capture.
+    drift_ack: 2026-08-22
     # 2026-08-22: the Thumb-2 decoder gained SMLABB/BT/TB/TT and SMULBB/BT/TB/TT
     # (ARMv7-M A7.7.166/171). They were UNDECODED, which in this core means a
     # silent no-op — `digitalWrite` on EFR32MG26 computes its port base with
@@ -347,7 +367,7 @@ boards:
     # golden trace (crates/wasm/tests/fixtures/motor-parity-native.json) still
     # matches. No other pinned firmware on any board reaches the encoding, so
     # nothing a silicon capture asserts moved. No live re-capture is evidenced here.
-    drift_ack_digest: 4ed1cf55f5ca29eb38d3db073a84f283ea389b624259166352c9fe132b284fe1
+    drift_ack_digest: 32964b3079df25f84b0753fe7b958d50f0df022a5ca7a8509282969854b0733f
     models:
       - crates/core/src/cpu/cortex_m.rs
       - crates/core/src/decoder/arm.rs
@@ -555,7 +575,27 @@ boards:
     # layouts are not touched — these boards never construct the EFR32 variant,
     # and the STM32 reset-value tests (`stm32h5_reset_values_match_silicon`,
     # `test_i2c_reset_values`) pass unchanged.
-    drift_ack: 2026-08-21
+    #
+    # Re-stamped 2026-08-22 for the EFR32 walk-free migration. Two files these
+    # boards watch moved, and neither moves a register they anchor:
+    #
+    #   * `i2c.rs` — `scheduler_mode()` was hardcoded false for the SHARED model.
+    #     Now switchable; the STM32 arms keep the walk-driven mode they had, pinned
+    #     by `the_efr32_i2c_drive_mode_is_switchable_in_both_directions`.
+    #   * `bus/routing.rs` — the per-cycle GPIO-edge pass was guarded by a peripheral
+    #     NAMED `gpio0`/`gpio1`, a Nordic spelling. The guard now also asks
+    #     `Peripheral::observes_gpio_edges()`. The change is additive (`||`), so no bus
+    #     that ran the pass can stop running it; it only reaches parts that letter
+    #     their ports. On an EFR32 the fast path would otherwise have deleted the only
+    #     route from a pad movement to an EXTI line — a button press latching nothing.
+    #
+    # `nrf52/gpiote.rs` gains only the `observes_gpio_edges()` override that keeps the
+    # Nordic behaviour explicit rather than name-derived.
+    #
+    # Ran: labwired-core --lib, nrf52_timer_walk_differential, stm32f401/stm32l476
+    # walk differentials, bus_visibility and logic_wire_channels_cross_family under
+    # (none) / event-scheduler / jit,event-scheduler. This is an ack, not a capture.
+    drift_ack: 2026-08-22
     # 2026-08-22: the Thumb-2 decoder gained SMLABB/BT/TB/TT and SMULBB/BT/TB/TT
     # (ARMv7-M A7.7.166/171). They were UNDECODED, which in this core means a
     # silent no-op — `digitalWrite` on EFR32MG26 computes its port base with
@@ -572,7 +612,7 @@ boards:
     # golden trace (crates/wasm/tests/fixtures/motor-parity-native.json) still
     # matches. No other pinned firmware on any board reaches the encoding, so
     # nothing a silicon capture asserts moved. No live re-capture is evidenced here.
-    drift_ack_digest: 4ed1cf55f5ca29eb38d3db073a84f283ea389b624259166352c9fe132b284fe1
+    drift_ack_digest: 32964b3079df25f84b0753fe7b958d50f0df022a5ca7a8509282969854b0733f
     models:
       - crates/core/src/cpu/cortex_m.rs
       - crates/core/src/decoder/arm.rs
@@ -933,8 +973,28 @@ boards:
     # from this change. Ran: `labwired-core --lib` 3255 pass / 0 fail, and the 126
     # GPIO tests, all unchanged. This is an ack, not a capture — no live re-capture
     # was made this session.
+    #
+    # Re-stamped 2026-08-22 for the EFR32 walk-free migration. Two files these
+    # boards watch moved, and neither moves a register they anchor:
+    #
+    #   * `i2c.rs` — `scheduler_mode()` was hardcoded false for the SHARED model.
+    #     Now switchable; the STM32 arms keep the walk-driven mode they had, pinned
+    #     by `the_efr32_i2c_drive_mode_is_switchable_in_both_directions`.
+    #   * `bus/routing.rs` — the per-cycle GPIO-edge pass was guarded by a peripheral
+    #     NAMED `gpio0`/`gpio1`, a Nordic spelling. The guard now also asks
+    #     `Peripheral::observes_gpio_edges()`. The change is additive (`||`), so no bus
+    #     that ran the pass can stop running it; it only reaches parts that letter
+    #     their ports. On an EFR32 the fast path would otherwise have deleted the only
+    #     route from a pad movement to an EXTI line — a button press latching nothing.
+    #
+    # `nrf52/gpiote.rs` gains only the `observes_gpio_edges()` override that keeps the
+    # Nordic behaviour explicit rather than name-derived.
+    #
+    # Ran: labwired-core --lib, nrf52_timer_walk_differential, stm32f401/stm32l476
+    # walk differentials, bus_visibility and logic_wire_channels_cross_family under
+    # (none) / event-scheduler / jit,event-scheduler. This is an ack, not a capture.
     drift_ack: 2026-08-22
-    drift_ack_digest: 7ec3b6b08e01804a74fec0f5414bb6226c9d541243bfd298434ae1b2e213280c
+    drift_ack_digest: 29cd28afd9dff7f077c4bf412aa7e0d352a155849ecff8070b01afb8e4f825c6
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/cpu/cortex_m.rs
@@ -2008,6 +2068,26 @@ boards:
     # from this change. Ran: `labwired-core --lib` 3255 pass / 0 fail, and the 126
     # GPIO tests, all unchanged. This is an ack, not a capture — no live re-capture
     # was made this session.
+    #
+    # Re-stamped 2026-08-22 for the EFR32 walk-free migration. Two files these
+    # boards watch moved, and neither moves a register they anchor:
+    #
+    #   * `i2c.rs` — `scheduler_mode()` was hardcoded false for the SHARED model.
+    #     Now switchable; the STM32 arms keep the walk-driven mode they had, pinned
+    #     by `the_efr32_i2c_drive_mode_is_switchable_in_both_directions`.
+    #   * `bus/routing.rs` — the per-cycle GPIO-edge pass was guarded by a peripheral
+    #     NAMED `gpio0`/`gpio1`, a Nordic spelling. The guard now also asks
+    #     `Peripheral::observes_gpio_edges()`. The change is additive (`||`), so no bus
+    #     that ran the pass can stop running it; it only reaches parts that letter
+    #     their ports. On an EFR32 the fast path would otherwise have deleted the only
+    #     route from a pad movement to an EXTI line — a button press latching nothing.
+    #
+    # `nrf52/gpiote.rs` gains only the `observes_gpio_edges()` override that keeps the
+    # Nordic behaviour explicit rather than name-derived.
+    #
+    # Ran: labwired-core --lib, nrf52_timer_walk_differential, stm32f401/stm32l476
+    # walk differentials, bus_visibility and logic_wire_channels_cross_family under
+    # (none) / event-scheduler / jit,event-scheduler. This is an ack, not a capture.
     drift_ack: 2026-08-22
     # 2026-08-22: the Thumb-2 decoder gained SMLABB/BT/TB/TT and SMULBB/BT/TB/TT
     # (ARMv7-M A7.7.166/171). They were UNDECODED, which in this core means a
@@ -2026,7 +2106,7 @@ boards:
     # matches. No other pinned firmware on any board reaches the encoding, so
     # nothing a silicon capture asserts moved. No live re-capture is evidenced here.
     drift_ack: 2026-08-22
-    drift_ack_digest: 223bd47e640a63f1c8bd6f75b31246af518c6319408a542f2b7c174376c5dda4
+    drift_ack_digest: 7ce3c806ca9d8c1cc3bfca03b12ebba9f5b6822aea9fbbb14476d9eef13d48ea
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/cpu/cortex_m.rs
@@ -2330,8 +2410,28 @@ boards:
     # from this change. Ran: `labwired-core --lib` 3255 pass / 0 fail, and the 126
     # GPIO tests, all unchanged. This is an ack, not a capture — no live re-capture
     # was made this session.
+    #
+    # Re-stamped 2026-08-22 for the EFR32 walk-free migration. Two files these
+    # boards watch moved, and neither moves a register they anchor:
+    #
+    #   * `i2c.rs` — `scheduler_mode()` was hardcoded false for the SHARED model.
+    #     Now switchable; the STM32 arms keep the walk-driven mode they had, pinned
+    #     by `the_efr32_i2c_drive_mode_is_switchable_in_both_directions`.
+    #   * `bus/routing.rs` — the per-cycle GPIO-edge pass was guarded by a peripheral
+    #     NAMED `gpio0`/`gpio1`, a Nordic spelling. The guard now also asks
+    #     `Peripheral::observes_gpio_edges()`. The change is additive (`||`), so no bus
+    #     that ran the pass can stop running it; it only reaches parts that letter
+    #     their ports. On an EFR32 the fast path would otherwise have deleted the only
+    #     route from a pad movement to an EXTI line — a button press latching nothing.
+    #
+    # `nrf52/gpiote.rs` gains only the `observes_gpio_edges()` override that keeps the
+    # Nordic behaviour explicit rather than name-derived.
+    #
+    # Ran: labwired-core --lib, nrf52_timer_walk_differential, stm32f401/stm32l476
+    # walk differentials, bus_visibility and logic_wire_channels_cross_family under
+    # (none) / event-scheduler / jit,event-scheduler. This is an ack, not a capture.
     drift_ack: 2026-08-22
-    drift_ack_digest: 4ea15df2185a50fc6b31db7945f4a43775984f3b0c912c1d22649483e64a856f
+    drift_ack_digest: 3f56da09d36bec9a3ffaac4ff21cc598939b8e77cf59fbbe8a2d82b29fa60b55
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/cpu/cortex_m.rs
@@ -2678,6 +2778,26 @@ boards:
     # from this change. Ran: `labwired-core --lib` 3255 pass / 0 fail, and the 126
     # GPIO tests, all unchanged. This is an ack, not a capture — no live re-capture
     # was made this session.
+    #
+    # Re-stamped 2026-08-22 for the EFR32 walk-free migration. Two files these
+    # boards watch moved, and neither moves a register they anchor:
+    #
+    #   * `i2c.rs` — `scheduler_mode()` was hardcoded false for the SHARED model.
+    #     Now switchable; the STM32 arms keep the walk-driven mode they had, pinned
+    #     by `the_efr32_i2c_drive_mode_is_switchable_in_both_directions`.
+    #   * `bus/routing.rs` — the per-cycle GPIO-edge pass was guarded by a peripheral
+    #     NAMED `gpio0`/`gpio1`, a Nordic spelling. The guard now also asks
+    #     `Peripheral::observes_gpio_edges()`. The change is additive (`||`), so no bus
+    #     that ran the pass can stop running it; it only reaches parts that letter
+    #     their ports. On an EFR32 the fast path would otherwise have deleted the only
+    #     route from a pad movement to an EXTI line — a button press latching nothing.
+    #
+    # `nrf52/gpiote.rs` gains only the `observes_gpio_edges()` override that keeps the
+    # Nordic behaviour explicit rather than name-derived.
+    #
+    # Ran: labwired-core --lib, nrf52_timer_walk_differential, stm32f401/stm32l476
+    # walk differentials, bus_visibility and logic_wire_channels_cross_family under
+    # (none) / event-scheduler / jit,event-scheduler. This is an ack, not a capture.
     drift_ack: 2026-08-22
     # 2026-08-22: the Thumb-2 decoder gained SMLABB/BT/TB/TT and SMULBB/BT/TB/TT
     # (ARMv7-M A7.7.166/171). They were UNDECODED, which in this core means a
@@ -2696,7 +2816,7 @@ boards:
     # matches. No other pinned firmware on any board reaches the encoding, so
     # nothing a silicon capture asserts moved. No live re-capture is evidenced here.
     drift_ack: 2026-08-22
-    drift_ack_digest: 4dedf6a08c8ce02125db67aaa0f3feefd38a65d61680a836bdcb4f0e7db92d9e
+    drift_ack_digest: 23a7cf2169387939229bacf3ce77560c752c1ebaa5db1b19cdc433d3281b86da
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/cpu/cortex_m.rs
@@ -3003,6 +3123,26 @@ boards:
     # from this change. Ran: `labwired-core --lib` 3255 pass / 0 fail, and the 126
     # GPIO tests, all unchanged. This is an ack, not a capture — no live re-capture
     # was made this session.
+    #
+    # Re-stamped 2026-08-22 for the EFR32 walk-free migration. Two files these
+    # boards watch moved, and neither moves a register they anchor:
+    #
+    #   * `i2c.rs` — `scheduler_mode()` was hardcoded false for the SHARED model.
+    #     Now switchable; the STM32 arms keep the walk-driven mode they had, pinned
+    #     by `the_efr32_i2c_drive_mode_is_switchable_in_both_directions`.
+    #   * `bus/routing.rs` — the per-cycle GPIO-edge pass was guarded by a peripheral
+    #     NAMED `gpio0`/`gpio1`, a Nordic spelling. The guard now also asks
+    #     `Peripheral::observes_gpio_edges()`. The change is additive (`||`), so no bus
+    #     that ran the pass can stop running it; it only reaches parts that letter
+    #     their ports. On an EFR32 the fast path would otherwise have deleted the only
+    #     route from a pad movement to an EXTI line — a button press latching nothing.
+    #
+    # `nrf52/gpiote.rs` gains only the `observes_gpio_edges()` override that keeps the
+    # Nordic behaviour explicit rather than name-derived.
+    #
+    # Ran: labwired-core --lib, nrf52_timer_walk_differential, stm32f401/stm32l476
+    # walk differentials, bus_visibility and logic_wire_channels_cross_family under
+    # (none) / event-scheduler / jit,event-scheduler. This is an ack, not a capture.
     drift_ack: 2026-08-22
     # 2026-08-22: the Thumb-2 decoder gained SMLABB/BT/TB/TT and SMULBB/BT/TB/TT
     # (ARMv7-M A7.7.166/171). They were UNDECODED, which in this core means a
@@ -3021,7 +3161,7 @@ boards:
     # matches. No other pinned firmware on any board reaches the encoding, so
     # nothing a silicon capture asserts moved. No live re-capture is evidenced here.
     drift_ack: 2026-08-22
-    drift_ack_digest: 90973fe04efe024b4ac47fa82929e63b3069e89d60ad31ca0b8d3d9c86e7ff04
+    drift_ack_digest: a5a3a6c75cd3547a54aa9208915d628dd2c9f1c7254d804506005eb58e3b18ad
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     # 2026-08-12: chip yaml adds bxcan1 (type bxcan @ 0x40006400, APB1ENR bit 25) for
     # Arduino matrix L8 loopback. Existing BxCan model; no register-map change to
