@@ -89,7 +89,8 @@
 //! instance, and the reason it is not `cpu_hz` is written here.
 
 use crate::peripherals::pad_lines::PadLines;
-use crate::{Peripheral, PeripheralTickResult, SimResult};
+use crate::{CycleClock, Peripheral, PeripheralTickResult, SimResult};
+use std::cell::Cell;
 
 // ── Register offsets, walked from `TIMER_TypeDef` ──────────────────────────
 const OFF_IPVERSION: u64 = 0x00;
@@ -166,11 +167,16 @@ pub struct Efr32s2Timer {
     cfg: u32,
     ctrl: u32,
     status_running: bool,
-    iflag: u32,
+    /// Latched interrupt flags. `Cell` because scheduler mode latches them from
+    /// the `&self` lazy advance ([`Efr32s2Timer::advance_to`]); on the legacy
+    /// walk only `tick_elapsed`/`write_word` reach it.
+    iflag: Cell<u32>,
     ien: u32,
     top: u32,
     topb: u32,
-    cnt: u32,
+    /// The counter. `Cell` for the same reason as `iflag` — a `&self` MMIO read
+    /// advances it to the bus-published "now" before answering.
+    cnt: Cell<u32>,
     lock: u32,
     cc_cfg: [u32; CC_COUNT],
     cc_ctrl: [u32; CC_COUNT],
@@ -180,10 +186,51 @@ pub struct Efr32s2Timer {
 
     /// Core clocks not yet turned into timer clocks, so a peripheral clock
     /// that is not a divisor of the core clock loses no fraction.
-    prescale_residue: u64,
+    prescale_residue: Cell<u64>,
     /// Timer clocks not yet turned into counter steps, so a prescaler larger
     /// than the tick interval does not lose the remainder.
-    presc_residue: u64,
+    presc_residue: Cell<u64>,
+
+    /// Bus-published cycle clock, attached by `SystemBus::add_peripheral`.
+    /// `Some` selects scheduler mode; `None` keeps the legacy per-cycle walk
+    /// (feature off, or a hand-built test bus that bypasses registration).
+    clock: Option<CycleClock>,
+    /// Lazy-path anchor: the absolute published cycle the counter was last
+    /// advanced to. Owned exclusively by [`Efr32s2Timer::advance_to`]; the
+    /// legacy walk never touches it.
+    anchor: Cell<u64>,
+    /// Arming token (cancellation contract layer 3): bumped whenever the wake
+    /// this model needs MOVES, so an event scheduled under the old
+    /// configuration dies on arrival instead of racing the fresh chain.
+    arm_seq: u32,
+    /// What the in-flight event covers, or `None` for "nothing armed".
+    /// Compared before every re-arm so the writes that change nothing about
+    /// when this timer next needs the CPU — a `CNT` poll's read-modify-write,
+    /// an `IF` clear that leaves the same compare pending — do not each leave
+    /// another entry resident on the heap. Same residency discipline
+    /// `esp32c3::bt` documents, and the reason a polling loop cannot trip
+    /// `MAX_LIVE_EVENTS_PER_PERIPHERAL`.
+    armed_wake: Option<Wake>,
+}
+
+/// What the timer's in-flight event is for.
+///
+/// ⚠️ Two cases, and they must NOT both be spelled as an absolute deadline. A
+/// held IRQ level re-pends on every tick, so "the next wake" for it is
+/// `now + 1` — a cycle that MOVES with every MMIO write. Keying the
+/// idempotence check on that would make every write during an unacked timer
+/// interrupt look like a changed requirement and arm another event, and the
+/// scheduler's dedup key includes the deadline, so those do not collapse: one
+/// resident entry per write until each fires. [`Self::Level`] is the same
+/// requirement expressed as a state rather than a cycle, so it compares equal
+/// to itself and the chain stays a singleton.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Wake {
+    /// Re-assert the held IRQ level on the next tick, and keep doing so until
+    /// firmware clears the flag.
+    Level,
+    /// A one-off wake at this ABSOLUTE cycle: a flag latch or a PWM wire edge.
+    At(u64),
 }
 
 impl Efr32s2Timer {
@@ -198,22 +245,26 @@ impl Efr32s2Timer {
             cfg: 0,
             ctrl: 0,
             status_running: false,
-            iflag: 0,
+            iflag: Cell::new(0),
             ien: 0,
             top: TOP_RESET,
             // `_TIMER_TOPB_RESETVALUE` is 0, not TOP's 0xFFFF. The die cannot
             // arbitrate — it reads 0 here either way while EN is clear — so
             // the header is the source, and the header says 0.
             topb: 0,
-            cnt: 0,
+            cnt: Cell::new(0),
             lock: 0,
             cc_cfg: [0; CC_COUNT],
             cc_ctrl: [0; CC_COUNT],
             cc_oc: [0; CC_COUNT],
             cc_ocb: [0; CC_COUNT],
             dt: [0; 8],
-            prescale_residue: 0,
-            presc_residue: 0,
+            prescale_residue: Cell::new(0),
+            presc_residue: Cell::new(0),
+            clock: None,
+            anchor: Cell::new(0),
+            arm_seq: 0,
+            armed_wake: None,
         }
     }
 
@@ -262,7 +313,7 @@ impl Efr32s2Timer {
     /// Whether channel `ch`'s PWM output is high right now: high while
     /// `CNT < OC`.
     pub fn pwm_output_high(&self, ch: usize) -> bool {
-        ch < CC_COUNT && self.cc_mode(ch) == CC_MODE_PWM && self.cnt < self.cc_oc[ch]
+        ch < CC_COUNT && self.cc_mode(ch) == CC_MODE_PWM && self.cnt.get() < self.cc_oc[ch]
     }
 
     /// Line order for this timer's [`PadLines`]: one per CC channel, named the
@@ -318,7 +369,7 @@ impl Efr32s2Timer {
                     0
                 }
             }
-            OFF_IF => self.iflag,
+            OFF_IF => self.iflag.get(),
             OFF_IEN => self.ien,
             // ⚠️ The counter block is held in reset while the module is
             // disabled, and reads 0 — NOT `_TIMER_TOP_RESETVALUE`.
@@ -336,7 +387,7 @@ impl Efr32s2Timer {
             OFF_TOPB if self.en & EN_EN == 0 => 0,
             OFF_TOP => self.top,
             OFF_TOPB => self.topb,
-            OFF_CNT => self.cnt,
+            OFF_CNT => self.cnt.get(),
             OFF_LOCK => self.lock,
             OFF_EN => self.en,
             o if (OFF_DT_FIRST..=OFF_DT_LAST).contains(&o) => {
@@ -369,7 +420,7 @@ impl Efr32s2Timer {
                 self.en = value & EN_EN;
                 if self.en == 0 {
                     self.status_running = false;
-                    self.cnt = 0;
+                    self.cnt.set(0);
                 }
             }
             OFF_CFG => self.cfg = value,
@@ -384,11 +435,11 @@ impl Efr32s2Timer {
                     self.status_running = false;
                 }
             }
-            OFF_IF => self.iflag &= !value,
+            OFF_IF => self.iflag.set(self.iflag.get() & !value),
             OFF_IEN => self.ien = value,
             OFF_TOP => self.top = self.mask(value),
             OFF_TOPB => self.topb = self.mask(value),
-            OFF_CNT => self.cnt = self.mask(value),
+            OFF_CNT => self.cnt.set(self.mask(value)),
             OFF_LOCK => self.lock = value,
             o if (OFF_DT_FIRST..=OFF_DT_LAST).contains(&o) => {
                 self.dt[((o - OFF_DT_FIRST) / 4) as usize] = value;
@@ -407,46 +458,339 @@ impl Efr32s2Timer {
         }
     }
 
+    /// Steps from a counter value `from` (which MUST be `<= TOP`) until the
+    /// counter next latches channel `ch`'s compare flag, replaying the
+    /// SINGLE-step trajectory exactly.
+    ///
+    /// ⚠️ "Exactly" is the whole point, and it is not the obvious formula.
+    /// The counter takes the values `from+1 … TOP`, then wraps to `0`, then
+    /// `1 …`. A compare latches when the counter TAKES its value — with one
+    /// documented exception the single-step path has always had: the wrap step
+    /// itself (`TOP → 0`) latches every channel whose `OC` is at or above
+    /// `TOP`, which is how an `OC` programmed ABOVE `TOP` (a duty the counter
+    /// can never reach) still produces a flag once per period rather than
+    /// never.
+    ///
+    /// So `OC == from` is **not** an immediate hit: the counter is leaving that
+    /// value, and does not return to it until a full period later. Getting that
+    /// one case wrong is what makes a lumped advance disagree with a per-cycle
+    /// one, and it is pinned by `a_lumped_advance_latches_exactly_what_single_
+    /// steps_latch`.
+    fn steps_to_compare(&self, from: u64, oc: u64) -> u64 {
+        let top = self.top as u64;
+        let period = top + 1;
+        let to_wrap = period - from; // `from <= top`, so this is >= 1
+        if oc > from && oc <= top {
+            oc - from
+        } else if oc >= top || oc == 0 {
+            to_wrap
+        } else {
+            to_wrap + oc
+        }
+    }
+
     /// Advance the counter by `steps`, raising overflow and compare flags on
-    /// the way. Split out so the wrap logic is one place and a multi-wrap
-    /// advance (a big tick interval, a large prescaler) cannot skip a flag.
-    fn advance(&mut self, steps: u64) {
+    /// the way.
+    ///
+    /// ⚠️ **A lump of N steps must latch exactly what N single steps latch.**
+    /// The scheduler path advances the counter in one closed-form jump between
+    /// observations, so any place where a big advance and a per-cycle advance
+    /// disagree is a place where the twin renders one thing under the walk and
+    /// another under the scheduler. `steps_to_compare` is the shared
+    /// derivation, and the brute-force gate in this module's tests is what
+    /// keeps the two identical.
+    ///
+    /// `&self`: every field it mutates is a `Cell`, so a lazy `&self` MMIO read
+    /// can bring the counter up to "now" before answering.
+    fn advance(&self, steps: u64) {
         if steps == 0 {
             return;
         }
         let period = self.top as u64 + 1;
-        // A compare fires when the counter PASSES its value. Over an advance
-        // that wraps, every channel whose OC lies anywhere in the span fires —
-        // stepping by more than one count must not silently skip a match, or a
-        // large tick interval would drop compares a small one catches.
-        let from = self.cnt as u64;
-        let wrapped = from + steps >= period;
+        let mut from = self.cnt.get() as u64;
+        let mut steps = steps;
+
+        // Degenerate entry state: firmware wrote a `CNT` above `TOP`. The
+        // single-step path wraps on the very next step and latches every
+        // channel the old predicate named, so reproduce exactly that one step
+        // and continue from the normalised value.
+        if from >= period {
+            let landed = (from + 1) % period;
+            for ch in 0..CC_COUNT {
+                let mode = self.cc_mode(ch);
+                if mode != CC_MODE_OUTPUTCOMPARE && mode != CC_MODE_PWM {
+                    continue;
+                }
+                let oc = self.cc_oc[ch] as u64;
+                if oc >= from || oc <= landed {
+                    self.iflag
+                        .set(self.iflag.get() | (1 << (IF_CC0_SHIFT + ch as u32)));
+                }
+            }
+            self.iflag.set(self.iflag.get() | IF_OF);
+            self.cnt.set(self.mask(landed as u32));
+            steps -= 1;
+            if steps == 0 {
+                self.publish_cc();
+                return;
+            }
+            from = landed;
+        }
+
+        let mut flags = self.iflag.get();
+        // The overflow flag latches on the wrap step, and a multi-wrap advance
+        // latches it once — it is a latch, not a count.
+        if steps >= period - from {
+            flags |= IF_OF;
+        }
         for ch in 0..CC_COUNT {
             let mode = self.cc_mode(ch);
             if mode != CC_MODE_OUTPUTCOMPARE && mode != CC_MODE_PWM {
                 continue;
             }
-            let oc = self.cc_oc[ch] as u64;
-            let hit = if wrapped {
-                // The span covers [from, period) plus [0, remainder].
-                oc >= from || oc <= (from + steps) % period
-            } else {
-                oc > from && oc <= from + steps
-            };
-            if hit {
-                self.iflag |= 1 << (IF_CC0_SHIFT + ch as u32);
+            if steps >= self.steps_to_compare(from, self.cc_oc[ch] as u64) {
+                flags |= 1 << (IF_CC0_SHIFT + ch as u32);
             }
         }
-        if wrapped {
-            self.iflag |= IF_OF;
-        }
-        self.cnt = self.mask(((from + steps) % period) as u32);
+        self.iflag.set(flags);
+        self.cnt.set(self.mask(((from + steps) % period) as u32));
         self.publish_cc();
+    }
+
+    // ── Drive-mode plumbing (walk vs event scheduler) ──────────────────────
+
+    /// True when the event scheduler owns this timer's time base: the
+    /// `event-scheduler` feature AND a [`CycleClock`] attached by the bus
+    /// registration choke. Everything time-related branches on this ONE
+    /// predicate, so the two drive modes can never mix.
+    #[inline]
+    fn scheduler_mode(&self) -> bool {
+        cfg!(feature = "event-scheduler") && self.clock.is_some()
+    }
+
+    /// Test/differential knob: detach the cycle clock, pinning the model to the
+    /// legacy walk (`uses_scheduler() == false`). This is how the
+    /// walk-vs-scheduler differential builds its reference lane out of the very
+    /// same bus assembly.
+    pub fn force_legacy_walk(&mut self) {
+        self.clock = None;
+        self.armed_wake = None;
+    }
+
+    /// Counter steps the walk would take over `cycles` CORE clocks, consuming
+    /// and re-publishing both residues. Identical arithmetic to
+    /// `tick_elapsed`'s — extracted so the walk and the lazy replay share it.
+    ///
+    /// The accumulation is linear, which is what makes the closed form exact:
+    /// `n` calls of one cycle each leave the residues at exactly the values one
+    /// call of `n` cycles leaves them at.
+    fn steps_for_cycles(&self, cycles: u64) -> u64 {
+        // `cycles` counts CORE clocks. Convert to timer clocks first, at the
+        // ratio between the two — otherwise a chip whose peripheral clock is a
+        // quarter of its core clock counts four times too fast. The remainder
+        // carries in core clocks so no fraction is lost.
+        let timer_clocks = self.prescale_residue.get() + cycles * self.timer_hz();
+        let per_timer_clock = self.cpu_hz.max(1);
+        let ticks = timer_clocks / per_timer_clock;
+        self.prescale_residue.set(timer_clocks % per_timer_clock);
+
+        let divisor = self.prescale_divisor();
+        let total = self.presc_residue.get() + ticks;
+        self.presc_residue.set(total % divisor);
+        total / divisor
+    }
+
+    /// The inverse of [`Self::steps_for_cycles`]: the smallest number of CORE
+    /// clocks after which the counter will have advanced `n >= 1` steps.
+    /// `None` when that lands beyond a `u64` cycle count, i.e. never in any
+    /// run.
+    ///
+    /// Read-only — it must not consume the residues, because it answers "when
+    /// should I be woken", not "how far have I come".
+    fn cycles_for_steps(&self, n: u64) -> Option<u64> {
+        let divisor = self.prescale_divisor() as u128;
+        // Smallest tick count T with `(presc_residue + T) / divisor >= n`.
+        // Saturating: a `CFG` rewrite can leave the residue at or above the new
+        // divisor, in which case the step is already owed and T is 0.
+        let ticks_needed = (n as u128 * divisor).saturating_sub(self.presc_residue.get() as u128);
+        // Smallest cycle count e with
+        // `(prescale_residue + e * timer_hz) / cpu_hz >= ticks_needed`.
+        let need = ticks_needed * self.cpu_hz.max(1) as u128;
+        let have = self.prescale_residue.get() as u128;
+        let hz = self.timer_hz() as u128;
+        let e = need.saturating_sub(have).div_ceil(hz).max(1);
+        u64::try_from(e).ok()
+    }
+
+    /// Steps until the counter latches a flag that `IEN` is actually watching —
+    /// the wake the walk would first pend the NVIC line on. `None` when nothing
+    /// unmasked can latch (the counter is halted, or every enabled source is
+    /// masked), in which case the chain is allowed to die and only an MMIO
+    /// write can revive it.
+    fn steps_to_next_enabled_flag(&self) -> Option<u64> {
+        if self.en & EN_EN == 0 || !self.status_running || self.ien == 0 {
+            return None;
+        }
+        let from = self.cnt.get() as u64;
+        if from > self.top as u64 {
+            // Degenerate `CNT > TOP`: the next single step wraps and latches.
+            return Some(1);
+        }
+        let period = self.top as u64 + 1;
+        let mut best: Option<u64> = None;
+        if self.ien & IF_OF != 0 {
+            best = Some(period - from);
+        }
+        for ch in 0..CC_COUNT {
+            if self.ien & (1 << (IF_CC0_SHIFT + ch as u32)) == 0 {
+                continue;
+            }
+            let mode = self.cc_mode(ch);
+            if mode != CC_MODE_OUTPUTCOMPARE && mode != CC_MODE_PWM {
+                continue;
+            }
+            let s = self.steps_to_compare(from, self.cc_oc[ch] as u64);
+            best = Some(best.map_or(s, |b: u64| b.min(s)));
+        }
+        best
+    }
+
+    /// Steps until a PWM output changes level.
+    ///
+    /// ⚠️ This is not an interrupt concern, it is a WIRE concern, and it is why
+    /// a scheduler-driven PWM timer still needs events when no interrupt is
+    /// enabled at all. Under the walk the pad level is republished on every
+    /// tick, so an edge lands on its exact cycle for free. A lazily-advanced
+    /// counter only republishes when something observes it — and nothing does:
+    /// a logic probe or a board view reads the PAD, through the GPIO model,
+    /// which never calls back into this timer. Without an event at each edge
+    /// the waveform would simply stop moving between MMIO accesses.
+    ///
+    /// `None` when no channel can produce an edge — no wire cell, halted
+    /// counter, no PWM channel, or a duty pinned at 0% / 100%.
+    fn steps_to_next_pwm_edge(&self) -> Option<u64> {
+        if self.lines.is_none() || self.en & EN_EN == 0 || !self.status_running {
+            return None;
+        }
+        let from = self.cnt.get() as u64;
+        if from > self.top as u64 {
+            return Some(1);
+        }
+        let top = self.top as u64;
+        let period = top + 1;
+        let mut best: Option<u64> = None;
+        for ch in 0..CC_COUNT {
+            if self.cc_mode(ch) != CC_MODE_PWM {
+                continue;
+            }
+            let oc = self.cc_oc[ch] as u64;
+            // The output is high while `CNT < OC`.
+            let s = if from < oc {
+                // Falling edge when the counter first reaches OC. An OC above
+                // TOP is never reached: the duty is 100% and there is no edge.
+                if oc > top {
+                    continue;
+                }
+                oc - from
+            } else {
+                // Rising edge at the wrap, where the counter lands on 0. An OC
+                // of 0 is 0% duty: the output never rises.
+                if oc == 0 {
+                    continue;
+                }
+                period - from
+            };
+            best = Some(best.map_or(s, |b: u64| b.min(s)));
+        }
+        best
+    }
+
+    /// What this timer next needs the CPU for, from the just-synced state: a
+    /// held IRQ level re-asserts on the very next tick; otherwise it is the
+    /// earlier of the next unmasked flag latch and the next PWM wire edge.
+    /// `None` = nothing armed, let the chain die.
+    ///
+    /// `anchor` is the cycle the state was just synced to, so an `At` is
+    /// absolute and stays comparable across later calls.
+    fn next_wake(&self) -> Option<Wake> {
+        if self.iflag.get() & self.ien != 0 {
+            // The walk re-pends on every tick while the level is held.
+            return Some(Wake::Level);
+        }
+        let steps = match (
+            self.steps_to_next_enabled_flag(),
+            self.steps_to_next_pwm_edge(),
+        ) {
+            (Some(a), Some(b)) => a.min(b),
+            (Some(a), None) => a,
+            (None, Some(b)) => b,
+            (None, None) => return None,
+        };
+        self.cycles_for_steps(steps)
+            .map(|d| Wake::At(self.anchor.get() + d))
+    }
+
+    /// CORE clocks from the just-synced state (`anchor`) until `wake`.
+    fn delay_to(&self, wake: Wake) -> u64 {
+        match wake {
+            Wake::Level => 1,
+            Wake::At(deadline) => deadline.saturating_sub(self.anchor.get()).max(1),
+        }
+    }
+
+    /// Lazy advance to the absolute published cycle `now` — callable from
+    /// `&self` because every field it moves is a `Cell`. Idempotent, and a
+    /// `now` at or behind the anchor is ignored.
+    ///
+    /// The advanced window always has constant EN/CFG/TOP/CC settings: every
+    /// MMIO write syncs first through the bus `sync_to` choke, so a settings
+    /// change can never straddle a window.
+    fn advance_to(&self, now: u64) {
+        let anchor = self.anchor.get();
+        if now <= anchor {
+            return;
+        }
+        self.anchor.set(now);
+        if self.en & EN_EN == 0 || !self.status_running {
+            // Halted: the window elapses with no counting and no residue
+            // movement, exactly the walk's early return.
+            return;
+        }
+        self.advance(self.steps_for_cycles(now - anchor));
+    }
+
+    /// Pull "now" from the bus-published clock and advance. No-op in legacy
+    /// mode, where the walk advances the counter instead.
+    fn sync_from_clock(&self) {
+        if self.scheduler_mode() {
+            if let Some(clock) = &self.clock {
+                self.advance_to(clock.now());
+            }
+        }
+    }
+
+    /// One legacy walk tick: advance by `cycles` core clocks, then report the
+    /// held IRQ level. Shared by the walk and the hardware-oracle forced walk.
+    fn walk_tick(&mut self, cycles: u64) -> PeripheralTickResult {
+        let mut result = PeripheralTickResult::default();
+        if self.en & EN_EN != 0 && self.status_running {
+            self.advance(self.steps_for_cycles(cycles));
+        }
+        if self.iflag.get() & self.ien != 0 {
+            result.irq = true;
+        }
+        result
     }
 }
 
 impl Peripheral for Efr32s2Timer {
     fn read(&self, offset: u64) -> SimResult<u8> {
+        // Scheduler mode: bring the lazily-advanced counter up to the
+        // bus-published "now" first, so a polled `CNT`/`IF` read observes fresh
+        // time. Exact at tick interval 1; at a wider interval it trails the
+        // true read cycle by less than one interval — the same bound the
+        // write-path `sync_to` ships.
+        self.sync_from_clock();
         let word = self.read_word(offset & !3);
         Ok(((word >> ((offset % 4) * 8)) & 0xFF) as u8)
     }
@@ -460,6 +804,7 @@ impl Peripheral for Efr32s2Timer {
     }
 
     fn read_u32(&self, offset: u64) -> SimResult<u32> {
+        self.sync_from_clock();
         Ok(self.read_word(offset))
     }
 
@@ -472,31 +817,120 @@ impl Peripheral for Efr32s2Timer {
         self.read(offset).ok()
     }
 
+    fn uses_scheduler(&self) -> bool {
+        self.scheduler_mode()
+    }
+
+    /// Everything the walk does here is event-expressible, and every piece of
+    /// it is reproduced on the event path:
+    ///
+    /// * the prescaled up-count is a LINEAR function of elapsed core clocks, so
+    ///   the lazy `advance_to` replays any window in closed form;
+    /// * `IF.OF` / `IF.CCn` latch at cycles this model computes exactly
+    ///   (`steps_to_next_enabled_flag`), and the held NVIC level re-pends at
+    ///   delay 1 exactly as the walk re-pends per tick;
+    /// * the PWM output level reaches its pad at each edge through a scheduled
+    ///   wake (`steps_to_next_pwm_edge`) rather than a per-tick republish.
+    ///
+    /// The unmodelled parts (`CLKSEL`, `TOPB` buffering, `LOCK`, dead time,
+    /// input capture, down/up-down counting) are inert register bits the walk
+    /// ignores identically, so no configuration needs a dynamic fallback. In
+    /// legacy mode (feature off / no clock) the walk does the real counting and
+    /// the conservative `true` stands.
     fn needs_legacy_walk(&self) -> bool {
-        true
+        !self.scheduler_mode()
+    }
+
+    fn attach_cycle_clock(&mut self, clock: CycleClock) {
+        // Anchor at the clock's current value so cycles that elapsed before the
+        // attach (normally zero — attach happens at bus assembly) are not
+        // retroactively replayed into the counter.
+        self.anchor.set(clock.now());
+        self.clock = Some(clock);
+    }
+
+    fn sync_to(&mut self, now_cycle: u64) {
+        if self.scheduler_mode() {
+            self.advance_to(now_cycle);
+        }
+    }
+
+    /// Re-arm the wake chain after an MMIO write.
+    ///
+    /// IDEMPOTENT by absolute deadline. This runs after EVERY write to the
+    /// block, and most writes do not move when the timer next needs the CPU —
+    /// an `IF` clear that leaves another compare pending, a `CNT` poll's
+    /// read-modify-write. Arming for those is what puts entries on the heap
+    /// that nothing can collapse (the scheduler's dedup key includes the
+    /// deadline, so two arms at DIFFERENT deadlines both stay resident until
+    /// they fire). Comparing the absolute deadline first is what keeps a
+    /// polling loop from tripping `MAX_LIVE_EVENTS_PER_PERIPHERAL`.
+    ///
+    /// The `- 1`: the bus turns the returned delay into the absolute deadline
+    /// `current_cycle + 1 + delay`, and the wake is wanted `d` cycles after the
+    /// just-synced state, i.e. at `current_cycle + d`.
+    fn take_scheduled_events(&mut self) -> Vec<(u64, u32)> {
+        if !self.scheduler_mode() {
+            return Vec::new();
+        }
+        let want = self.next_wake();
+        if want == self.armed_wake {
+            // An event covering exactly this is already in flight.
+            return Vec::new();
+        }
+        // The requirement moved, so whatever is queued is now wrong: bump the
+        // token so it is rejected on arrival. There is no scheduler-side
+        // cancel, by design.
+        self.armed_wake = want;
+        self.arm_seq = self.arm_seq.wrapping_add(1);
+        match want {
+            Some(wake) => vec![(self.delay_to(wake) - 1, self.arm_seq)],
+            None => Vec::new(),
+        }
+    }
+
+    fn on_event(
+        &mut self,
+        event_token: u32,
+        sched: &mut crate::sched::EventScheduler,
+        _bus: &mut dyn crate::Bus,
+    ) -> crate::sched::EventResult {
+        if !self.scheduler_mode() || event_token != self.arm_seq {
+            // Stale chain (re-armed since this event was scheduled): die.
+            return crate::sched::EventResult::default();
+        }
+        // Materialise the latch / wire edge this event was scheduled for, at
+        // the exact cycle the walk's tick would have produced it.
+        self.advance_to(sched.now());
+        let irq = self.iflag.get() & self.ien != 0;
+        // `Machine::drain_scheduler_events` re-arms `reschedule_delay` under
+        // the SAME token, so record what that in-flight event now covers —
+        // otherwise the next MMIO write compares against a stale `armed_wake`,
+        // concludes the work is uncovered, and arms a duplicate.
+        let want = self.next_wake();
+        self.armed_wake = want;
+        crate::sched::EventResult {
+            raise_own_irq: irq,
+            reschedule_delay: want.map(|w| self.delay_to(w)),
+            ..Default::default()
+        }
     }
 
     fn tick_elapsed(&mut self, cycles: u64) -> PeripheralTickResult {
-        let mut result = PeripheralTickResult::default();
-        if self.en & EN_EN != 0 && self.status_running {
-            // `cycles` counts CORE clocks. Convert to timer clocks first, at
-            // the ratio between the two — otherwise a chip whose peripheral
-            // clock is a quarter of its core clock counts four times too fast.
-            // The remainder carries in core clocks so no fraction is lost.
-            let timer_clocks = self.prescale_residue + cycles * self.timer_hz();
-            let per_timer_clock = self.cpu_hz.max(1);
-            let ticks = timer_clocks / per_timer_clock;
-            self.prescale_residue = timer_clocks % per_timer_clock;
+        // A scheduler-mode instance is walk-skipped and the event chain owns
+        // the counter; the guard keeps a stray direct call from double-counting
+        // the lazily-anchored state.
+        if self.scheduler_mode() {
+            return PeripheralTickResult::default();
+        }
+        self.walk_tick(cycles)
+    }
 
-            let divisor = self.prescale_divisor();
-            let total = self.presc_residue + ticks;
-            self.presc_residue = total % divisor;
-            self.advance(total / divisor);
-        }
-        if self.iflag & self.ien != 0 {
-            result.irq = true;
-        }
-        result
+    /// The bare-CPU hardware oracle freezes the CPU and deliberately asks for
+    /// the pre-scheduler one-tick advance, so the `scheduler_mode()` no-op in
+    /// [`Self::tick_elapsed`] must NOT apply here.
+    fn tick_elapsed_forced(&mut self, cycles: u64) -> PeripheralTickResult {
+        self.walk_tick(cycles)
     }
 
     /// The fallback timebase for a chip whose peripheral and core clocks are
@@ -830,6 +1264,279 @@ mod tests {
         t.write_word(OFF_CC + 2 * CC_STRIDE + CC_OC, 0x1234);
         assert_eq!(t.read_word(OFF_CC + 2 * CC_STRIDE + CC_OC), 0x1234);
         assert_eq!(t.read_word(OFF_CC + CC_OC), 0, "CC0 is a different channel");
+    }
+
+    // ── Walk ≡ scheduler: the closed forms, brute-forced ──────────────────
+    //
+    // The scheduler path replaces a per-cycle walk with two closed forms — a
+    // lumped `advance` and an inverse that says when to be woken. Both are
+    // pinned here against the thing they replace, over a parameter grid rather
+    // than at a point, because "a model that arms an event at the wrong cycle
+    // delivers an interrupt late, which renders identically right up to the run
+    // where it does not".
+
+    /// ⚠️ **A lump of N steps must latch exactly what N single steps latch.**
+    ///
+    /// This is the property the whole lazy-counter design rests on: the
+    /// scheduler advances the counter in one jump between observations, so any
+    /// disagreement here is a flag the twin raises under one drive mode and not
+    /// the other. Brute-forced over every start value, every compare value and
+    /// every advance length for a small TOP, in both compare modes.
+    ///
+    /// It is also the gate that caught the real defect: the previous wrapped
+    /// predicate latched every channel with `OC >= CNT` on ANY wrapping
+    /// advance, so a lump flagged `OC == CNT` that single steps do not (the
+    /// counter is leaving that value, not arriving at it).
+    #[test]
+    fn a_lumped_advance_latches_exactly_what_single_steps_latch() {
+        const TOP: u32 = 7;
+        for mode in [CC_MODE_OUTPUTCOMPARE, CC_MODE_PWM] {
+            // OC deliberately runs past TOP: an OC the counter can never reach
+            // is a real firmware state (a duty above the period).
+            for oc in 0..=(TOP + 3) {
+                for from in 0..=(TOP + 2) {
+                    for steps in 1..=(3 * (TOP as u64 + 1)) {
+                        let build = || {
+                            let mut t = Efr32s2Timer::new(32);
+                            t.write_word(OFF_EN, EN_EN);
+                            t.write_word(OFF_CMD, CMD_START);
+                            t.write_word(OFF_TOP, TOP);
+                            t.write_word(OFF_CC + CC_CFG, mode);
+                            t.write_word(OFF_CC + CC_OC, oc);
+                            t.cnt.set(from);
+                            t.iflag.set(0);
+                            t
+                        };
+                        let lump = build();
+                        lump.advance(steps);
+
+                        let unit = build();
+                        for _ in 0..steps {
+                            unit.advance(1);
+                        }
+
+                        assert_eq!(
+                            lump.iflag.get(),
+                            unit.iflag.get(),
+                            "flags diverge: mode={mode} oc={oc} from={from} steps={steps} \
+                             (lump={:#x} single={:#x})",
+                            lump.iflag.get(),
+                            unit.iflag.get()
+                        );
+                        assert_eq!(
+                            lump.cnt.get(),
+                            unit.cnt.get(),
+                            "counter diverges: mode={mode} oc={oc} from={from} steps={steps}"
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    /// `cycles_for_steps` is the inverse of `steps_for_cycles`, and it has to be
+    /// EXACT in both directions: one cycle short and the interrupt is late, one
+    /// cycle long and it is early. Brute-forced across prescalers and a clock
+    /// ratio that is deliberately not an integer (19 MHz timer clock off a
+    /// 78 MHz core is this part's real one), so the residue carry is exercised.
+    #[test]
+    fn the_wake_cycle_is_exactly_when_the_step_lands() {
+        for presc in [0u32, 1, 7, 18, 999] {
+            for (cpu, per) in [(78_000_000u64, 19_000_000u64), (48_000_000, 48_000_000)] {
+                let mut t = Efr32s2Timer::new(32);
+                t.attach_cpu_hz(cpu);
+                t.set_peripheral_hz(per);
+                t.write_word(OFF_EN, EN_EN);
+                t.write_word(OFF_CMD, CMD_START);
+                t.write_word(OFF_TOP, 0xFFFF_FFFF);
+                t.write_word(OFF_CFG, presc << CFG_PRESC_SHIFT);
+
+                for n in 1..=4u64 {
+                    // Read-only query on a pristine residue state.
+                    let e = t.cycles_for_steps(n).expect("a reachable wake");
+
+                    // One cycle short must NOT have produced `n` steps...
+                    let mut short = Efr32s2Timer::new(32);
+                    short.prescale_residue.set(t.prescale_residue.get());
+                    short.presc_residue.set(t.presc_residue.get());
+                    short.cpu_hz = cpu;
+                    short.peripheral_hz = Some(per);
+                    short.cfg = presc << CFG_PRESC_SHIFT;
+                    assert!(
+                        short.steps_for_cycles(e - 1) < n,
+                        "presc={presc} cpu={cpu} per={per} n={n}: {} cycles already \
+                         reached {n} steps, so the wake at {e} is LATE",
+                        e - 1
+                    );
+
+                    // ...and exactly `e` cycles must have.
+                    let mut exact = Efr32s2Timer::new(32);
+                    exact.prescale_residue.set(t.prescale_residue.get());
+                    exact.presc_residue.set(t.presc_residue.get());
+                    exact.cpu_hz = cpu;
+                    exact.peripheral_hz = Some(per);
+                    exact.cfg = presc << CFG_PRESC_SHIFT;
+                    assert!(
+                        exact.steps_for_cycles(e) >= n,
+                        "presc={presc} cpu={cpu} per={per} n={n}: {e} cycles did not \
+                         reach {n} steps, so the wake is EARLY"
+                    );
+
+                    // Advance the reference by one cycle so the next round
+                    // starts from a different residue phase.
+                    t.tick_elapsed(1);
+                }
+            }
+        }
+    }
+
+    /// The lazy replay must land on exactly the state the per-cycle walk lands
+    /// on — same counter, same flags, same residues — for an arbitrary window.
+    /// This is the in-module half of the executing differential.
+    #[test]
+    fn the_lazy_replay_equals_the_per_cycle_walk() {
+        for presc in [0u32, 3, 77] {
+            for top in [9u32, 255, 1000] {
+                let build = || {
+                    let mut t = Efr32s2Timer::new(32);
+                    t.attach_cpu_hz(78_000_000);
+                    t.set_peripheral_hz(19_000_000);
+                    t.write_word(OFF_EN, EN_EN);
+                    t.write_word(OFF_CMD, CMD_START);
+                    t.write_word(OFF_TOP, top);
+                    t.write_word(OFF_CFG, presc << CFG_PRESC_SHIFT);
+                    t.write_word(OFF_CC + CC_CFG, CC_MODE_PWM);
+                    t.write_word(OFF_CC + CC_OC, top / 3);
+                    t.write_word(OFF_CC + CC_STRIDE + CC_CFG, CC_MODE_OUTPUTCOMPARE);
+                    t.write_word(OFF_CC + CC_STRIDE + CC_OC, top / 2 + 1);
+                    t
+                };
+                for window in [1u64, 2, 17, 313, 5000, 100_000] {
+                    let mut walk = build();
+                    for _ in 0..window {
+                        walk.tick_elapsed(1);
+                    }
+                    let lazy = build();
+                    lazy.advance_to(window);
+
+                    assert_eq!(
+                        (
+                            lazy.cnt.get(),
+                            lazy.iflag.get(),
+                            lazy.prescale_residue.get(),
+                            lazy.presc_residue.get()
+                        ),
+                        (
+                            walk.cnt.get(),
+                            walk.iflag.get(),
+                            walk.prescale_residue.get(),
+                            walk.presc_residue.get()
+                        ),
+                        "presc={presc} top={top} window={window}: the lazy replay \
+                         diverged from the per-cycle walk"
+                    );
+                }
+            }
+        }
+    }
+
+    /// A PWM channel's pad edges must be scheduled, not merely republished when
+    /// something happens to touch the timer: nothing reads back INTO this model
+    /// from the pad side, so an unscheduled edge is an edge that never happens.
+    /// Both directions, and both duty extremes that legitimately have no edge.
+    #[test]
+    fn a_pwm_channel_asks_to_be_woken_at_each_wire_edge() {
+        let mut t = Efr32s2Timer::new(32);
+        // A wire cell is what makes the pad observable at all; without one
+        // there is nothing to publish and no reason to schedule.
+        assert_eq!(t.steps_to_next_pwm_edge(), None, "no wire cell yet");
+        let _ = t.pad_lines_arc();
+
+        t.write_word(OFF_EN, EN_EN);
+        t.write_word(OFF_CMD, CMD_START);
+        t.write_word(OFF_TOP, 99);
+        t.write_word(OFF_CC + CC_CFG, CC_MODE_PWM);
+        t.write_word(OFF_CC + CC_OC, 40);
+
+        // CNT 0 < OC 40: high, and the falling edge is 40 steps away.
+        assert!(t.pwm_output_high(0));
+        assert_eq!(t.steps_to_next_pwm_edge(), Some(40));
+
+        t.tick_elapsed_forced(40);
+        assert!(!t.pwm_output_high(0), "CNT 40 is not below OC 40");
+        // Low now; the rising edge is at the wrap, 60 steps on.
+        assert_eq!(t.steps_to_next_pwm_edge(), Some(60));
+
+        // 0% duty never rises, 100% duty never falls: no edge either way.
+        t.write_word(OFF_CC + CC_OC, 0);
+        assert_eq!(t.steps_to_next_pwm_edge(), None, "0% duty has no edge");
+        t.write_word(OFF_CNT, 0);
+        t.write_word(OFF_CC + CC_OC, 0xFFFF); // above TOP
+        assert_eq!(t.steps_to_next_pwm_edge(), None, "100% duty has no edge");
+    }
+
+    /// The wake the arming path computes is the cycle the walk would first pend
+    /// on — and a masked flag must NOT produce one, or every idle timer would
+    /// hold an event chain open and the batcher would never widen.
+    #[test]
+    fn only_an_unmasked_source_arms_a_wake() {
+        let mut t = Efr32s2Timer::new(32);
+        t.attach_cpu_hz(78_000_000);
+        t.set_peripheral_hz(78_000_000);
+        t.write_word(OFF_EN, EN_EN);
+        t.write_word(OFF_CMD, CMD_START);
+        t.write_word(OFF_TOP, 99);
+        assert_eq!(t.next_wake(), None, "IEN clear: nothing to wake for");
+
+        t.write_word(OFF_IEN, IF_OF);
+        assert_eq!(
+            t.next_wake(),
+            Some(Wake::At(100)),
+            "the overflow is 100 counts, and one count is one cycle here"
+        );
+
+        // A compare nearer than the wrap wins.
+        t.write_word(OFF_CC + CC_CFG, CC_MODE_OUTPUTCOMPARE);
+        t.write_word(OFF_CC + CC_OC, 30);
+        t.write_word(OFF_IEN, IF_OF | (1 << IF_CC0_SHIFT));
+        assert_eq!(t.next_wake(), Some(Wake::At(30)));
+
+        // Once the level is held the walk re-pends every tick, so the chain
+        // perpetuates at 1 until firmware clears the flag.
+        t.tick_elapsed_forced(30);
+        assert_eq!(
+            t.next_wake(),
+            Some(Wake::Level),
+            "a held level re-pends every tick, and must be spelled as a STATE \
+             rather than as a moving deadline"
+        );
+        t.write_word(OFF_IF, 0xFFFF_FFFF);
+        assert_eq!(t.next_wake(), Some(Wake::At(70)), "back to the wrap");
+
+        // A halted counter arms nothing at all.
+        t.write_word(OFF_CMD, CMD_STOP);
+        assert_eq!(t.next_wake(), None);
+    }
+
+    /// Legacy mode is the default for a hand-built model, and the differential
+    /// knob must be able to put a scheduler-mode instance back on the walk —
+    /// otherwise the reference lane silently becomes the candidate lane.
+    #[test]
+    fn the_drive_mode_follows_the_attached_clock() {
+        let mut t = Efr32s2Timer::new(32);
+        assert!(
+            t.needs_legacy_walk() && !t.uses_scheduler(),
+            "no clock: walk"
+        );
+
+        t.attach_cycle_clock(CycleClock::default());
+        if cfg!(feature = "event-scheduler") {
+            assert!(t.uses_scheduler() && !t.needs_legacy_walk());
+            t.force_legacy_walk();
+            assert!(t.needs_legacy_walk() && !t.uses_scheduler());
+        } else {
+            assert!(t.needs_legacy_walk() && !t.uses_scheduler());
+        }
     }
 
     #[test]

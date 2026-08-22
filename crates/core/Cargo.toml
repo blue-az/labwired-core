@@ -263,6 +263,11 @@ required-features = ["event-scheduler"]
 
 # #![cfg(feature = "event-scheduler")]
 [[test]]
+name = "efr32mg26_walk_differential"
+required-features = ["event-scheduler"]
+
+# #![cfg(feature = "event-scheduler")]
+[[test]]
 name = "nrf52840_timer_machine_gate"
 required-features = ["event-scheduler"]
 

@@ -63,7 +63,7 @@
 //!   `TRIGGER` and `MASKREQ` store and do nothing.
 //! * **No warm-up state machine.** `STATUS.ADCWARM` never sets.
 
-use crate::{Peripheral, PeripheralTickResult, SimResult};
+use crate::{CycleClock, Peripheral, PeripheralTickResult, SimResult};
 
 // ── Register offsets, walked from `IADC_TypeDef` ───────────────────────────
 const OFF_IPVERSION: u64 = 0x00;
@@ -225,6 +225,14 @@ pub struct Efr32s2Iadc {
     /// byte-wise 32-bit read returns one coherent result instead of popping
     /// four times. See the `read` override.
     byte_lane_cache: std::sync::atomic::AtomicU32,
+
+    /// Bus-published cycle clock, attached by `SystemBus::add_peripheral`.
+    /// `Some` selects scheduler mode; `None` keeps the legacy per-cycle walk.
+    clock: Option<CycleClock>,
+    /// In-flight singleton guard (cancellation contract layer 2): true while a
+    /// service event is queued, so a second MMIO write cannot stack a duplicate
+    /// wake on top of the live chain.
+    chain_live: bool,
 }
 
 impl Default for Efr32s2Iadc {
@@ -265,6 +273,8 @@ impl Efr32s2Iadc {
             last_result: std::sync::atomic::AtomicU32::new(0),
             conversion_pending: false,
             byte_lane_cache: std::sync::atomic::AtomicU32::new(0),
+            clock: None,
+            chain_live: false,
         }
     }
 
@@ -453,6 +463,51 @@ impl Efr32s2Iadc {
         }
     }
 
+    /// True when the event scheduler owns this model's service tick (the
+    /// `event-scheduler` feature AND a bus clock attached at registration).
+    /// One predicate behind every drive-mode branch.
+    #[inline]
+    fn scheduler_mode(&self) -> bool {
+        cfg!(feature = "event-scheduler") && self.clock.is_some()
+    }
+
+    /// Test/differential knob: detach the clock, pinning the model to the
+    /// legacy walk so the differential can build its reference lane from the
+    /// same bus assembly.
+    pub fn force_legacy_walk(&mut self) {
+        self.clock = None;
+        self.chain_live = false;
+    }
+
+    /// Everything one legacy walk tick does, in ONE place: settle a pending
+    /// conversion, then report the held IRQ level. Shared by the walk, the
+    /// hardware-oracle forced walk and the event chain, so the three cannot
+    /// drift apart.
+    fn service_tick(&mut self) -> PeripheralTickResult {
+        let mut result = PeripheralTickResult::default();
+        if self.conversion_pending {
+            self.conversion_pending = false;
+            // `None` means SINGLE names an input this model does not have. No
+            // result is produced and no flag is set, so firmware waiting on
+            // SINGLEFIFODV hangs rather than reading an invented sample.
+            if let Some(mv) = self.selected_millivolts() {
+                let code = self.code_for(mv);
+                self.push_result(code);
+            }
+        }
+        if self.ien & self.iflag != 0 {
+            result.irq = true;
+        }
+        result
+    }
+
+    /// True while the model still owes the walk a visit: a conversion is
+    /// waiting to settle, or an unmasked flag holds the interrupt line. Outside
+    /// this window the walk contributes nothing and the event chain may stop.
+    fn active(&self) -> bool {
+        self.conversion_pending || (self.ien & self.iflag != 0)
+    }
+
     fn apply_cmd(&mut self, value: u32) {
         if value & CMD_SINGLEFIFOFLUSH != 0 {
             if let Ok(mut f) = self.fifo.lock() {
@@ -526,26 +581,85 @@ impl Peripheral for Efr32s2Iadc {
         Ok(())
     }
 
+    fn uses_scheduler(&self) -> bool {
+        self.scheduler_mode()
+    }
+
+    /// The two things `tick_elapsed` does — settle the one-tick conversion a
+    /// `SINGLESTART` armed, and hold the IRQ level while `IF & IEN` is set —
+    /// are both reachable from an MMIO write, and both are exactly what the
+    /// event chain below performs at the same cycle. Nothing else accumulates
+    /// here: `conversion_pending` is set only by a `CMD` write and there is no
+    /// free-running counter, no warm-up state machine and no SCAN queue. In
+    /// legacy mode (feature off / no clock) the walk is the only thing that
+    /// settles a conversion, and the conservative `true` stands.
     fn needs_legacy_walk(&self) -> bool {
-        true
+        !self.scheduler_mode()
+    }
+
+    fn attach_cycle_clock(&mut self, clock: CycleClock) {
+        self.clock = Some(clock);
+    }
+
+    /// Nothing accumulates with elapsed cycles: the conversion is instantaneous
+    /// (see the module header) and settles on the first visit after the
+    /// command, not after a modelled conversion time. There is no lazy state to
+    /// bring forward to `now_cycle`.
+    fn sync_to(&mut self, _now_cycle: u64) {}
+
+    /// Arm the service chain after any MMIO write that leaves the model with
+    /// work: a `CMD.SINGLESTART` (a conversion owed on the next tick), or an
+    /// `IEN`/`IF` write that leaves an unmasked flag latched. delay-0 →
+    /// deadline `current_cycle + 1`, the exact cycle the walk's next tick would
+    /// have serviced it on.
+    fn take_scheduled_events(&mut self) -> Vec<(u64, u32)> {
+        if self.scheduler_mode() && self.active() && !self.chain_live {
+            self.chain_live = true;
+            vec![(0u64, 0u32)]
+        } else {
+            Vec::new()
+        }
+    }
+
+    fn on_event(
+        &mut self,
+        _event_token: u32,
+        _sched: &mut crate::sched::EventScheduler,
+        _bus: &mut dyn crate::Bus,
+    ) -> crate::sched::EventResult {
+        if !self.scheduler_mode() {
+            return crate::sched::EventResult::default();
+        }
+        // One walk tick, on the cycle the walk would have run it: settle the
+        // conversion and re-assert the held level. Perpetuate at delay 1 while
+        // anything is still owed, then stop — which is what lets the batcher
+        // widen again once firmware has cleared IF.
+        let irq = self.service_tick().irq;
+        let active = self.active();
+        self.chain_live = active;
+        crate::sched::EventResult {
+            raise_own_irq: irq,
+            reschedule_delay: active.then_some(1),
+            ..Default::default()
+        }
     }
 
     fn tick_elapsed(&mut self, _cycles: u64) -> PeripheralTickResult {
-        let mut result = PeripheralTickResult::default();
-        if self.conversion_pending {
-            self.conversion_pending = false;
-            // `None` means SINGLE names an input this model does not have. No
-            // result is produced and no flag is set, so firmware waiting on
-            // SINGLEFIFODV hangs rather than reading an invented sample.
-            if let Some(mv) = self.selected_millivolts() {
-                let code = self.code_for(mv);
-                self.push_result(code);
-            }
+        // A scheduler-mode instance is walk-skipped and the event chain owns
+        // the conversion; the guard keeps a stray direct call from settling it
+        // twice.
+        if self.scheduler_mode() {
+            return PeripheralTickResult::default();
         }
-        if self.ien & self.iflag != 0 {
-            result.irq = true;
-        }
-        result
+        self.service_tick()
+    }
+
+    /// The bare-CPU hardware oracle freezes the CPU and deliberately asks for
+    /// the pre-scheduler one-tick transition, so the `scheduler_mode()` no-op
+    /// in [`Self::tick_elapsed`] must NOT apply here. Same contract the STM32
+    /// `Exti` and the DMA models carry.
+    fn tick_elapsed_forced(&mut self, _cycles: u64) -> PeripheralTickResult {
+        self.service_tick()
     }
 
     fn set_adc_channel_input(&mut self, channel: u8, millivolts: u16) -> bool {
@@ -554,6 +668,13 @@ impl Peripheral for Efr32s2Iadc {
     }
 
     fn as_any(&self) -> Option<&dyn std::any::Any> {
+        Some(self)
+    }
+
+    /// ⚠️ The mutable accessor DEFAULTS TO `None`, and the differential
+    /// harness reaches this model mutably to pin it back onto the walk.
+    /// Without it the reference lane silently becomes the candidate lane.
+    fn as_any_mut(&mut self) -> Option<&mut dyn std::any::Any> {
         Some(self)
     }
 }

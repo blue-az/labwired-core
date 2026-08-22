@@ -1849,6 +1849,15 @@ pub struct Efr32s2I2c {
     attached_devices: Vec<RefCell<Box<dyn I2cDevice>>>,
     #[serde(skip)]
     current_target: Option<usize>,
+
+    /// Bus-published cycle clock, attached by `SystemBus::add_peripheral`.
+    /// `Some` selects scheduler mode; `None` keeps the legacy per-cycle walk.
+    #[serde(skip)]
+    clock: Option<CycleClock>,
+    /// In-flight singleton guard (cancellation contract layer 2): true while a
+    /// held-level re-assert event is queued.
+    #[serde(skip)]
+    chain_live: bool,
 }
 
 impl Default for Efr32s2I2c {
@@ -1877,6 +1886,8 @@ impl Default for Efr32s2I2c {
             // succeeds and `logic_watch` hands back `None`.
             lines: Some(std::sync::Arc::new(PadLines::new(I2C_LINES, &[true, true]))),
             wire_frames: Vec::new(),
+            clock: None,
+            chain_live: false,
             ien: 0,
             expect_address: false,
             is_reading: false,
@@ -2261,6 +2272,20 @@ impl Efr32s2I2c {
     fn irq_pending(&self) -> bool {
         self.iflag.get() & self.ien != 0
     }
+
+    /// True when the event scheduler owns this controller's IRQ level (the
+    /// `event-scheduler` feature AND a bus clock attached at registration).
+    ///
+    /// ⚠️ This model has NO cycle-paced transaction engine — a byte completes
+    /// inside the register write — so there is nothing to *pace*. What it does
+    /// owe the walk is the level re-assertion in `tick()`, and that is exactly
+    /// what the event chain re-emits. Leaving it on the walk for want of an
+    /// engine is what kept every EFR32 bus off the walk-free path: four I²C
+    /// instances that do nothing per cycle still pinned the whole chip to one
+    /// instruction per batch.
+    fn scheduler_mode(&self) -> bool {
+        cfg!(feature = "event-scheduler") && self.clock.is_some()
+    }
 }
 
 /// I2C peripheral — one variant per chip family. Register sets fully isolated.
@@ -2422,10 +2447,11 @@ impl I2c {
             Self::Stm32F1(i) => i.scheduler_mode(),
             Self::Stm32L4(i) => i.scheduler_mode(),
             Self::Kinetis(i) => i.scheduler_mode(),
-            // The EFR32 model has no cycle-paced transaction engine: a byte
-            // completes inside the register write, so there is nothing for the
-            // scheduler to pace and it stays on the legacy walk.
-            Self::Efr32s2(_) => false,
+            // The EFR32 model has no cycle-paced transaction engine, but it
+            // does hold a level-triggered IRQ the walk re-asserts every tick —
+            // and THAT is what the event chain takes over. See
+            // `Efr32s2I2c::scheduler_mode`.
+            Self::Efr32s2(i) => i.scheduler_mode(),
         }
     }
 
@@ -2437,8 +2463,10 @@ impl I2c {
             Self::Stm32F1(i) => i.clock = None,
             Self::Stm32L4(i) => i.clock = None,
             Self::Kinetis(i) => i.clock = None,
-            // Never on the scheduler in the first place.
-            Self::Efr32s2(_) => {}
+            Self::Efr32s2(i) => {
+                i.clock = None;
+                i.chain_live = false;
+            }
         }
     }
 }
@@ -2585,8 +2613,20 @@ impl crate::Peripheral for I2c {
 
     fn take_scheduled_events(&mut self) -> Vec<(u64, u32)> {
         match self {
-            // Never on the scheduler: nothing to arm.
-            Self::Efr32s2(_) => Vec::new(),
+            // EFR32: arm the held-level re-assert the moment a write leaves an
+            // unmasked flag pending. Every path that raises a flag on this
+            // model is an MMIO write (the transfer completes inside it), so the
+            // per-write drain always catches the activation. delay-0 → deadline
+            // `current_cycle + 1` = the cycle the walk's next tick would have
+            // pended on.
+            Self::Efr32s2(i) => {
+                if i.scheduler_mode() && i.irq_pending() && !i.chain_live {
+                    i.chain_live = true;
+                    vec![(0u64, 0u32)]
+                } else {
+                    Vec::new()
+                }
+            }
             Self::Kinetis(i) => {
                 if !i.scheduler_mode() {
                     return Vec::new();
@@ -2640,8 +2680,23 @@ impl crate::Peripheral for I2c {
     ) -> crate::sched::EventResult {
         let _ = sched;
         match self {
-            // Never on the scheduler: no event can be delivered here.
-            Self::Efr32s2(_) => crate::sched::EventResult::default(),
+            // EFR32: re-assert the held level every cycle while an unmasked
+            // flag stays latched — the event-path equivalent of the walk's
+            // per-tick `irq_pending()`. Stops when firmware clears IF
+            // (write-1-to-clear) or masks IEN, which is what lets the batcher
+            // widen again.
+            Self::Efr32s2(i) => {
+                if !i.scheduler_mode() {
+                    return crate::sched::EventResult::default();
+                }
+                let pending = i.irq_pending();
+                i.chain_live = pending;
+                crate::sched::EventResult {
+                    raise_own_irq: pending,
+                    reschedule_delay: pending.then_some(1),
+                    ..Default::default()
+                }
+            }
             Self::Kinetis(i) => {
                 if !i.scheduler_mode() {
                     return crate::sched::EventResult::default();
@@ -2705,9 +2760,7 @@ impl crate::Peripheral for I2c {
             Self::Stm32F1(i) => i.clock = Some(clock),
             Self::Stm32L4(i) => i.clock = Some(clock),
             Self::Kinetis(i) => i.clock = Some(clock),
-            // The EFR32 model completes a byte inside the register write, so
-            // it has no cycle-paced engine to hand a clock to.
-            Self::Efr32s2(_) => {}
+            Self::Efr32s2(i) => i.clock = Some(clock),
         }
     }
 
@@ -3812,10 +3865,7 @@ mod kinetis_scheduler {
             I2c::Stm32F1(i) => i.clock.clone(),
             I2c::Stm32L4(i) => i.clock.clone(),
             I2c::Kinetis(i) => i.clock.clone(),
-            // The EFR32 controller has no cycle clock at all: it completes a
-            // transfer inside the register write and never schedules an event,
-            // so it is not one of the variants this harness can drive.
-            I2c::Efr32s2(_) => panic!("EFR32 I2C is not a scheduler-mode variant"),
+            I2c::Efr32s2(i) => i.clock.clone(),
         }
         .expect("scheduler-mode instance has a clock")
     }
