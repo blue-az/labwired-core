@@ -904,7 +904,6 @@ boards:
     # layouts are not touched — these boards never construct the EFR32 variant,
     # and the STM32 reset-value tests (`stm32h5_reset_values_match_silicon`,
     # `test_i2c_reset_values`) pass unchanged.
-    drift_ack: 2026-08-21
     # 2026-08-22: the Thumb-2 decoder gained SMLABB/BT/TB/TT and SMULBB/BT/TB/TT
     # (ARMv7-M A7.7.166/171). They were UNDECODED, which in this core means a
     # silent no-op — `digitalWrite` on EFR32MG26 computes its port base with
@@ -921,7 +920,21 @@ boards:
     # golden trace (crates/wasm/tests/fixtures/motor-parity-native.json) still
     # matches. No other pinned firmware on any board reaches the encoding, so
     # nothing a silicon capture asserts moved. No live re-capture is evidenced here.
-    drift_ack_digest: fe15dea91457eac5c4c7ca31ce88dc547ca703b920179eccab21e530e7f253dc
+    #
+    # Re-stamped 2026-08-22 for the per-tick GPIO port read. `gpio.rs` gained ONE
+    # method, `read_gpio_input_word`, and changed nothing else: no register layout,
+    # no reset value, no `read_reg`/`write_reg` arm. It returns
+    # `read_reg(idr_offset())` — the same register, and the same value, that the
+    # edge-detection pass previously assembled by calling `read_gpio_input` once per
+    # pin. The equality is exact, not approximate: `read_gpio_input` IS
+    # `read_reg(idr_offset()) & (1 << pin)` for every pin below 32 and answers `Some`
+    # for all 32, so the old loop never ended early and rebuilt this identical word.
+    # IDR, ODR, MODER/CRL/CRH, BSRR and every anchored reset value are unreachable
+    # from this change. Ran: `labwired-core --lib` 3255 pass / 0 fail, and the 126
+    # GPIO tests, all unchanged. This is an ack, not a capture — no live re-capture
+    # was made this session.
+    drift_ack: 2026-08-22
+    drift_ack_digest: 7ec3b6b08e01804a74fec0f5414bb6226c9d541243bfd298434ae1b2e213280c
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/cpu/cortex_m.rs
@@ -1982,6 +1995,19 @@ boards:
       # `parse_size` reads MB as 10^6 — the modelled part grows to the size of the
       # real one. No register layout, reset value or peripheral behaviour is
       # touched, which is what the silicon capture asserts, so the capture stands.
+    #
+    # Re-stamped 2026-08-22 for the per-tick GPIO port read. `gpio.rs` gained ONE
+    # method, `read_gpio_input_word`, and changed nothing else: no register layout,
+    # no reset value, no `read_reg`/`write_reg` arm. It returns
+    # `read_reg(idr_offset())` — the same register, and the same value, that the
+    # edge-detection pass previously assembled by calling `read_gpio_input` once per
+    # pin. The equality is exact, not approximate: `read_gpio_input` IS
+    # `read_reg(idr_offset()) & (1 << pin)` for every pin below 32 and answers `Some`
+    # for all 32, so the old loop never ended early and rebuilt this identical word.
+    # IDR, ODR, MODER/CRL/CRH, BSRR and every anchored reset value are unreachable
+    # from this change. Ran: `labwired-core --lib` 3255 pass / 0 fail, and the 126
+    # GPIO tests, all unchanged. This is an ack, not a capture — no live re-capture
+    # was made this session.
     drift_ack: 2026-08-22
     # 2026-08-22: the Thumb-2 decoder gained SMLABB/BT/TB/TT and SMULBB/BT/TB/TT
     # (ARMv7-M A7.7.166/171). They were UNDECODED, which in this core means a
@@ -1999,7 +2025,8 @@ boards:
     # golden trace (crates/wasm/tests/fixtures/motor-parity-native.json) still
     # matches. No other pinned firmware on any board reaches the encoding, so
     # nothing a silicon capture asserts moved. No live re-capture is evidenced here.
-    drift_ack_digest: e511c7e725d610348ce5b57c71167d508958045ec7cc46d157de12c7d03b323a
+    drift_ack: 2026-08-22
+    drift_ack_digest: 223bd47e640a63f1c8bd6f75b31246af518c6319408a542f2b7c174376c5dda4
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/cpu/cortex_m.rs
@@ -2274,7 +2301,6 @@ boards:
     # layouts are not touched — these boards never construct the EFR32 variant,
     # and the STM32 reset-value tests (`stm32h5_reset_values_match_silicon`,
     # `test_i2c_reset_values`) pass unchanged.
-    drift_ack: 2026-08-21
     # 2026-08-22: the Thumb-2 decoder gained SMLABB/BT/TB/TT and SMULBB/BT/TB/TT
     # (ARMv7-M A7.7.166/171). They were UNDECODED, which in this core means a
     # silent no-op — `digitalWrite` on EFR32MG26 computes its port base with
@@ -2291,7 +2317,21 @@ boards:
     # golden trace (crates/wasm/tests/fixtures/motor-parity-native.json) still
     # matches. No other pinned firmware on any board reaches the encoding, so
     # nothing a silicon capture asserts moved. No live re-capture is evidenced here.
-    drift_ack_digest: f25b4203a3f32c92d9272521e140db27d2a799d778dc7c2818f49545af1f7687
+    #
+    # Re-stamped 2026-08-22 for the per-tick GPIO port read. `gpio.rs` gained ONE
+    # method, `read_gpio_input_word`, and changed nothing else: no register layout,
+    # no reset value, no `read_reg`/`write_reg` arm. It returns
+    # `read_reg(idr_offset())` — the same register, and the same value, that the
+    # edge-detection pass previously assembled by calling `read_gpio_input` once per
+    # pin. The equality is exact, not approximate: `read_gpio_input` IS
+    # `read_reg(idr_offset()) & (1 << pin)` for every pin below 32 and answers `Some`
+    # for all 32, so the old loop never ended early and rebuilt this identical word.
+    # IDR, ODR, MODER/CRL/CRH, BSRR and every anchored reset value are unreachable
+    # from this change. Ran: `labwired-core --lib` 3255 pass / 0 fail, and the 126
+    # GPIO tests, all unchanged. This is an ack, not a capture — no live re-capture
+    # was made this session.
+    drift_ack: 2026-08-22
+    drift_ack_digest: 4ea15df2185a50fc6b31db7945f4a43775984f3b0c912c1d22649483e64a856f
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/cpu/cortex_m.rs
@@ -2625,6 +2665,19 @@ boards:
       # `parse_size` reads MB as 10^6 — the modelled part grows to the size of the
       # real one. No register layout, reset value or peripheral behaviour is
       # touched, which is what the silicon capture asserts, so the capture stands.
+    #
+    # Re-stamped 2026-08-22 for the per-tick GPIO port read. `gpio.rs` gained ONE
+    # method, `read_gpio_input_word`, and changed nothing else: no register layout,
+    # no reset value, no `read_reg`/`write_reg` arm. It returns
+    # `read_reg(idr_offset())` — the same register, and the same value, that the
+    # edge-detection pass previously assembled by calling `read_gpio_input` once per
+    # pin. The equality is exact, not approximate: `read_gpio_input` IS
+    # `read_reg(idr_offset()) & (1 << pin)` for every pin below 32 and answers `Some`
+    # for all 32, so the old loop never ended early and rebuilt this identical word.
+    # IDR, ODR, MODER/CRL/CRH, BSRR and every anchored reset value are unreachable
+    # from this change. Ran: `labwired-core --lib` 3255 pass / 0 fail, and the 126
+    # GPIO tests, all unchanged. This is an ack, not a capture — no live re-capture
+    # was made this session.
     drift_ack: 2026-08-22
     # 2026-08-22: the Thumb-2 decoder gained SMLABB/BT/TB/TT and SMULBB/BT/TB/TT
     # (ARMv7-M A7.7.166/171). They were UNDECODED, which in this core means a
@@ -2642,7 +2695,8 @@ boards:
     # golden trace (crates/wasm/tests/fixtures/motor-parity-native.json) still
     # matches. No other pinned firmware on any board reaches the encoding, so
     # nothing a silicon capture asserts moved. No live re-capture is evidenced here.
-    drift_ack_digest: 8f491ed0bee517b51dd9e4f406b623f7f5d8a3e89d5257f637e7adbf85832ee8
+    drift_ack: 2026-08-22
+    drift_ack_digest: 4dedf6a08c8ce02125db67aaa0f3feefd38a65d61680a836bdcb4f0e7db92d9e
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/cpu/cortex_m.rs
@@ -2936,6 +2990,19 @@ boards:
       # `parse_size` reads MB as 10^6 — the modelled part grows to the size of the
       # real one. No register layout, reset value or peripheral behaviour is
       # touched, which is what the silicon capture asserts, so the capture stands.
+    #
+    # Re-stamped 2026-08-22 for the per-tick GPIO port read. `gpio.rs` gained ONE
+    # method, `read_gpio_input_word`, and changed nothing else: no register layout,
+    # no reset value, no `read_reg`/`write_reg` arm. It returns
+    # `read_reg(idr_offset())` — the same register, and the same value, that the
+    # edge-detection pass previously assembled by calling `read_gpio_input` once per
+    # pin. The equality is exact, not approximate: `read_gpio_input` IS
+    # `read_reg(idr_offset()) & (1 << pin)` for every pin below 32 and answers `Some`
+    # for all 32, so the old loop never ended early and rebuilt this identical word.
+    # IDR, ODR, MODER/CRL/CRH, BSRR and every anchored reset value are unreachable
+    # from this change. Ran: `labwired-core --lib` 3255 pass / 0 fail, and the 126
+    # GPIO tests, all unchanged. This is an ack, not a capture — no live re-capture
+    # was made this session.
     drift_ack: 2026-08-22
     # 2026-08-22: the Thumb-2 decoder gained SMLABB/BT/TB/TT and SMULBB/BT/TB/TT
     # (ARMv7-M A7.7.166/171). They were UNDECODED, which in this core means a
@@ -2953,7 +3020,8 @@ boards:
     # golden trace (crates/wasm/tests/fixtures/motor-parity-native.json) still
     # matches. No other pinned firmware on any board reaches the encoding, so
     # nothing a silicon capture asserts moved. No live re-capture is evidenced here.
-    drift_ack_digest: b6850f7e5ffa2a08631eb5f5c410237bb5e1d36d4d8c4f8e60a06f6577035a37
+    drift_ack: 2026-08-22
+    drift_ack_digest: 90973fe04efe024b4ac47fa82929e63b3069e89d60ad31ca0b8d3d9c86e7ff04
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     # 2026-08-12: chip yaml adds bxcan1 (type bxcan @ 0x40006400, APB1ENR bit 25) for
     # Arduino matrix L8 loopback. Existing BxCan model; no register-map change to
@@ -3700,7 +3768,7 @@ boards:
     # golden trace (crates/wasm/tests/fixtures/motor-parity-native.json) still
     # matches. No other pinned firmware on any board reaches the encoding, so
     # nothing a silicon capture asserts moved. No live re-capture is evidenced here.
-    drift_ack_digest: b3de20ac20320b1e82f10fd72f848a7defe066eb2d475bc8122af01bb3b25795
+    drift_ack_digest: 1784454ab3aaa18d6cce5fd95ae54de633644ef7deb52b00f8097b5e78be31ab
     models:
       - crates/core/src/cpu/cortex_m.rs
       - crates/core/src/decoder/arm.rs
@@ -3787,7 +3855,7 @@ boards:
     # golden trace (crates/wasm/tests/fixtures/motor-parity-native.json) still
     # matches. No other pinned firmware on any board reaches the encoding, so
     # nothing a silicon capture asserts moved. No live re-capture is evidenced here.
-    drift_ack_digest: 8d7c7f22e537baef2daa2aa2ecfbcc60a531417289477cfb23da554beced010d
+    drift_ack_digest: 0fb27d55c48c66a5483209c4f7fa029280227b36ea0b24b928d4527b74fceeed
     models:
       - crates/core/src/cpu/cortex_m.rs
       - crates/core/src/decoder/arm.rs

@@ -1097,6 +1097,22 @@ impl crate::Peripheral for GpioPort {
         Some((reg & (1u32 << pin)) != 0)
     }
 
+    fn read_gpio_input_word(&self) -> u32 {
+        // The same register `read_gpio_input` reads, read ONCE instead of once
+        // per pin. That is not an approximation of the default 32-call loop, it
+        // is the identity it computes: the loop's bit `pin` is
+        // `read_reg(idr_offset()) >> pin & 1` for every pin below 32, and this
+        // model answers `Some` for all 32, so the loop never breaks early and
+        // reassembles this exact word. Every family's input offset comes from
+        // `idr_offset`, so no family is special-cased here.
+        //
+        // Worth overriding because `read_reg` on the input offset is not a field
+        // load: it evaluates `effective_idr` (STM32 F1/V2, Kinetis, nRF52) or
+        // the Series-2 DIN path (`Efr32s2Gpio::read_reg`, which alone was 60% of
+        // all retired instructions on efr32mg26 before this).
+        self.read_reg(self.idr_offset())
+    }
+
     fn read_gpio_pad(&self, pin: u8) -> Option<bool> {
         self.pad_level(pin)
     }
