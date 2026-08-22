@@ -346,6 +346,13 @@ impl SystemBus {
                 .and_then(|a| a.downcast_ref::<crate::peripherals::nrf52::nvmc::Nrf52Nvmc>())
                 .is_some()
         });
+        // The GPIO edge-detection pass caches its four port indices on first
+        // use. Every other index on this bus is rebuilt here when the
+        // peripheral list changes; that one must be dropped for the same
+        // reason, or it keeps pointing at the old layout — including a cached
+        // "no ports found", which would never be re-resolved.
+        self.gpio_port_idx = None;
+
         self.irq_fabric.esp32c3.system_idx = self
             .peripherals
             .iter()
