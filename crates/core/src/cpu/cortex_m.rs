@@ -3583,6 +3583,38 @@ impl CortexM {
                     self.write_reg(rd, res);
                     pc_increment = 4;
                 }
+                Instruction::SmlaXy {
+                    rd,
+                    rn,
+                    rm,
+                    ra,
+                    n_top,
+                    m_top,
+                    accumulate,
+                } => {
+                    // ⚠️ SIGNED halves, sign-extended before the multiply. Taking
+                    // them as u16 would agree with the hardware on every small
+                    // positive operand and disagree on every negative one — the
+                    // shape of bug that passes a smoke test and fails a sensor.
+                    let half = |value: u32, top: bool| -> i32 {
+                        (if top {
+                            (value >> 16) as u16
+                        } else {
+                            value as u16
+                        }) as i16 as i32
+                    };
+                    let product =
+                        half(self.read_reg(rn), n_top).wrapping_mul(half(self.read_reg(rm), m_top));
+                    // The SMUL forms have no addend; `ra` there is the 0b1111
+                    // encoding marker, not a register.
+                    let res = if accumulate {
+                        (self.read_reg(ra) as i32).wrapping_add(product)
+                    } else {
+                        product
+                    };
+                    self.write_reg(rd, res as u32);
+                    pc_increment = 4;
+                }
 
                 // -------- VFPv4 single-precision (FPU) --------
                 Instruction::Vldr { sd, rn, imm, add } => {
@@ -4987,6 +5019,73 @@ mod tests {
         run_test_instr(&mut cpu, &mut bus, 0xFBA2_0103, true);
         assert_eq!(cpu.r0, 0xFFFF_FFFE, "UMULL low half");
         assert_eq!(cpu.r1, 0x0000_0001, "UMULL high half");
+    }
+
+    /// SMLABB/BT/TB/TT and SMULBB — the DSP halfword multiplies.
+    ///
+    /// ⚠️ THIS IS A BLINK TEST WEARING A DECODER TEST'S CLOTHES. `smlabb r3,
+    /// r3, r4, r2` is what GCC emits at -Os for the port-base arithmetic in
+    /// Arduino's `digitalWrite` on EFR32MG26 — `0x4003C000 + 0x30 * (pin >> 4)`
+    /// — and while it was undecoded it was a silent no-op, so `digitalWrite`
+    /// wrote to a garbage address. The BRD2709A Arduino column read 6 pass /
+    /// 2 fail, and the two failures were blink and SPI: the two sketches that
+    /// drive a pin.
+    ///
+    /// The negative cases matter as much as the positive one. Taking the halves
+    /// as UNSIGNED agrees with the hardware on every small positive operand —
+    /// which is every pin number — and disagrees on every negative one.
+    ///
+    /// ⚠️ Every encoding below is `arm-none-eabi-as -mcpu=cortex-m33` output,
+    /// not hand-derived. Two of them were hand-derived first and both put Rm at
+    /// r0: the product came out zero and the assertion still read like a
+    /// sign-extension bug rather than a typo in the test.
+    #[test]
+    fn test_thumb2_halfword_multiplies() {
+        let mut cpu = CortexM::new();
+        let mut bus = MockBus::new();
+
+        // The exact instruction from a compiled digitalWrite:
+        //   smlabb r3, r3, r4, r2   =  FB13 2304
+        // r3 = SInt(r3[15:0]) * SInt(r4[15:0]) + r2
+        cpu.r3 = 0x30; // 48 bytes per GPIO port
+        cpu.r4 = 2; // port index for a PC pin
+        cpu.r2 = 0x4003_C000; // GPIO block base
+        run_test_instr(&mut cpu, &mut bus, 0xFB13_2304, true);
+        assert_eq!(
+            cpu.r3, 0x4003_C060,
+            "SMLABB: PORTC base = 0x4003C000 + 48*2"
+        );
+
+        // ⚠️ SIGNED, and the halves are sign-extended BEFORE the multiply.
+        // -2 * 3 = -6, not 65534 * 3.
+        cpu.r3 = 0x0000_FFFE; // bottom half = -2
+        cpu.r4 = 0x0000_0003;
+        cpu.r2 = 0;
+        run_test_instr(&mut cpu, &mut bus, 0xFB13_2304, true);
+        assert_eq!(cpu.r3 as i32, -6, "SMLABB sign-extends both halves");
+
+        // The TOP-half selectors are separate bits and must not be swapped.
+        //   smlatb r0, r1, r2, r3  = FB11 3022  (N=1 -> Rn top, M=0 -> Rm bottom)
+        cpu.r1 = 0x0005_0000; // top half = 5, bottom = 0
+        cpu.r2 = 0x0000_0007; // bottom half = 7
+        cpu.r3 = 1;
+        run_test_instr(&mut cpu, &mut bus, 0xFB11_3022, true);
+        assert_eq!(cpu.r0, 36, "SMLATB: 5*7 + 1, Rn top and Rm bottom");
+
+        //   smlabt r0, r1, r2, r3  = FB11 3012  (N=0 -> Rn bottom, M=1 -> Rm top)
+        cpu.r1 = 0x0000_0005;
+        cpu.r2 = 0x0007_0000;
+        cpu.r3 = 1;
+        run_test_instr(&mut cpu, &mut bus, 0xFB11_3012, true);
+        assert_eq!(cpu.r0, 36, "SMLABT: Rn bottom and Rm top");
+
+        // Ra == 0b1111 is SMULBB — the product alone, with NO addend. Reading
+        // r15 as an accumulator instead would add the PC.
+        //   smulbb r0, r1, r2  = FB11 F002
+        cpu.r1 = 6;
+        cpu.r2 = 7;
+        run_test_instr(&mut cpu, &mut bus, 0xFB11_F002, true);
+        assert_eq!(cpu.r0, 42, "SMULBB does not accumulate");
     }
 
     #[test]
