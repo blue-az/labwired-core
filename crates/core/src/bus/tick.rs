@@ -547,12 +547,23 @@ impl SystemBus {
                 ("gpioc", 2),
                 ("gpiod", 3),
             ];
-            let mut gpio_idx: [Option<usize>; 4] = [None; 4];
-            for (name, port) in GPIO_PORT_IDS {
-                if gpio_idx[port].is_none() {
-                    gpio_idx[port] = self.find_peripheral_index_by_name(name);
+            // Resolved once, then cached — see `SystemBus::gpio_port_idx`. Doing
+            // it per tick is eight linear scans of the peripheral list with a
+            // string compare each, on every boundary of every chip, to arrive at
+            // the same four indices every time.
+            let gpio_idx = match self.gpio_port_idx {
+                Some(cached) => cached,
+                None => {
+                    let mut resolved: [Option<usize>; 4] = [None; 4];
+                    for (name, port) in GPIO_PORT_IDS {
+                        if resolved[port].is_none() {
+                            resolved[port] = self.find_peripheral_index_by_name(name);
+                        }
+                    }
+                    self.gpio_port_idx = Some(resolved);
+                    resolved
                 }
-            }
+            };
             let mut changes: Vec<(u8, u8, u8)> = Vec::new();
             // First pass ADOPTS the live levels as the baseline (see
             // `last_gpio_in`): nothing has transitioned yet, so `baseline` is
@@ -562,17 +573,14 @@ impl SystemBus {
             let mut current_in = baseline.unwrap_or([0; 4]);
             for (port, idx) in gpio_idx.iter().enumerate() {
                 let Some(idx) = idx else { continue };
-                let dev = &self.peripherals[*idx].dev;
-                let mut cur = 0u32;
-                for pin in 0..32u8 {
-                    match dev.read_gpio_input(pin) {
-                        Some(true) => cur |= 1 << pin,
-                        Some(false) => {}
-                        // A port narrower than 32 pins stops answering; the
-                        // rest of the word stays clear.
-                        None => break,
-                    }
-                }
+                // Whole port in one call. `read_gpio_input_word`'s default IS
+                // the pin-by-pin loop that used to be written out here (first
+                // `None` ends the port, so a port narrower than 32 pins leaves
+                // the rest of the word clear), so a model that does not
+                // override it produces the identical word; `GpioPort` does
+                // override it, and answers with one register read instead of
+                // 32 evaluations of a computed input register.
+                let cur = self.peripherals[*idx].dev.read_gpio_input_word();
                 current_in[port] = cur;
                 let Some(prev) = baseline.map(|b| b[port]) else {
                     continue;

@@ -233,6 +233,7 @@ impl SystemBus {
             last_route: Cell::new(None),
             last_gap: Cell::new(None),
             last_gpio_in: None,
+            gpio_port_idx: None,
             current_cycle: 0,
             cycle_clock: crate::CycleClock::default(),
             pending_schedule: Vec::new(),

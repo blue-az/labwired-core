@@ -655,6 +655,37 @@ pub trait Peripheral: std::fmt::Debug + Send {
         None
     }
 
+    /// GPIO capability: the firmware-visible input levels of the WHOLE port as
+    /// one word, bit `n` being pin `n`. Zero for a non-GPIO peripheral.
+    ///
+    /// The per-tick edge-detection pass in [`SystemBus::tick_peripherals_fully`]
+    /// wants the whole port, not one pin, and it runs on every boundary tick.
+    /// Assembling the word from 32 [`Peripheral::read_gpio_input`] calls costs
+    /// 32 evaluations of the port's input register per port per tick — and on
+    /// these models that register is COMPUTED, not stored: `GpioPort` resolves
+    /// it through `effective_idr`, which folds the output latch, the open-drain
+    /// mask and the pad levels together on every call. Measured under callgrind
+    /// on the perf-spin fixture, that loop was 60% of all instructions the
+    /// simulator retired on efr32mg26 (4 ports) and ~33% on nrf52840 (2 ports).
+    ///
+    /// The default builds the word exactly the way that pass built it before
+    /// this method existed, so a model that does not override it is bit-for-bit
+    /// unchanged: pins are read low to high, and the first `None` ends the port
+    /// (a port narrower than 32 pins leaves the rest of the word clear).
+    /// A port that keeps its inputs in one register overrides this and answers
+    /// in a single read.
+    fn read_gpio_input_word(&self) -> u32 {
+        let mut word = 0u32;
+        for pin in 0..32u8 {
+            match self.read_gpio_input(pin) {
+                Some(true) => word |= 1 << pin,
+                Some(false) => {}
+                None => break,
+            }
+        }
+        word
+    }
+
     /// GPIO capability: read the firmware-visible output latch for `pin`.
     /// Non-GPIO peripherals return `None`.
     fn read_gpio_output(&self, _pin: u8) -> Option<bool> {

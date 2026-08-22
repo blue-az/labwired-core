@@ -317,6 +317,22 @@ pub struct SystemBus {
     /// construction site cannot silently spell "not yet sampled" as "sampled
     /// zero".
     last_gpio_in: Option<[u32; 4]>,
+    /// Cached bus indices of GPIO ports 0..3, resolved on the first
+    /// edge-detection pass and never again.
+    ///
+    /// That pass runs on every boundary tick and used to resolve them by name
+    /// each time: eight `find_peripheral_index_by_name` calls, each a linear
+    /// scan of the whole peripheral list with a string compare per entry, to
+    /// arrive at the same four answers. On nrf52840 (49 peripherals) that is up
+    /// to 392 string compares per tick, and it was measurable on every chip
+    /// including the ones that have no port under any of those names.
+    ///
+    /// Same fixed-set assumption the `Machine` index caches make (`scb_index`,
+    /// `nvmc_index`): nothing removes or reorders `peripherals` after the bus is
+    /// assembled, and appends never move an existing index. Resolved lazily
+    /// rather than at construction because the assembly path clears and refills
+    /// `peripherals`; the first tick is strictly after that.
+    gpio_port_idx: Option<[Option<usize>; 4]>,
     /// Phase 2B.2 (issue #192): the current CPU cycle count, mirrored from
     /// `Machine::total_cycles` once per step. Read by the MMIO write path to
     /// lazily sync scheduler-driven peripherals (`uses_scheduler() == true`)
