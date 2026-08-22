@@ -624,7 +624,7 @@ fn doom_inputs() -> (ChipDescriptor, SystemManifest) {
 /// See also the `NIGHTLY_ONLY` entry for this file in
 /// `crates/core/src/tests/scheduler_lane_coverage.rs`.
 #[test]
-#[ignore = "ROM-boots the S3 Doom lab to frame 1 (73.8M steps, ~18s release) and needs the monorepo's Doom flash image; run with --release --ignored"]
+#[ignore = "ROM-boots the S3 Doom lab to frame 1 (160M steps, ~38 s release) and needs the monorepo's Doom flash image; run with --release --ignored"]
 fn esp32s3_doom_frame1_matches_hardware_oracle() {
     let (chip, manifest) = doom_inputs();
     let mut run = DoomRun::new(&chip, &manifest);
