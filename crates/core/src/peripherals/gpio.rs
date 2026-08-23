@@ -45,6 +45,23 @@ pub enum GpioRegisterLayout {
     Stm32F1,
     Stm32V2,
     Nrf52,
+    /// Nordic **nRF54L family** (nRF54L05/10/15, nRF54LM20A/B) GPIO port.
+    ///
+    /// The same registers as [`GpioRegisterLayout::Nrf52`] with the same
+    /// meanings, at a COMPACTED set of offsets: OUT @0x000, OUTSET @0x004,
+    /// OUTCLR @0x008, IN @0x00C, DIR @0x010, DIRSET @0x014, DIRCLR @0x018,
+    /// LATCH @0x020, DETECTMODE @0x024, PIN_CNF[n] @0x080 + 4n. Source: Nordic
+    /// MDK `nrf54lm20a_application.svd`, peripheral GLOBAL_P2.
+    ///
+    /// ⚠️ This is NOT a constant shift of the nRF52 map, which is why it is a
+    /// layout and not a `reg_offset`. The first block moved by exactly 0x504,
+    /// but PIN_CNF moved from 0x700 to 0x080 — a delta of 0x680. A port
+    /// declared as nRF52-with-an-offset therefore serves DIR and OUT correctly
+    /// and drops every PIN_CNF access on the floor, which is silent: LEDs still
+    /// light, because they only need DIR and OUT, while an input's pull-up
+    /// configuration — written by Zephyr and nrfx through PIN_CNF alone — never
+    /// arrives, and the pin reads whatever the bus floats at.
+    Nrf54l,
     /// NXP Kinetis (KW41Z GPIOA/B/C): PDOR @0x0 (output), PSOR/PCOR/PTOR
     /// set/clear/toggle, PDIR @0x10 (input), PDDR @0x14 (direction).
     Kinetis,
@@ -64,10 +81,11 @@ impl FromStr for GpioRegisterLayout {
             "stm32f1" | "f1" | "legacy" => Ok(Self::Stm32F1),
             "stm32v2" | "v2" | "modern" | "stm32-modern" | "h5" | "stm32h5" => Ok(Self::Stm32V2),
             "nrf52" | "nordic" => Ok(Self::Nrf52),
+            "nrf54l" | "nrf54lm20a" | "nrf54l15" => Ok(Self::Nrf54l),
             "kinetis" | "kw41z" | "nxp" => Ok(Self::Kinetis),
             "efr32s2" | "efr32_series2" | "efr32xg2" => Ok(Self::Efr32s2),
             _ => Err(format!(
-                "unsupported GPIO register layout '{}'; supported: stm32f1, stm32v2, nrf52, kinetis, efr32s2",
+                "unsupported GPIO register layout '{}'; supported: stm32f1, stm32v2, nrf52, nrf54l, kinetis, efr32s2",
                 value
             )),
         }
@@ -703,6 +721,12 @@ pub struct GpioPort {
         std::sync::Arc<crate::peripherals::pad_claims::PadClaims>,
         u8,
     )>,
+    /// True when this port decodes the nRF54L compacted offsets. The register
+    /// BEHAVIOUR is the nRF52 model's — only the addresses differ — so the
+    /// family stays `Nrf52` and every `GpioFamily::Nrf52(_)` arm elsewhere
+    /// keeps working. Adding a family variant instead would make each of those
+    /// arms silently miss this port.
+    nrf54l_offsets: bool,
 }
 
 impl Default for GpioPort {
@@ -719,6 +743,7 @@ impl GpioPort {
             pad_routes: crate::peripherals::pad_routing::PadRoutes::new(),
             window_offset: 0,
             pad_claims: None,
+            nrf54l_offsets: false,
         }
     }
 
@@ -738,6 +763,11 @@ impl GpioPort {
             GpioRegisterLayout::Stm32F1 => GpioFamily::Stm32F1(F1Gpio::new()),
             GpioRegisterLayout::Stm32V2 => GpioFamily::Stm32V2(V2Gpio::default()),
             GpioRegisterLayout::Nrf52 => GpioFamily::Nrf52(Nrf52Gpio::default()),
+            GpioRegisterLayout::Nrf54l => {
+                let mut port = Self::from_family(GpioFamily::Nrf52(Nrf52Gpio::default()));
+                port.nrf54l_offsets = true;
+                return port;
+            }
             GpioRegisterLayout::Kinetis => GpioFamily::Kinetis(KinetisGpio::default()),
             GpioRegisterLayout::Efr32s2 => GpioFamily::Efr32s2(Efr32s2Gpio::default()),
         })
@@ -747,6 +777,16 @@ impl GpioPort {
     /// Use this when the port has fewer than 32 physical pins (e.g. P1 = 16).
     pub fn new_nrf52(num_pins: u32) -> Self {
         Self::from_family(GpioFamily::Nrf52(Nrf52Gpio::with_num_pins(num_pins)))
+    }
+
+    /// Build an nRF54L-layout GPIO port with an explicit pin count.
+    ///
+    /// Port widths are NOT uniform on this family and a wrong one is silent:
+    /// nRF54LM20A has P0 = 10, P1 = 32, P2 = 11, P3 = 13 (Zephyr DT `ngpios`).
+    pub fn new_nrf54l(num_pins: u32) -> Self {
+        let mut port = Self::from_family(GpioFamily::Nrf52(Nrf52Gpio::with_num_pins(num_pins)));
+        port.nrf54l_offsets = true;
+        port
     }
 
     /// Build a V2-layout GPIO port with explicit MODER/OSPEEDR/PUPDR reset
@@ -768,11 +808,29 @@ impl GpioPort {
     /// through here, so a port with a non-zero window offset cannot be reached
     /// by one path and missed by another.
     fn read_reg(&self, offset: u64) -> u32 {
-        self.family.read_reg(offset + self.window_offset)
+        self.family.read_reg(self.translate(offset) + self.window_offset)
     }
 
     fn write_reg(&mut self, offset: u64, value: u32) {
-        self.family.write_reg(offset + self.window_offset, value);
+        let translated = self.translate(offset);
+        self.family.write_reg(translated + self.window_offset, value);
+    }
+
+    /// nRF54L window offset -> the nRF52 model's register offset.
+    ///
+    /// Piecewise, because the two blocks moved by different amounts: the
+    /// OUT..DETECTMODE run by 0x504, PIN_CNF by 0x680. An unrecognised offset
+    /// is passed through unchanged so it reaches the model's own census
+    /// counter rather than being folded onto a real register.
+    fn translate(&self, offset: u64) -> u64 {
+        if !self.nrf54l_offsets {
+            return offset;
+        }
+        match offset {
+            0x000..=0x024 => offset + 0x504,
+            0x080..=0x0FC => offset + 0x680,
+            other => other,
+        }
     }
 
     /// Register offset of the output data register (ODR) for this family,
@@ -783,6 +841,7 @@ impl GpioPort {
         let family: u64 = match &self.family {
             GpioFamily::Stm32F1(_) => 0x0C,
             GpioFamily::Stm32V2(_) => 0x14,
+            GpioFamily::Nrf52(_) if self.nrf54l_offsets => 0x000,
             GpioFamily::Nrf52(_) => 0x504,
             GpioFamily::Kinetis(_) => 0x00,
             GpioFamily::Efr32s2(_) => 0x10, // DOUT
@@ -797,6 +856,7 @@ impl GpioPort {
         let family: u64 = match &self.family {
             GpioFamily::Stm32F1(_) => 0x08,
             GpioFamily::Stm32V2(_) => 0x10,
+            GpioFamily::Nrf52(_) if self.nrf54l_offsets => 0x00C,
             GpioFamily::Nrf52(_) => 0x510,
             GpioFamily::Kinetis(_) => 0x10,
             GpioFamily::Efr32s2(_) => 0x14, // DIN
@@ -835,6 +895,10 @@ impl GpioPort {
         match &self.family {
             GpioFamily::Stm32F1(_) => GpioRegisterLayout::Stm32F1,
             GpioFamily::Stm32V2(_) => GpioRegisterLayout::Stm32V2,
+            // Reported as its own layout, which is what keeps
+            // `wire_nrf52_pads` off this port: that engine's PSEL decode is
+            // verified on the nRF52840 only.
+            GpioFamily::Nrf52(_) if self.nrf54l_offsets => GpioRegisterLayout::Nrf54l,
             GpioFamily::Nrf52(_) => GpioRegisterLayout::Nrf52,
             GpioFamily::Kinetis(_) => GpioRegisterLayout::Kinetis,
             GpioFamily::Efr32s2(_) => GpioRegisterLayout::Efr32s2,
