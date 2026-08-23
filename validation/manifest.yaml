@@ -3746,7 +3746,25 @@ boards:
     # under --features event-scheduler (0 failed), clippy clean, fmt clean. No
     # live re-capture, and this ack does not discharge the ones already owed
     # above.
-    drift_ack: 2026-08-22
+    #
+    # Re-stamped 2026-08-23 for the walk-free S3 interrupt path. The intmatrix and
+    # its routing are unchanged; what changed is WHERE the routed state is derived.
+    # A walk-deleted S3 bus no longer re-aggregates interrupt levels every cycle:
+    # they are re-derived at the MMIO write choke (`sync_esp32s3_irq_write`), on the
+    # event path (`deliver_scheduled_irq_levels`), and after a dispatch clears the
+    # routed bit (`resettle_cpu_irq_levels`).
+    #
+    # This is not asserted, it is MEASURED per boundary. `esp32s3_irq_cache_
+    # differential` computes the routed state BOTH ways at every walk-free boundary
+    # — cached versus a fresh `poll_scheduler_matrix_sources` + recompute — over the
+    # per-core slot bitmap, the intmatrix INTR_STATUS mirror esp-hal reads back, and
+    # the scheduler-source bitmap. Real S3 Doom firmware, ROM boot, 40 M steps:
+    # 39,998,109 boundaries, 156,089 carrying a routed IRQ, 0 divergences. Breaking
+    # the write choke turns it red at 1333 boundaries, so the gate demonstrably bites.
+    #
+    # No silicon-anchored reset value is reachable from this: it changes when a level
+    # is recomputed, never what the registers hold. This is an ack, not a capture.
+    drift_ack: 2026-08-23
     # 2026-08-10: GP-SPI2 CPU W-buffer transactions now deliver MOSI bytes to
     # attached devices and return their MISO bytes; display D/C observes the S3
     # GPIO output; GPIO labels resolve against the S3 register bank. This is an
@@ -3843,7 +3861,7 @@ boards:
       # changes. Behaviour-preserving extraction, not a model correction —
       # `pr-workspace-tests` green on all shards is what exercises this peripheral,
       # so nothing the silicon capture asserts changed and the capture stands.
-    drift_ack_digest: 5de4805fa1b110ee03f6d82123ec65b7b50f979e2a132d4ce3355463d4531f52
+    drift_ack_digest: 821161b38b4859863e513233a8da9edeb9ce71cfc4f8796a71ba6302c0550f3a
     models:
       - crates/core/src/cpu/xtensa_lx7.rs
       - crates/core/src/decoder/xtensa.rs
