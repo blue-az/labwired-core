@@ -142,6 +142,12 @@ pub enum SpiRegisterLayout {
     /// CR1.CSTART-gated transfer engine. See [`Stm32H5SpiRegs`].
     Stm32H5,
     Nrf52Spim,
+    /// Nordic **nRF54L-family SPIM** (nRF54L05/10/15, nRF54LM20A/B). Same
+    /// EasyDMA engine as [`SpiRegisterLayout::Nrf52Spim`] on relocated
+    /// offsets, plus hardware D/C (`PSEL.DCX` + `DCXCNT`) and a hardware chip
+    /// select. See [`NrfSpimMap`] for the moved-register table and for why this
+    /// is one engine with two maps rather than two models.
+    Nrf54lSpim,
     /// NXP Kinetis **DSPI** (KW41Z `SPI0/SPI1`) — FIFO master with MCR / TCR /
     /// CTAR / SR / PUSHR / POPR. A frame is transmitted by writing PUSHR (the
     /// low 16 bits are the data, the high bits select PCS / CONT / EOQ); the
@@ -167,10 +173,11 @@ impl FromStr for SpiRegisterLayout {
             // H5 carries the H7-lineage "SPI v3" IP, not the L4/F7 FIFO map.
             "stm32h5" => Ok(Self::Stm32H5),
             "nrf52" | "nrf52_spim" | "nrf_spim" | "nordic" => Ok(Self::Nrf52Spim),
+            "nrf54l" | "nrf54l_spim" | "nrf54lm20a" | "nrf54l15" => Ok(Self::Nrf54lSpim),
             "kinetis" | "dspi" | "kinetis_dspi" | "nxp_dspi" | "kw41z" => Ok(Self::KinetisDspi),
             "efr32s2" | "efr32" | "efm32" | "gecko" | "efr32s2_usart" => Ok(Self::Efr32s2Usart),
             _ => Err(format!(
-                "unsupported SPI register layout '{}'; supported: stm32, stm32_fifo, stm32h5, nrf52, kinetis",
+                "unsupported SPI register layout '{}'; supported: stm32, stm32_fifo, stm32h5, nrf52, nrf54l, kinetis",
                 value
             )),
         }
@@ -535,6 +542,45 @@ impl Stm32H5SpiRegs {
 ///   0x548  TXD.MAXCNT  — number of bytes to transmit
 ///   0x54C  TXD.AMOUNT  — bytes actually transmitted (HW-updated, PS §6.30.4D8)
 ///   0x5C0  ORC         — over-read character (sent when TXD exhausted but RXD still running)
+/// Which generation's register offsets this instance answers on.
+///
+/// The nRF54L SPIM is the SAME transfer engine as the nRF52 SPIM — EasyDMA,
+/// `ENABLE` = 7 to select the SPIM personality on a shared serial-instance
+/// window, and a `CONFIG` at 0x554 whose ORDER/CPHA/CPOL bits sit in the same
+/// places. What moved is the address of nearly everything else, exactly as it
+/// moved for this family's UARTE and TWIM:
+///
+///   register           nRF52    nRF54L    note
+///   TASKS_START        0x010    0x000
+///   EVENTS_END         0x118    0x108
+///   RX complete        0x110    0x14C     EVENTS_DMA.RX.END
+///   TX complete        0x120    0x168     EVENTS_DMA.TX.END
+///   PSEL.SCK           0x508    0x600
+///   RX descriptor      0x534    0x704     DMA.RX.PTR
+///   TX descriptor      0x544    0x73C     DMA.TX.PTR
+///   bit rate           0x524    0x52C     FREQUENCY enum -> PRESCALER divisor
+///
+/// Source: Nordic MDK `nrf54lm20a_application.svd`, peripheral GLOBAL_SPIM00.
+///
+/// This is modelled as one engine with two offset maps rather than two models
+/// because the BEHAVIOUR is not what changed. The UARTE and TWIM on this family
+/// did need their own models — their task/event *semantics* diverged — but a
+/// SPIM transfer here is byte-for-byte the nRF52 sequence at new addresses, and
+/// a second copy of the EasyDMA engine would be a second place for it to rot.
+///
+/// ⚠️ `ENABLE` (0x500), `CONFIG` (0x554) and `ORC` (0x5C0) coincide across both
+/// generations. That is the same coincidence that disguised the UARTE
+/// incompatibility on this family: a wrong map still accepts the enable and the
+/// mode write and looks alive, then never sees the DMA start task.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, serde::Serialize)]
+enum NrfSpimMap {
+    /// nRF52/nRF5340 SPIM offsets.
+    #[default]
+    Nrf52,
+    /// nRF54L-family SPIM offsets (nRF54L05/10/15, nRF54LM20A/B).
+    Nrf54l,
+}
+
 #[derive(Debug, Clone, Default, serde::Serialize)]
 struct Nrf52SpiRegs {
     // EVENTS — HW-set only; SW may only write 0 to clear
@@ -542,6 +588,10 @@ struct Nrf52SpiRegs {
     events_endrx: u32,
     events_end: u32,
     events_endtx: u32,
+    /// EVENTS_STARTED — transfer started. Unmodelled on the nRF52 map (no
+    /// driver there polls it); decoded on the nRF54L map so a driver that waits
+    /// on it makes progress instead of spinning.
+    events_started: u32,
     /// Legacy SPI (NRF_SPI_Type) EVENTS_READY @ 0x108 — TXD byte done / RXD ready.
     events_ready: u32,
     /// Legacy SPI RXD @ 0x518 (last byte clocked in).
@@ -549,6 +599,10 @@ struct Nrf52SpiRegs {
 
     // INTEN — bit-field enabling each event's IRQ
     inten: u32,
+    /// SHORTS (nRF54L 0x200) — event-to-task shortcuts. Stored for readback;
+    /// no shortcut is acted on, because the modelled transfer completes inside
+    /// one call and there is no window in which a shortcut could re-arm it.
+    shorts: u32,
 
     // Config / pin-select / mode
     enable: u32,
@@ -573,6 +627,29 @@ struct Nrf52SpiRegs {
 
     // Over-read character (low 8 bits, rest reserved)
     orc: u32,
+
+    /// Which generation's offsets this instance decodes. Default `Nrf52` so
+    /// every existing construction site keeps its behaviour unchanged.
+    map: NrfSpimMap,
+
+    // ── nRF54L-only registers ──────────────────────────────────────────────
+    /// PRESCALER.DIVISOR (0x52C, reset 0x40). A real core-clock divisor, not
+    /// the nRF52 FREQUENCY enumeration.
+    prescaler: u32,
+    /// PSEL.DCX (0x60C) — the data/command line the SPIM drives ITSELF. A
+    /// disconnected select (bit 31 set) leaves D/C to a plain GPIO, which is
+    /// how the nRF52-era boards wire a display.
+    psel_dcx: u32,
+    /// DCXCNT (0x5B4) — "the number of command bytes preceding the data
+    /// bytes. The PSEL.DCX line will be low during transmission of command
+    /// bytes" (SVD GLOBAL_SPIM00.DCXCNT). 0 means the whole transfer is data.
+    dcxcnt: u32,
+    /// CSNPOL (0x5B8) — polarity of the hardware CSN output.
+    csnpol: u32,
+    /// IFTIMING.CSNDUR (0x5B0) — CSN hold duration, stored for readback.
+    csndur: u32,
+    /// IFTIMING.RXDELAY (0x5AC) — stored for readback.
+    rxdelay: u32,
 }
 
 /// `ENABLE` value that selects the SPIM personality on the shared
@@ -596,8 +673,53 @@ const INTEN_ENDRX: u32 = 1 << 4;
 const INTEN_END: u32 = 1 << 6;
 const INTEN_ENDTX: u32 = 1 << 8;
 
+/// nRF54L INTENSET bit positions (SVD GLOBAL_SPIM00.INTENSET).
+///
+/// ⚠️ Only STOPPED coincides with the nRF52 numbering. END moved 6 → 2, and the
+/// two EasyDMA completions moved out to bits 19 and 26. Reusing the nRF52
+/// constants here would enable the wrong lines: an `INTENSET = 1 << 2` from a
+/// driver asking for END would read as the nRF52 map's *nothing*, and the
+/// transfer-complete interrupt would never be delivered.
+const NRF54L_INTEN_STARTED: u32 = 1 << 0;
+const NRF54L_INTEN_STOPPED: u32 = 1 << 1;
+const NRF54L_INTEN_END: u32 = 1 << 2;
+const NRF54L_INTEN_DMA_RX_END: u32 = 1 << 19;
+const NRF54L_INTEN_DMA_TX_END: u32 = 1 << 26;
+
 impl Nrf52SpiRegs {
+    /// A reset-state register file on the nRF54L offset map.
+    ///
+    /// Not `Default`: PRESCALER resets to 0x40 (SVD GLOBAL_SPIM00.PRESCALER)
+    /// and every PSEL resets DISCONNECTED (bit 31). Zero-filling those would
+    /// claim pad 0 for SCK and divide the 128 MHz source by nothing.
+    fn new_nrf54l() -> Self {
+        Self {
+            map: NrfSpimMap::Nrf54l,
+            prescaler: 0x0000_0040,
+            psel_sck: 0xFFFF_FFFF,
+            psel_mosi: 0xFFFF_FFFF,
+            psel_miso: 0xFFFF_FFFF,
+            psel_csn: 0xFFFF_FFFF,
+            psel_dcx: 0xFFFF_FFFF,
+            ..Self::default()
+        }
+    }
+
     fn read_reg(&self, offset: u64) -> u32 {
+        match self.map {
+            NrfSpimMap::Nrf52 => self.read_reg_nrf52(offset),
+            NrfSpimMap::Nrf54l => self.read_reg_nrf54l(offset),
+        }
+    }
+
+    fn write_reg(&mut self, offset: u64, value: u32) -> bool {
+        match self.map {
+            NrfSpimMap::Nrf52 => self.write_reg_nrf52(offset, value),
+            NrfSpimMap::Nrf54l => self.write_reg_nrf54l(offset, value),
+        }
+    }
+
+    fn read_reg_nrf52(&self, offset: u64) -> u32 {
         match offset {
             // TASKS read as 0 (write-only strobes on silicon)
             0x010 | 0x014 => 0,
@@ -642,7 +764,7 @@ impl Nrf52SpiRegs {
     ///
     /// EVENTS write semantics: SW write of 1 is a no-op (only HW sets events);
     /// SW write of 0 clears the event.
-    fn write_reg(&mut self, offset: u64, value: u32) -> bool {
+    fn write_reg_nrf52(&mut self, offset: u64, value: u32) -> bool {
         match offset {
             // TASKS — trigger on non-zero write
             0x010 => return value != 0, // TASKS_START: signal caller
@@ -688,6 +810,109 @@ impl Nrf52SpiRegs {
 
             _ => {
                 crate::census_reg!("spi:Nrf52SpiRegs", offset, "write");
+            }
+        }
+        false
+    }
+
+    /// nRF54L-family SPIM register file.
+    ///
+    /// Offsets transcribed from the Nordic MDK `nrf54lm20a_application.svd`,
+    /// peripheral `GLOBAL_SPIM00` (the map is family-wide, not part-specific —
+    /// SPIM20/21/22/23/24/30 derive from the same description).
+    ///
+    /// ⚠️ 0x010 is TASKS_RESUME here and TASKS_START on the nRF52 map. Decoding
+    /// an nRF54L instance with the nRF52 table therefore turns every driver's
+    /// "start" into a resume of a transfer that was never suspended, which is
+    /// silent: the enable and the mode write both land, and nothing moves.
+    fn read_reg_nrf54l(&self, offset: u64) -> u32 {
+        match offset {
+            // TASKS read as 0 (write-only strobes on silicon)
+            0x000 | 0x004 | 0x00C | 0x010 => 0,
+            // EVENTS
+            0x100 => self.events_started,
+            0x104 => self.events_stopped,
+            0x108 => self.events_end,
+            0x14C => self.events_endrx, // EVENTS_DMA.RX.END
+            0x168 => self.events_endtx, // EVENTS_DMA.TX.END
+            // SHORTS
+            0x200 => self.shorts,
+            // INTENSET / INTENCLR both read the enable mask. There is no
+            // INTEN at 0x300 on this family — the SVD lists only these two.
+            0x304 | 0x308 => self.inten,
+            // Config
+            0x500 => self.enable,
+            0x52C => self.prescaler,
+            0x554 => self.config,
+            0x5AC => self.rxdelay,
+            0x5B0 => self.csndur,
+            0x5B4 => self.dcxcnt,
+            0x5B8 => self.csnpol,
+            0x5C0 => self.orc & 0xFF,
+            // Pin select
+            0x600 => self.psel_sck,
+            0x604 => self.psel_mosi,
+            0x608 => self.psel_miso,
+            0x60C => self.psel_dcx,
+            0x610 => self.psel_csn,
+            // EasyDMA descriptors
+            0x704 => self.rxd_ptr,
+            0x708 => self.rxd_maxcnt,
+            0x70C => self.rxd_amount,
+            0x73C => self.txd_ptr,
+            0x740 => self.txd_maxcnt,
+            0x744 => self.txd_amount,
+            _ => {
+                crate::census_reg!("spi:Nrf54lSpimRegs", offset, "read");
+                0
+            }
+        }
+    }
+
+    /// Handle MMIO writes on the nRF54L offset map.
+    ///
+    /// Returns `true` when TASKS_START (0x000) was triggered.
+    fn write_reg_nrf54l(&mut self, offset: u64, value: u32) -> bool {
+        match offset {
+            0x000 => return value != 0, // TASKS_START
+            0x004 => {}                 // TASKS_STOP — events_stopped is HW-set
+            0x00C | 0x010 => {}         // TASKS_SUSPEND / TASKS_RESUME
+
+            // EVENTS — SW write of 1 ignored; SW write of 0 clears
+            0x100 if value == 0 => self.events_started = 0,
+            0x104 if value == 0 => self.events_stopped = 0,
+            0x108 if value == 0 => self.events_end = 0,
+            0x14C if value == 0 => self.events_endrx = 0,
+            0x168 if value == 0 => self.events_endtx = 0,
+
+            0x200 => self.shorts = value,
+            0x304 => self.inten |= value, // INTENSET
+            0x308 => self.inten &= !value, // INTENCLR
+
+            0x500 => self.enable = value,
+            0x52C => self.prescaler = value,
+            0x554 => self.config = value,
+            0x5AC => self.rxdelay = value,
+            0x5B0 => self.csndur = value,
+            0x5B4 => self.dcxcnt = value,
+            0x5B8 => self.csnpol = value,
+            0x5C0 => self.orc = value & 0xFF,
+
+            0x600 => self.psel_sck = value,
+            0x604 => self.psel_mosi = value,
+            0x608 => self.psel_miso = value,
+            0x60C => self.psel_dcx = value,
+            0x610 => self.psel_csn = value,
+
+            0x704 => self.rxd_ptr = value,
+            0x708 => self.rxd_maxcnt = value,
+            0x70C => self.rxd_amount = value,
+            0x73C => self.txd_ptr = value,
+            0x740 => self.txd_maxcnt = value,
+            0x744 => self.txd_amount = value,
+
+            _ => {
+                crate::census_reg!("spi:Nrf54lSpimRegs", offset, "write");
             }
         }
         false
@@ -1188,6 +1413,7 @@ impl Spi {
             }),
             SpiRegisterLayout::Stm32H5 => SpiRegs::Stm32H5(Stm32H5SpiRegs::reset()),
             SpiRegisterLayout::Nrf52Spim => SpiRegs::Nrf52(Nrf52SpiRegs::default()),
+            SpiRegisterLayout::Nrf54lSpim => SpiRegs::Nrf52(Nrf52SpiRegs::new_nrf54l()),
             SpiRegisterLayout::KinetisDspi => SpiRegs::KinetisDspi(KinetisDspiRegs::default()),
             SpiRegisterLayout::Efr32s2Usart => SpiRegs::Efr32s2Usart(Efr32s2SpiRegs::default()),
         };
@@ -1287,6 +1513,15 @@ impl Spi {
     fn nrf52_sck_bit_cycles(&self) -> u64 {
         const CORE_HZ: u64 = 64_000_000;
         let frequency = match &self.regs {
+            // nRF54L: PRESCALER.DIVISOR is a genuine core-clock divisor, not an
+            // enumeration (SVD GLOBAL_SPIM00.PRESCALER, "Core clock to SCK
+            // divisor", reset 0x40). SPIM00's source is `hfpll` at 128 MHz and
+            // the engine cycle IS a 128 MHz core cycle, so cycles-per-SCK-bit
+            // is the divisor itself — no rate arithmetic to get wrong. The
+            // floor of 2 matches the part's own minimum divisor.
+            SpiRegs::Nrf52(r) if r.map == NrfSpimMap::Nrf54l => {
+                return u64::from(r.prescaler & 0xFFFF).max(2)
+            }
             SpiRegs::Nrf52(r) => r.frequency,
             _ => return 2,
         };
@@ -2937,6 +3172,36 @@ impl crate::Peripheral for Spi {
 
         // ── nRF52 SPIM: raise IRQ for any enabled+pending EVENTS ─────────────
         if let SpiRegs::Nrf52(r) = &self.regs {
+            if r.map == NrfSpimMap::Nrf54l {
+                // Same events, different enable bits AND different event
+                // addresses — `fired_events` carries the offset a debugger will
+                // look for, so it must be this map's offset, not the nRF52 one.
+                if r.events_started != 0 && r.inten & NRF54L_INTEN_STARTED != 0 {
+                    irq = true;
+                    fired.push(0x100);
+                }
+                if r.events_stopped != 0 && r.inten & NRF54L_INTEN_STOPPED != 0 {
+                    irq = true;
+                    fired.push(0x104);
+                }
+                if r.events_end != 0 && r.inten & NRF54L_INTEN_END != 0 {
+                    irq = true;
+                    fired.push(0x108);
+                }
+                if r.events_endrx != 0 && r.inten & NRF54L_INTEN_DMA_RX_END != 0 {
+                    irq = true;
+                    fired.push(0x14C);
+                }
+                if r.events_endtx != 0 && r.inten & NRF54L_INTEN_DMA_TX_END != 0 {
+                    irq = true;
+                    fired.push(0x168);
+                }
+                return crate::PeripheralTickResult {
+                    irq,
+                    fired_events: fired,
+                    ..Default::default()
+                };
+            }
             // Check each event against its INTEN bit.
             if r.events_stopped != 0 && r.inten & INTEN_STOPPED != 0 {
                 irq = true;
@@ -3107,6 +3372,43 @@ impl Spi {
             return;
         };
 
+        // ── Hardware D/C and hardware chip select (nRF54L only) ─────────────
+        //
+        // The nRF54L SPIM drives the display's data/command line ITSELF from
+        // `PSEL.DCX`, holding it LOW for the first `DCXCNT` bytes of the
+        // transfer and HIGH for the rest (SVD GLOBAL_SPIM00.DCXCNT: "the number
+        // of command bytes preceding the data bytes"). That is a real
+        // difference from the nRF52-era boards, where D/C is a plain GPIO the
+        // firmware toggles between transfers and the bus latches through
+        // `dc_source`. A panel wired to PSEL.DCX declares NO `dc_pin`, so the
+        // GPIO latch skips it and this is the only writer of its D/C level.
+        //
+        // `PSEL.CSN` is the same story for chip select: with it connected the
+        // controller asserts CS for the duration of the transfer, so a device
+        // on this bus is selected by the hardware rather than by a firmware
+        // pin write, and the `selected_devices` gate must not veto it.
+        //
+        // ⚠️ `dcx_live` is PSEL.DCX being CONNECTED — never `DCXCNT > 0`.
+        // DCXCNT = 0 is a legal, common setting meaning "no command bytes, this
+        // whole transfer is data", and it must drive D/C HIGH for every byte.
+        // Treating it as "D/C not in use" instead leaves the line at whatever
+        // the previous transfer left it at, which is LOW after any command —
+        // so a pixel burst would be fed to the panel as commands, and only
+        // after a transfer that happened to end high would it ever look right.
+        let (dcx_bytes, dcx_live, hw_csn) = match &self.regs {
+            SpiRegs::Nrf52(r) if r.map == NrfSpimMap::Nrf54l => (
+                r.dcxcnt as usize,
+                r.psel_dcx & 0x8000_0000 == 0,
+                r.psel_csn & 0x8000_0000 == 0,
+            ),
+            _ => (0, false, false),
+        };
+        if hw_csn {
+            for dev in self.attached_devices.iter_mut() {
+                dev.cs_select();
+            }
+        }
+
         // Determine the total number of byte-cycles to run: whichever
         // descriptor is larger drives the clock count; the smaller one
         // pads with ORC (TX side) or discards (RX side that is full).
@@ -3145,9 +3447,14 @@ impl Spi {
             // no-device — mirrors MOSI back).
             let miso: u8 = if !self.attached_devices.is_empty() {
                 let mut resp: u8 = 0;
+                // Hardware D/C: LOW for the first DCXCNT bytes, HIGH after.
+                let dc_high = i >= dcx_bytes;
                 for (index, dev) in self.attached_devices.iter_mut().enumerate() {
-                    if !dev.cs_pin().is_empty() && !self.selected_devices[index] {
+                    if !hw_csn && !dev.cs_pin().is_empty() && !self.selected_devices[index] {
                         continue;
+                    }
+                    if dcx_live {
+                        dev.set_dc_level(dc_high);
                     }
                     let r = dev.transfer(mosi);
                     if r != 0 {
@@ -3168,6 +3475,14 @@ impl Spi {
             }
         }
 
+        if hw_csn {
+            // CS rises at the end of the transfer. A panel flushes its pending
+            // command on the rising edge, so this is not cosmetic.
+            for dev in self.attached_devices.iter_mut() {
+                dev.cs_release();
+            }
+        }
+
         // Update AMOUNT registers and fire completion events.
         if let SpiRegs::Nrf52(r) = &mut self.regs {
             r.txd_amount = txd_amount;
@@ -3176,6 +3491,11 @@ impl Spi {
             r.events_endtx = 1;
             r.events_endrx = 1;
             r.events_end = 1;
+            // STARTED is decoded on the nRF54L map only; setting it on the
+            // nRF52 map would publish an event that map cannot read back.
+            if r.map == NrfSpimMap::Nrf54l {
+                r.events_started = 1;
+            }
         }
         // The whole buffer has clocked out as far as this model is concerned,
         // so this is where the burst becomes narratable.
@@ -4254,6 +4574,160 @@ mod tests {
         spi.write(0x41, 0x5A).unwrap(); // CRCPOLY byte 1
         assert_eq!(h5_read(&spi, 0x40), 0x0000_5AA5, "bytes merged in place");
     }
+
+    // ── nRF54L SPIM ───────────────────────────────────────────────────────────
+
+    /// Records every byte with the D/C level the controller held while it moved.
+    ///
+    /// The log is shared rather than read back through a downcast: `SpiDevice`
+    /// is deliberately a behaviour-only seam, so the test observes the panel
+    /// the same way a panel observes the bus.
+    #[derive(Clone)]
+    struct DcCapture {
+        cs: String,
+        dc: std::sync::Arc<std::sync::Mutex<bool>>,
+        seen: std::sync::Arc<std::sync::Mutex<Vec<(bool, u8)>>>,
+    }
+    impl DcCapture {
+        fn new(cs: &str) -> Self {
+            Self {
+                cs: cs.to_string(),
+                dc: std::sync::Arc::new(std::sync::Mutex::new(false)),
+                seen: std::sync::Arc::new(std::sync::Mutex::new(Vec::new())),
+            }
+        }
+        fn log(&self) -> Vec<(bool, u8)> {
+            self.seen.lock().unwrap().clone()
+        }
+    }
+    impl SpiDevice for DcCapture {
+        fn transfer(&mut self, mosi: u8) -> u8 {
+            let dc = *self.dc.lock().unwrap();
+            self.seen.lock().unwrap().push((dc, mosi));
+            0
+        }
+        fn cs_pin(&self) -> &str {
+            &self.cs
+        }
+        fn set_dc_level(&mut self, level: bool) {
+            *self.dc.lock().unwrap() = level;
+        }
+    }
+
+    /// Configure an nRF54L SPIM for a TX-only EasyDMA burst on the nRF54L map.
+    fn nrf54l_arm(spi: &mut Spi, tx_base: u64, len: u32, dcxcnt: u32) {
+        nrf_write_u32(spi, 0x500, 7); // ENABLE = 7 (SPIM)
+        nrf_write_u32(spi, 0x600, 0x0000_002A); // PSEL.SCK — connected, P1.10
+        nrf_write_u32(spi, 0x604, 0x0000_002B); // PSEL.MOSI — connected
+        nrf_write_u32(spi, 0x610, 0x0000_002C); // PSEL.CSN — hardware chip select
+        nrf_write_u32(spi, 0x60C, 0x0000_002D); // PSEL.DCX — hardware D/C
+        nrf_write_u32(spi, 0x5B4, dcxcnt); // DCXCNT
+        nrf_write_u32(spi, 0x73C, tx_base as u32); // DMA.TX.PTR
+        nrf_write_u32(spi, 0x740, len); // DMA.TX.MAXCNT
+    }
+
+    /// The whole point of the map: a display write lands, and the controller —
+    /// not a GPIO — decides which of those bytes were command and which data.
+    #[test]
+    fn nrf54l_spim_moves_bytes_and_drives_hardware_dc() {
+        let mut spi = Spi::new_with_layout(SpiRegisterLayout::Nrf54lSpim);
+        let mut bus = FlatRamBus::new();
+        let tx_base: u64 = 0x2000_0000;
+        // One command byte (0x2C RAMWR) followed by four pixel bytes.
+        bus.write_slice(tx_base, &[0x2C, 0xF8, 0x00, 0x07, 0xE0]);
+
+        // A CS label that NOTHING ever drives. With PSEL.CSN connected the
+        // controller asserts chip select itself, so the transfer must still
+        // reach the panel — that is the behaviour being pinned.
+        let panel = DcCapture::new("P1.12");
+        spi.push_device(Box::new(panel.clone()));
+
+        nrf54l_arm(&mut spi, tx_base, 5, 1);
+        nrf_write_u32(&mut spi, 0x000, 1); // TASKS_START
+        assert!(spi.needs_bus_tick(), "TASKS_START at 0x000 must arm the DMA");
+        spi.tick_with_bus(&mut bus);
+
+        assert_eq!(
+            panel.log(),
+            vec![
+                (false, 0x2C), // DCXCNT = 1 -> the first byte is a COMMAND
+                (true, 0xF8),
+                (true, 0x00),
+                (true, 0x07),
+                (true, 0xE0),
+            ],
+            "hardware DCX must hold D/C low for exactly DCXCNT bytes"
+        );
+
+        assert_eq!(nrf_read_u32(&spi, 0x108), 1, "EVENTS_END");
+        assert_eq!(nrf_read_u32(&spi, 0x168), 1, "EVENTS_DMA.TX.END");
+        assert_eq!(nrf_read_u32(&spi, 0x744), 5, "DMA.TX.AMOUNT");
+    }
+
+    /// DCXCNT = 0 means the whole transfer is data — not "no D/C at all".
+    #[test]
+    fn nrf54l_spim_dcxcnt_zero_sends_no_command_bytes() {
+        let mut spi = Spi::new_with_layout(SpiRegisterLayout::Nrf54lSpim);
+        let mut bus = FlatRamBus::new();
+        let tx_base: u64 = 0x2000_0000;
+        bus.write_slice(tx_base, &[0x11, 0x22]);
+        let panel = DcCapture::new("");
+        spi.push_device(Box::new(panel.clone()));
+        nrf54l_arm(&mut spi, tx_base, 2, 0);
+        nrf_write_u32(&mut spi, 0x000, 1);
+        spi.tick_with_bus(&mut bus);
+        let seen = panel.log();
+        assert_eq!(seen.len(), 2);
+        assert!(
+            seen.iter().all(|(dc, _)| *dc),
+            "with DCXCNT = 0 every byte is data"
+        );
+    }
+
+    /// NEGATIVE CONTROL — the offset map is load-bearing in BOTH directions.
+    ///
+    /// Without this, a model that answered on the union of both maps would pass
+    /// every test above while being wrong on silicon. 0x010 is TASKS_START on
+    /// the nRF52 map and TASKS_RESUME on the nRF54L map; 0x000 is the reverse.
+    /// Each must be inert on the other generation.
+    #[test]
+    fn nrf54l_and_nrf52_start_offsets_do_not_cross() {
+        // nRF54L instance: the nRF52 start offset must NOT arm it.
+        let mut l = Spi::new_with_layout(SpiRegisterLayout::Nrf54lSpim);
+        nrf_write_u32(&mut l, 0x500, 7);
+        nrf_write_u32(&mut l, 0x73C, 0x2000_0000);
+        nrf_write_u32(&mut l, 0x740, 4);
+        nrf_write_u32(&mut l, 0x010, 1); // TASKS_RESUME here, START on nRF52
+        assert!(
+            !l.needs_bus_tick(),
+            "0x010 is TASKS_RESUME on the nRF54L map and must not start a transfer"
+        );
+
+        // nRF52 instance: the nRF54L start offset must NOT arm it.
+        let mut c = Spi::new_with_layout(SpiRegisterLayout::Nrf52Spim);
+        nrf_write_u32(&mut c, 0x500, 7);
+        nrf_write_u32(&mut c, 0x544, 0x2000_0000);
+        nrf_write_u32(&mut c, 0x548, 4);
+        nrf_write_u32(&mut c, 0x000, 1);
+        assert!(
+            !c.needs_bus_tick(),
+            "0x000 is not a task on the nRF52 map and must not start a transfer"
+        );
+    }
+
+    /// PRESCALER is a divisor with a NON-ZERO reset. Zero-filling it would make
+    /// the modelled bit clock infinite and the reset-state readback a lie.
+    #[test]
+    fn nrf54l_spim_prescaler_resets_to_0x40() {
+        let spi = Spi::new_with_layout(SpiRegisterLayout::Nrf54lSpim);
+        assert_eq!(nrf_read_u32(&spi, 0x52C), 0x40, "PRESCALER reset value");
+        assert_eq!(
+            nrf_read_u32(&spi, 0x600),
+            0xFFFF_FFFF,
+            "PSEL.SCK resets DISCONNECTED"
+        );
+    }
+
 }
 
 #[cfg(test)]
