@@ -14,6 +14,13 @@
     "reg_match": 0
   },
   {
+    "behavior": true,
+    "excluded": 0,
+    "level": 1,
+    "name": "nrf54lm20a",
+    "reg_match": 0
+  },
+  {
     "behavior": false,
     "excluded": 0,
     "level": 0,
