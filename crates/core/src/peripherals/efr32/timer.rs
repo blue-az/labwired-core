@@ -191,6 +191,37 @@ pub struct Efr32s2Timer {
     /// than the tick interval does not lose the remainder.
     presc_residue: Cell<u64>,
 
+    /// "The value `CNT` holds right now has not been compared yet."
+    ///
+    /// ⚠️ MEASURED ON THE DIE, and not derivable from the counting rule. The
+    /// EFR32 compare is a LEVEL match on `CNT == OC` sampled by the counter
+    /// clock, not an arrival edge: a counter *written* onto its own compare
+    /// value and then started latches `IF.CCn` on its very first counter step,
+    /// without ever arriving there. Silicon, TIMER0, `PRESC=1023`, `TOP=FFFF`,
+    /// `CC0_OC=0x8000`, `CC0` in OUTPUTCOMPARE, `CNT` pre-loaded to `0x8000`:
+    /// `IF` reads `0x10` after 250 ms, with `CNT` at `0x9268` — a value the
+    /// counter cannot have re-reached inside one 3.5 s period.
+    ///
+    /// The same run also pins the other half: `IF` read back `0x00000000`
+    /// after `CNT` and `CC0_OC` were written and before `CMD.START`. So the
+    /// match is NOT a free-running combinational set into `IF` — it is gated
+    /// by the counter actually being clocked. Hence a *pending* level match:
+    /// armed by the events that make a value resident under a running counter
+    /// (`CMD.START`, a `CNT` write, a `CC_OC`/`CC_CFG` write), consumed by the
+    /// first counter step that follows.
+    ///
+    /// ⚠️ It must be a one-shot, NOT a standing "also compare the value you
+    /// start from" rule in [`Self::advance`]. Under the walk every advance
+    /// starts from the value the previous advance landed on, so a standing
+    /// rule re-latches every compare a second time — and firmware that clears
+    /// `IF` in its handler would take two interrupts per match. It also has to
+    /// be a one-shot for a lump of N steps to latch exactly what N single
+    /// steps latch, which is the property the whole scheduler path rests on.
+    ///
+    /// `Cell` for the same reason as `iflag`: the lazy `&self` advance
+    /// consumes it.
+    level_pending: Cell<bool>,
+
     /// Bus-published cycle clock, attached by `SystemBus::add_peripheral`.
     /// `Some` selects scheduler mode; `None` keeps the legacy per-cycle walk
     /// (feature off, or a hand-built test bus that bypasses registration).
@@ -261,6 +292,7 @@ impl Efr32s2Timer {
             dt: [0; 8],
             prescale_residue: Cell::new(0),
             presc_residue: Cell::new(0),
+            level_pending: Cell::new(false),
             clock: None,
             anchor: Cell::new(0),
             arm_seq: 0,
@@ -430,6 +462,12 @@ impl Efr32s2Timer {
                 // resolves it that way and it is the safe reading.
                 if value & CMD_START != 0 && self.en & EN_EN != 0 {
                     self.status_running = true;
+                    // A counter that starts ON its compare value matches on its
+                    // first counter clock — the silicon case `level_pending`
+                    // documents. Arming here rather than at the `CNT` write is
+                    // what keeps `IF` at 0 until the counter is actually
+                    // clocked, which is the other half of that measurement.
+                    self.level_pending.set(true);
                 }
                 if value & CMD_STOP != 0 {
                     self.status_running = false;
@@ -439,7 +477,12 @@ impl Efr32s2Timer {
             OFF_IEN => self.ien = value,
             OFF_TOP => self.top = self.mask(value),
             OFF_TOPB => self.topb = self.mask(value),
-            OFF_CNT => self.cnt.set(self.mask(value)),
+            OFF_CNT => {
+                self.cnt.set(self.mask(value));
+                // Firmware placed a value under the counter: it is compared on
+                // the next counter clock, arrival or not.
+                self.level_pending.set(true);
+            }
             OFF_LOCK => self.lock = value,
             o if (OFF_DT_FIRST..=OFF_DT_LAST).contains(&o) => {
                 self.dt[((o - OFF_DT_FIRST) / 4) as usize] = value;
@@ -447,9 +490,19 @@ impl Efr32s2Timer {
             o => {
                 if let Some((ch, reg)) = Self::cc_index(o) {
                     match reg {
-                        CC_CFG => self.cc_cfg[ch] = value,
+                        // Moving the compare value under a resident counter —
+                        // or switching the channel into a compare mode while
+                        // it already matches — is the same level match from the
+                        // other side, so it arms the same one-shot.
+                        CC_CFG => {
+                            self.cc_cfg[ch] = value;
+                            self.level_pending.set(true);
+                        }
                         CC_CTRL => self.cc_ctrl[ch] = value,
-                        CC_OC => self.cc_oc[ch] = self.mask(value),
+                        CC_OC => {
+                            self.cc_oc[ch] = self.mask(value);
+                            self.level_pending.set(true);
+                        }
                         CC_OCB => self.cc_ocb[ch] = self.mask(value),
                         _ => {}
                     }
@@ -476,6 +529,14 @@ impl Efr32s2Timer {
     /// one case wrong is what makes a lumped advance disagree with a per-cycle
     /// one, and it is pinned by `a_lumped_advance_latches_exactly_what_single_
     /// steps_latch`.
+    ///
+    /// ⚠️ That is the rule for the values the counter TRAVELS THROUGH, and it
+    /// is deliberately not the whole compare. The die also latches a match on a
+    /// value that was PLACED under the counter (a `CNT` or `CC_OC` write, or a
+    /// start on an already-equal value) — one level match, once, on the next
+    /// counter clock. That one is [`Self::take_level_match`]'s, kept out of
+    /// this trajectory rule precisely so it cannot re-fire on every advance
+    /// boundary. See [`Self::level_pending`] for the silicon evidence.
     fn steps_to_compare(&self, from: u64, oc: u64) -> u64 {
         let top = self.top as u64;
         let period = top + 1;
@@ -487,6 +548,34 @@ impl Efr32s2Timer {
         } else {
             to_wrap + oc
         }
+    }
+
+    /// Consume the pending level match: the counter clock about to be taken
+    /// samples `CNT == OC` on the value that is resident RIGHT NOW, before the
+    /// counter moves off it.
+    ///
+    /// One-shot by construction — see [`Self::level_pending`] for why a
+    /// standing rule would double-latch every compare under the walk.
+    fn take_level_match(&self) {
+        // `get`-then-`set`, not `replace`: this runs on every advance, and the
+        // pending case is the rare one. A `replace` would store unconditionally
+        // on the walk's hot path for nothing.
+        if !self.level_pending.get() {
+            return;
+        }
+        self.level_pending.set(false);
+        let cnt = self.cnt.get();
+        let mut flags = self.iflag.get();
+        for ch in 0..CC_COUNT {
+            let mode = self.cc_mode(ch);
+            if mode != CC_MODE_OUTPUTCOMPARE && mode != CC_MODE_PWM {
+                continue;
+            }
+            if self.cc_oc[ch] == cnt {
+                flags |= 1 << (IF_CC0_SHIFT + ch as u32);
+            }
+        }
+        self.iflag.set(flags);
     }
 
     /// Advance the counter by `steps`, raising overflow and compare flags on
@@ -504,8 +593,11 @@ impl Efr32s2Timer {
     /// can bring the counter up to "now" before answering.
     fn advance(&self, steps: u64) {
         if steps == 0 {
+            // No counter clock elapsed, so nothing is sampled — a pending
+            // level match stays pending.
             return;
         }
+        self.take_level_match();
         let period = self.top as u64 + 1;
         let mut from = self.cnt.get() as u64;
         let mut steps = steps;
@@ -632,6 +724,20 @@ impl Efr32s2Timer {
             return None;
         }
         let from = self.cnt.get() as u64;
+        // A pending level match latches on the very next counter step, so it
+        // beats anything the trajectory can reach. Without this the scheduler
+        // lane never arms for the silicon "started on its own compare value"
+        // case and delivers that interrupt a whole period late.
+        if self.level_pending.get()
+            && (0..CC_COUNT).any(|ch| {
+                let mode = self.cc_mode(ch);
+                self.ien & (1 << (IF_CC0_SHIFT + ch as u32)) != 0
+                    && (mode == CC_MODE_OUTPUTCOMPARE || mode == CC_MODE_PWM)
+                    && self.cc_oc[ch] as u64 == from
+            })
+        {
+            return Some(1);
+        }
         if from > self.top as u64 {
             // Degenerate `CNT > TOP`: the next single step wraps and latches.
             return Some(1);
@@ -1171,6 +1277,190 @@ mod tests {
         assert_eq!(t.read_word(OFF_IF) & IF_OF, IF_OF);
     }
 
+    // ── The compare is a LEVEL match: measured on a BRD2709A die ──────────
+    //
+    // TIMER0 @ 0x40048000 over SWD, `CFG = 0x0FFC0040` (PRESC = 1023,
+    // DEBUGRUN), `TOP = 0xFFFF`, CC0 in OUTPUTCOMPARE with `CC0_OC = 0x8000`.
+    // One counter tick is ~53 µs, one full period ~3.5 s. `IF` was cleared and
+    // read back `0x00000000` after setup and before `CMD.START` in every case.
+    //
+    // | case                       | start CNT | die `IF` @250 ms |
+    // |----------------------------|-----------|------------------|
+    // | B, the counter ARRIVES     | 0x7FFF    | 0x10  (CC0)      |
+    // | A, the counter is PLACED   | 0x8000    | 0x10  (CC0)      |
+    // | A, after the wrap (3.75 s) | 0x8000    | 0x11  (CC0 + OF) |
+    //
+    // Case A is the one the arrival rule cannot produce: the counter climbs
+    // 0x8000 → 0x9268 and never returns to 0x8000 inside that window, so the
+    // flag is not a second pass. See `Efr32s2Timer::level_pending`.
+
+    /// The die's register sequence, in the die's ORDER.
+    ///
+    /// ⚠️ Series-2 discipline, measured: `CFG` is a config register and must be
+    /// written while `EN = 0`; `TOP`, `CNT` and `CC_OC` are runtime registers
+    /// and must be written AFTER `EN = 1` or they read back 0. Get this wrong
+    /// and the test proves something about a timer it never configured.
+    fn die_timer0(start_cnt: u32) -> Efr32s2Timer {
+        let mut t = Efr32s2Timer::new(T0_BITS);
+        t.write_word(OFF_EN, 0);
+        t.write_word(OFF_CFG, 0x0FFC_0040); // PRESC = 1023, DEBUGRUN
+        t.write_word(OFF_CC + CC_CFG, CC_MODE_OUTPUTCOMPARE);
+        t.write_word(OFF_EN, EN_EN);
+        t.write_word(OFF_TOP, 0x0000_FFFF);
+        t.write_word(OFF_CC + CC_OC, 0x0000_8000);
+        t.write_word(OFF_CNT, start_cnt);
+        t.write_word(OFF_IF, 0xFFFF_FFFF);
+        t
+    }
+
+    /// `PRESC = 1023`, and this instance's timer clock is its core clock, so
+    /// one counter tick is 1024 cycles.
+    fn die_ticks(t: &mut Efr32s2Timer, ticks: u64) {
+        t.tick_elapsed(ticks * 1024);
+    }
+
+    /// Case B: the counter ARRIVES at the compare value. Both the arrival rule
+    /// and the level match produce this one — it is the control.
+    #[test]
+    fn a_counter_that_arrives_at_its_compare_value_flags() {
+        let mut t = die_timer0(0x7FFF);
+        assert_eq!(t.read_word(OFF_IF), 0, "the die read 0 before START");
+        t.write_word(OFF_CMD, CMD_START);
+
+        // 4712 ticks is where the die's CNT stood at the 250 ms read.
+        die_ticks(&mut t, 4712);
+        assert_eq!(t.read_word(OFF_CNT), 0x9267);
+        assert_eq!(t.read_word(OFF_IF), 0x10, "CC0, no overflow yet");
+    }
+
+    /// ⚠️ Case A, the one the die and the model disagreed on: a counter WRITTEN
+    /// equal to `OC` and started latches CC0 without ever arriving there. The
+    /// compare is a level match on `CNT == OC` sampled by the counter clock,
+    /// not an arrival edge.
+    #[test]
+    fn a_counter_started_on_its_compare_value_flags_without_arriving() {
+        let mut t = die_timer0(0x8000);
+        assert_eq!(
+            t.read_word(OFF_IF),
+            0,
+            "the die read 0 here too: the match is gated by the counter being \
+             CLOCKED, so writing CNT == OC while stopped sets nothing"
+        );
+        t.write_word(OFF_CMD, CMD_START);
+
+        die_ticks(&mut t, 4712); // where the die's CNT stood at 250 ms
+        assert_eq!(
+            t.read_word(OFF_CNT),
+            0x9268,
+            "the counter climbed away from 0x8000 and cannot have re-reached \
+             it inside one 3.5 s period"
+        );
+        assert_eq!(t.read_word(OFF_IF), 0x10, "the die reads CC0 set");
+    }
+
+    /// The third die row: the same pre-loaded run, carried past the wrap.
+    #[test]
+    fn the_pre_loaded_run_adds_the_overflow_after_the_wrap() {
+        let mut t = die_timer0(0x8000);
+        t.write_word(OFF_CMD, CMD_START);
+        die_ticks(&mut t, 70_000); // ~3.75 s, past the 3.5 s period
+        assert_eq!(t.read_word(OFF_IF), 0x11, "CC0 + OF, as the die reads");
+    }
+
+    /// ⚠️ The level match is a ONE-SHOT on the value that was placed, not a
+    /// standing "compare the value you start from" rule.
+    ///
+    /// Under the walk every advance starts from the value the previous advance
+    /// landed on. A standing rule therefore re-latches every compare on the
+    /// very next tick, and firmware that clears `IF` in its handler takes two
+    /// interrupts per match instead of one. This is the test that rejects the
+    /// naive reading of the die result.
+    #[test]
+    fn a_compare_latches_once_per_period_even_when_the_handler_clears_it() {
+        let mut t = running(T0_BITS);
+        t.write_word(OFF_TOP, 99);
+        t.write_word(OFF_CC + CC_CFG, CC_MODE_OUTPUTCOMPARE);
+        t.write_word(OFF_CC + CC_OC, 40);
+
+        t.tick_elapsed(40);
+        assert_eq!(t.read_word(OFF_CNT), 40);
+        assert_eq!(t.read_word(OFF_IF) & (1 << IF_CC0_SHIFT), 1 << IF_CC0_SHIFT);
+
+        // The handler acknowledges while `CNT` still sits on the compare value.
+        t.write_word(OFF_IF, 0xFFFF_FFFF);
+        t.tick_elapsed(1);
+        assert_eq!(
+            t.read_word(OFF_IF) & (1 << IF_CC0_SHIFT),
+            0,
+            "the counter is LEAVING 40; re-latching here would double every \
+             compare interrupt"
+        );
+
+        // ...and the next real match, a full period on, still lands.
+        t.tick_elapsed(99);
+        assert_eq!(t.read_word(OFF_CNT), 40);
+        assert_eq!(t.read_word(OFF_IF) & (1 << IF_CC0_SHIFT), 1 << IF_CC0_SHIFT);
+    }
+
+    /// A `CNT` write that lands on a live compare is the same level match from
+    /// the counter side, and a `CC_OC` write that lands on a live `CNT` is the
+    /// same match from the channel side.
+    #[test]
+    fn placing_either_side_of_the_match_under_a_running_counter_flags() {
+        for from_the_channel_side in [false, true] {
+            let mut t = running(T0_BITS);
+            t.write_word(OFF_TOP, 99);
+            t.write_word(OFF_CC + CC_CFG, CC_MODE_OUTPUTCOMPARE);
+            t.write_word(OFF_CC + CC_OC, 40);
+            t.tick_elapsed(10);
+            t.write_word(OFF_IF, 0xFFFF_FFFF);
+
+            if from_the_channel_side {
+                t.write_word(OFF_CC + CC_OC, 10); // OC moved onto CNT
+            } else {
+                t.write_word(OFF_CNT, 40); // CNT moved onto OC
+            }
+            assert_eq!(t.read_word(OFF_IF), 0, "nothing until the next clock");
+
+            t.tick_elapsed(1);
+            assert_eq!(
+                t.read_word(OFF_IF) & (1 << IF_CC0_SHIFT),
+                1 << IF_CC0_SHIFT,
+                "from_the_channel_side={from_the_channel_side}"
+            );
+        }
+    }
+
+    /// The scheduler lane has to ARM for the level match, or the pre-loaded
+    /// case's interrupt arrives a whole period late — rendering identically
+    /// under the walk and not under the scheduler, which is the exact failure
+    /// mode `efr32mg26_walk_differential` exists to catch.
+    #[test]
+    fn a_pending_level_match_arms_the_very_next_step() {
+        let mut t = Efr32s2Timer::new(T0_BITS);
+        t.attach_cpu_hz(78_000_000);
+        t.set_peripheral_hz(78_000_000);
+        t.write_word(OFF_EN, EN_EN);
+        t.write_word(OFF_TOP, 99);
+        t.write_word(OFF_CC + CC_CFG, CC_MODE_OUTPUTCOMPARE);
+        t.write_word(OFF_CC + CC_OC, 30);
+        t.write_word(OFF_IEN, 1 << IF_CC0_SHIFT);
+        t.write_word(OFF_CNT, 30);
+        t.write_word(OFF_CMD, CMD_START);
+
+        assert_eq!(
+            t.next_wake(),
+            Some(Wake::At(1)),
+            "the counter starts ON its compare value: the match is one step \
+             away, not a period away"
+        );
+
+        // The unarmed twin of the same state: no pending match, so the wake is
+        // the far side of the period.
+        t.level_pending.set(false);
+        assert_eq!(t.next_wake(), Some(Wake::At(100)));
+    }
+
     #[test]
     fn a_channel_that_is_off_never_flags() {
         let mut t = running(T0_BITS);
@@ -1287,6 +1577,13 @@ mod tests {
     /// predicate latched every channel with `OC >= CNT` on ANY wrapping
     /// advance, so a lump flagged `OC == CNT` that single steps do not (the
     /// counter is leaving that value, not arriving at it).
+    ///
+    /// ⚠️ `preloaded` is the die-measured level match ([`Efr32s2Timer::
+    /// level_pending`]) folded into the same grid, INCLUDING every `from ==
+    /// oc`. That case is exactly where a level match and a lumped advance can
+    /// come apart: the match is a one-shot on the resident value, so the lump
+    /// must consume it once and the N single steps must consume it once too —
+    /// on the first of them, not on each.
     #[test]
     fn a_lumped_advance_latches_exactly_what_single_steps_latch() {
         const TOP: u32 = 7;
@@ -1295,39 +1592,50 @@ mod tests {
             // is a real firmware state (a duty above the period).
             for oc in 0..=(TOP + 3) {
                 for from in 0..=(TOP + 2) {
-                    for steps in 1..=(3 * (TOP as u64 + 1)) {
-                        let build = || {
-                            let mut t = Efr32s2Timer::new(32);
-                            t.write_word(OFF_EN, EN_EN);
-                            t.write_word(OFF_CMD, CMD_START);
-                            t.write_word(OFF_TOP, TOP);
-                            t.write_word(OFF_CC + CC_CFG, mode);
-                            t.write_word(OFF_CC + CC_OC, oc);
-                            t.cnt.set(from);
-                            t.iflag.set(0);
-                            t
-                        };
-                        let lump = build();
-                        lump.advance(steps);
+                    for preloaded in [false, true] {
+                        for steps in 1..=(3 * (TOP as u64 + 1)) {
+                            let build = || {
+                                let mut t = Efr32s2Timer::new(32);
+                                t.write_word(OFF_EN, EN_EN);
+                                t.write_word(OFF_CMD, CMD_START);
+                                t.write_word(OFF_TOP, TOP);
+                                t.write_word(OFF_CC + CC_CFG, mode);
+                                t.write_word(OFF_CC + CC_OC, oc);
+                                t.cnt.set(from);
+                                t.iflag.set(0);
+                                t.level_pending.set(preloaded);
+                                t
+                            };
+                            let lump = build();
+                            lump.advance(steps);
 
-                        let unit = build();
-                        for _ in 0..steps {
-                            unit.advance(1);
+                            let unit = build();
+                            for _ in 0..steps {
+                                unit.advance(1);
+                            }
+
+                            assert_eq!(
+                                lump.iflag.get(),
+                                unit.iflag.get(),
+                                "flags diverge: mode={mode} oc={oc} from={from} \
+                                 preloaded={preloaded} steps={steps} \
+                                 (lump={:#x} single={:#x})",
+                                lump.iflag.get(),
+                                unit.iflag.get()
+                            );
+                            assert_eq!(
+                                lump.cnt.get(),
+                                unit.cnt.get(),
+                                "counter diverges: mode={mode} oc={oc} from={from} \
+                                 preloaded={preloaded} steps={steps}"
+                            );
+                            assert_eq!(
+                                lump.level_pending.get(),
+                                unit.level_pending.get(),
+                                "the one-shot itself diverges: mode={mode} oc={oc} \
+                                 from={from} preloaded={preloaded} steps={steps}"
+                            );
                         }
-
-                        assert_eq!(
-                            lump.iflag.get(),
-                            unit.iflag.get(),
-                            "flags diverge: mode={mode} oc={oc} from={from} steps={steps} \
-                             (lump={:#x} single={:#x})",
-                            lump.iflag.get(),
-                            unit.iflag.get()
-                        );
-                        assert_eq!(
-                            lump.cnt.get(),
-                            unit.cnt.get(),
-                            "counter diverges: mode={mode} oc={oc} from={from} steps={steps}"
-                        );
                     }
                 }
             }

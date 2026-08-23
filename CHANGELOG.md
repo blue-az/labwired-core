@@ -8,6 +8,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **The EFR32 TIMER compare is a level match on `CNT == OC`, measured on a
+  BRD2709A die.** A counter *written* onto its compare value and then started
+  latches `IF.CCn` on its first counter step, without ever arriving there —
+  silicon over SWD: TIMER0, `PRESC = 1023`, `TOP = 0xFFFF`, `CC0_OC = 0x8000`,
+  `CNT` pre-loaded to `0x8000`, `IF` reads `0x10` at 250 ms with `CNT` at
+  `0x9268`, which is inside the first pass of a 3.5 s period. The model required
+  arrival and stayed silent for a whole period. The same run pins the other
+  half: `IF` read back `0x00000000` while `CNT == OC` and the counter was
+  stopped, so the match is gated on the counter being clocked, not on the
+  register values alone. It is now modelled as a one-shot pending match armed by
+  the events that make a value resident (`CMD.START`, a `CNT` write, a
+  `CC_OC`/`CC_CFG` write) and consumed by the next counter step — deliberately
+  NOT a standing "also compare the value you start from" rule, which would
+  re-latch every compare on the following tick and hand firmware two interrupts
+  per match. The trajectory rule below is unchanged, and a lumped advance still
+  latches exactly what the same number of single steps latch. Pinned by
+  `crates/core/tests/efr32mg26_timer_compare_level.rs`, which replays the die's
+  register sequence against the real BRD2709A bus.
 - **The EFR32MG26 (BRD2709A) runs walk-free.** Every peripheral on that bus now
   either rides the event scheduler or provably does nothing on the per-cycle
   walk, so `SystemBus::derive_walk_deletable()` is true with no hand flag and
