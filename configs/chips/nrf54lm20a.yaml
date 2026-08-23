@@ -46,6 +46,15 @@ name: "nrf54lm20a"
 arch: "arm"
 core: "cortex-m33"
 
+# Simulated core clock, Hz -- see ChipDescriptor::cpu_hz. Self-timed devices
+# scale their datasheet microseconds by it; a slower board overrides it.
+# Matches peripherals/nrf54l/grtc.rs CPU_HZ_DEFAULT, and the devicetree: the
+# cpuapp node's `clocks = <&hfpll>` and `hfpll` is `clock-frequency =
+# <DT_FREQ_M(128)>` (nrf54lm20_a_b.dtsi). SPIM00's PRESCALER divides this same
+# 128 MHz, which is why its divisor and its cycles-per-SCK-bit are the same
+# number in the model.
+cpu_hz: 128_000_000
+
 # RRAM, not flash. 2036 KB — an odd size, and it is correct: see
 # nrf54lm20_a_b.dtsi, `cpuapp_rram: reg = <0x0 DT_SIZE_K(2036)>`.
 flash:

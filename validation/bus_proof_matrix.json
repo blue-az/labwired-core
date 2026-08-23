@@ -626,19 +626,21 @@
       }
     },
     "nrf54lm20a": {
-      "in_boards": false,
+      "in_boards": true,
       "uart": {
-        "state": "none",
-        "gap": "chip onboarded 2026-08-23; no firmware fixture boots nrf54lm20a yet. The UARTE20 model is the same nrf54l_uarte the nRF54L15 lane proves, at the same 0x500C6000 base, but a sibling's proof is not this chip's proof and the console IRQ differs (CLOCK moved 261 -> 270).",
-        "lane": "none"
+        "state": "proven",
+        "file": "crates/core/tests/strict_onboarding.rs",
+        "test": "test_strict_board_onboarding",
+        "signal": "the committed tests/fixtures/nrf54lm20a-snake.elf boots in-sim and UARTE20 EasyDMA reaches the capture sink; the asserted lines carry the chip's OWN geometry and map (rram=2036K ram=511K, p3@0x500D8600), all of which are wrong on the nRF54L15 profile this one would most plausibly be copied from",
+        "lane": "core-ci: cargo test -p labwired-core --test strict_onboarding (the gate EXECUTES examples/nrf54lm20a-snake/io-smoke.yaml through the CLI and fails the board if any assertion fails)"
       },
       "spi": {
-        "state": "shallow",
-        "file": "crates/core/src/peripherals/spi.rs",
-        "test": "nrf54l_spim_moves_bytes_and_drives_hardware_dc",
-        "signal": "unit-level: a TASKS_START at the nRF54L offset moves a TX buffer through an attached SpiDevice and the controller's own PSEL.DCX holds D/C low for exactly DCXCNT bytes. A two-way negative control asserts the nRF52 and nRF54L start-task offsets are inert on each other's map. This is the MODEL proven, not firmware: no ELF drives SPIM22 yet.",
-        "lane": "core-ci / core-integrity (push to main): cargo test -p labwired-core --lib",
-        "gap": "unit-level only: the SPIM model is driven directly, not by firmware. No committed ELF configures SPIM22 and no lab runs a pixel stream through it, so nothing yet proves the controller works when reached through from_config on a booted machine. Upgrade this cell when the AMOLED lab lands an ELF fixture."
+        "state": "proven",
+        "file": "crates/core/tests/strict_onboarding.rs",
+        "test": "test_strict_board_onboarding",
+        "signal": "SPIM22 EasyDMA drives an RM67162 AMOLED and the run is judged on the PICTURE, not the transaction: a display_region assertion requires ink in the 240x520 play area and requires the never-addressed 16-row strip below it to be EXACTLY black. Verified to discriminate -- setting DCXCNT to 0 in the firmware, so no byte is ever framed as a command, leaves every UART assertion passing and takes the play area to 0.0% inked.",
+        "lane": "core-ci: cargo test -p labwired-core --test strict_onboarding (the gate EXECUTES examples/nrf54lm20a-snake/io-smoke.yaml through the CLI and fails the board if any assertion fails)",
+        "note": "the D/C line is driven by the CONTROLLER (PSEL.DCX + DCXCNT), not a GPIO, so this also proves the nRF54L SPIM's hardware data/command path end to end."
       },
       "i2c": {
         "state": "none",

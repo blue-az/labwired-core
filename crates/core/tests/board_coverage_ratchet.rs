@@ -439,6 +439,15 @@ fn every_shipped_descriptor_is_ratcheted() {
         // no silicon oracle for its GRTC/IRQ path. Surviving a boot is not the
         // same as being right. Promote it only when that differential exists.
         "nrf54l15",
+        // Same standing as its sibling above, for the same reason. The
+        // nrf54lm20a-snake lab drives UARTE20, SPIM22, the RM67162 panel and
+        // four buttons across two GPIO ports, with display-region evidence and
+        // a verified-discriminating negative control -- but that is BUS-level
+        // conformance and survival, not the executing-fidelity class this gate
+        // requires: there is no walk-vs-scheduler differential and no silicon
+        // oracle for its GRTC/IRQ path. It is also not yet a bundled-configs.ts
+        // catalog board. Promote when both of those change.
+        "nrf54lm20a",
         // First Cortex-M7 chip; sim-derived (RM0468, no bench part). Has a
         // tier-1 fixture + io-smoke, but not yet a bundled-configs.ts catalog
         // board and no silicon oracle. Promote when it ships in the playground

@@ -1,0 +1,57 @@
+# LabWired - nRF54LM20A IO/display smoke test.
+#
+# Strict-onboarding gate (crates/core/tests/strict_onboarding.rs). Runs the
+# committed bare-metal fixture on the nRF54LM20A profile and asserts three
+# things a wrong chip profile cannot produce.
+#
+# Every assertion below is chosen to be WRONG ON THE SIBLING PART. nRF54L15 is
+# the profile this one is closest to and the one it would most plausibly be
+# copied from, so a smoke that both parts could pass would gate nothing.
+schema_version: "1.0"
+inputs:
+  firmware: "../../tests/fixtures/nrf54lm20a-snake.elf"
+  system: "./system.yaml"
+limits:
+  max_steps: 6000000
+assertions:
+  # The chip booted and UARTE20 EasyDMA reached the console.
+  - uart_contains: "nRF54LM20A AMOLED Snake"
+  # Memory geometry from the devicetree. nRF54L15 is 1524K/256K -- this line
+  # cannot be produced by a firmware linked against the sibling's map.
+  - uart_contains: "core=cortex-m33 rram=2036K ram=511K"
+  # The register map, including P3 at 0x500D8600 -- a FOURTH GPIO port, which
+  # nRF54L15 does not have and which is the port whose 0x400 spacing from P1
+  # makes the old back-offset window arrangement unrepresentable here.
+  - uart_contains: "uarte20@0x500C6000 spim22@0x500C8000 p1@0x500D8200 p3@0x500D8600"
+  # SPIM22 completed the panel's init transfers.
+  - uart_contains: "panel init ok"
+
+  # ── The picture, not the transaction ─────────────────────────────────────
+  #
+  # Every line above would pass with NOTHING on the far side of the SPI bus:
+  # EVENTS_END fires whether or not a panel is listening. These two measure
+  # what actually landed in frame memory.
+  #
+  # Verified to discriminate: setting DCXCNT to 0 in the firmware -- so no byte
+  # is ever framed as a command -- leaves all the UART assertions passing and
+  # takes this region to 0.0% inked.
+  - display_region:
+      id: "panel"
+      x: 0
+      y: 0
+      w: 240
+      h: 520
+      min_ink: 0.001
+      max_ink: 0.40
+  # The board is 26 rows of 20 px = 520, so the bottom 16 rows of the 536-row
+  # panel are never addressed. Any ink there is a window or framing fault
+  # smearing pixels outside their CASET/RASET rectangle.
+  - display_region:
+      id: "panel"
+      x: 0
+      y: 520
+      w: 240
+      h: 16
+      min_ink: 0.0
+      max_ink: 0.0
+  - expected_stop_reason: max_steps
