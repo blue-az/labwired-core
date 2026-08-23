@@ -624,6 +624,27 @@
         "lane": "core-arduino-matrix-smoke / arduino-matrix-gate (nightly 02:20 UTC + push to main)",
         "note": "the ACK is meaningful because the same chips' tier-1 fixtures show an UNMATCHED address NACKs (esp32 check_i2c addr 0x20, stm32 NACKF, rp2040 ABRT_7B_ADDR_NOACK) - the bus does not blanket-ACK. LIMIT: this proves address+data out and the device's ACK back, not a payload readback. Evidence: run 30842505709, 'cells=45 expected>=45 fails=0', 2026-08-03."
       }
+    },
+    "nrf54lm20a": {
+      "in_boards": false,
+      "uart": {
+        "state": "none",
+        "gap": "chip onboarded 2026-08-23; no firmware fixture boots nrf54lm20a yet. The UARTE20 model is the same nrf54l_uarte the nRF54L15 lane proves, at the same 0x500C6000 base, but a sibling's proof is not this chip's proof and the console IRQ differs (CLOCK moved 261 -> 270).",
+        "lane": "none"
+      },
+      "spi": {
+        "state": "shallow",
+        "file": "crates/core/src/peripherals/spi.rs",
+        "test": "nrf54l_spim_moves_bytes_and_drives_hardware_dc",
+        "signal": "unit-level: a TASKS_START at the nRF54L offset moves a TX buffer through an attached SpiDevice and the controller's own PSEL.DCX holds D/C low for exactly DCXCNT bytes. A two-way negative control asserts the nRF52 and nRF54L start-task offsets are inert on each other's map. This is the MODEL proven, not firmware: no ELF drives SPIM22 yet.",
+        "lane": "core-ci / core-integrity (push to main): cargo test -p labwired-core --lib",
+        "gap": "unit-level only: the SPIM model is driven directly, not by firmware. No committed ELF configures SPIM22 and no lab runs a pixel stream through it, so nothing yet proves the controller works when reached through from_config on a booted machine. Upgrade this cell when the AMOLED lab lands an ELF fixture."
+      },
+      "i2c": {
+        "state": "none",
+        "gap": "TWIM21 is declared at 0x500C7000 and uses the same nrf54l_twim model the nRF54L15 smart-ring lane proves, but no nrf54lm20a manifest or firmware wires an I2C device.",
+        "lane": "none"
+      }
     }
   }
 }
