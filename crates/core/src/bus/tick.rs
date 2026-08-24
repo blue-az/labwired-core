@@ -1005,6 +1005,113 @@ impl SystemBus {
         }
     }
 
+    /// The ESP32-S3 intmatrix `INTR_STATUS` mirror as the bus last routed it,
+    /// or all-zero on a bus with no intmatrix. The second half of the S3
+    /// fabric's routed output (the first is `pending_cpu_irqs`), read back so
+    /// the audit compares the WHOLE result.
+    ///
+    /// Read out of the intmatrix's own register file at
+    /// `PRO_INTR_STATUS_REG_0..3` (offset 0x18C) rather than by downcasting to
+    /// the model: this is the same four words esp-hal's `__level_*_interrupt`
+    /// loads to discover which source fired, so the audit checks the bytes the
+    /// GUEST would see and not an internal field that happens to back them.
+    #[cfg(feature = "event-scheduler")]
+    fn esp32s3_intr_status_mirror(&self) -> [u32; 4] {
+        /// `PRO_INTR_STATUS_REG_0` offset within the intmatrix bank.
+        const INTR_STATUS_BASE: u64 = 0x18C;
+        let Some(p) = self
+            .irq_fabric
+            .esp32s3
+            .intmatrix_idx
+            .and_then(|idx| self.peripherals.get(idx))
+        else {
+            return [0; 4];
+        };
+        let mut out = [0u32; 4];
+        for (reg, word) in out.iter_mut().enumerate() {
+            let mut bytes = [0u8; 4];
+            for (i, b) in bytes.iter_mut().enumerate() {
+                *b = p
+                    .dev
+                    .read(INTR_STATUS_BASE + (reg as u64) * 4 + i as u64)
+                    .unwrap_or(0);
+            }
+            *word = u32::from_le_bytes(bytes);
+        }
+        out
+    }
+
+    /// Compare the S3 routed interrupt state the walk-free path LEFT BEHIND
+    /// against the state a full re-poll would produce, at this bus boundary.
+    ///
+    /// This is the gate on the whole walk-free S3 claim. The fast path above
+    /// skips `refresh_esp32s3_sched_sources` + `recompute_esp32s3_irq_lines`
+    /// every cycle on the grounds that the write choke
+    /// (`sync_esp32s3_irq_write`) and the event path
+    /// (`deliver_scheduled_irq_levels`) already re-derived the same answer at
+    /// the exact cycle any input moved. Here that is checked rather than
+    /// believed: poll every scheduler-driven peripheral, recompute, and record
+    /// any disagreement — in the routed per-core slot bitmap, in the
+    /// `INTR_STATUS` mirror esp-hal reads back, or in the underlying
+    /// scheduler-source bitmap.
+    ///
+    /// The polled answer is left in place. An audited run therefore reproduces
+    /// the pre-optimisation build exactly, which is what makes the audit
+    /// non-destructive to the firmware under it — and it is why the audit is a
+    /// measurement, not a repair: a divergence is reported, and only reported.
+    ///
+    /// Costs one `Option` null check per walk-free boundary when not installed.
+    #[cfg(feature = "event-scheduler")]
+    fn audit_esp32s3_irq_boundary(&mut self) {
+        if !self.irq_fabric.esp32s3.routing {
+            // Not an S3 bus: count nothing, so a test that audits the wrong
+            // machine reports zero boundaries and fails on THAT.
+            return;
+        }
+        let cached_routed = self.pending_cpu_irqs;
+        let cached_intr_status = self.esp32s3_intr_status_mirror();
+        let cached_sched_sources = self.irq_fabric.esp32s3.sched_sources;
+
+        self.refresh_esp32s3_sched_sources();
+        self.recompute_esp32s3_irq_lines();
+
+        let polled_routed = self.pending_cpu_irqs;
+        let polled_intr_status = self.esp32s3_intr_status_mirror();
+        let polled_sched_sources = self.irq_fabric.esp32s3.sched_sources;
+        let cycle = self.current_cycle;
+
+        let Some(audit) = self.esp32s3_irq_audit.as_mut() else {
+            return;
+        };
+        audit.boundaries += 1;
+        if polled_routed != [0, 0] {
+            audit.boundaries_with_routed_irq += 1;
+        }
+        if polled_sched_sources != [0, 0] {
+            audit.boundaries_with_sched_sources += 1;
+            audit.sched_source_union[0] |= polled_sched_sources[0];
+            audit.sched_source_union[1] |= polled_sched_sources[1];
+        }
+        if cached_routed == polled_routed
+            && cached_intr_status == polled_intr_status
+            && cached_sched_sources == polled_sched_sources
+        {
+            return;
+        }
+        audit.divergence_count += 1;
+        if audit.divergences.len() < crate::bus::Esp32s3IrqAudit::MAX_RECORDED {
+            audit.divergences.push(crate::bus::Esp32s3IrqDivergence {
+                cycle,
+                cached_routed,
+                polled_routed,
+                cached_intr_status,
+                polled_intr_status,
+                cached_sched_sources,
+                polled_sched_sources,
+            });
+        }
+    }
+
     /// The ONE per-fabric choke the event path uses to deliver a scheduler-
     /// driven peripheral's level-sensitive IRQ at its exact firing cycle. Every
     /// MCU family follows the SAME shape (poll `matrix_irq_sources` → fold the
@@ -1223,6 +1330,11 @@ impl SystemBus {
         // pushed directly into the retained buffer (zero alloc after warmup).
         #[cfg(feature = "event-scheduler")]
         if self.per_cycle_tick_is_trivial() {
+            // Walk-free S3 differential audit. `None` in every production
+            // build; see `audit_esp32s3_irq_boundary`.
+            if self.esp32s3_irq_audit.is_some() {
+                self.audit_esp32s3_irq_boundary();
+            }
             self.collect_enabled_nvic_interrupts(interrupts);
             return;
         }
@@ -1266,6 +1378,11 @@ impl SystemBus {
         // no-pending-IRQ case is allocation-free.
         #[cfg(feature = "event-scheduler")]
         if !force_scheduler_walk && self.per_cycle_tick_is_trivial() {
+            // Walk-free S3 differential audit. `None` in every production
+            // build; see `audit_esp32s3_irq_boundary`.
+            if self.esp32s3_irq_audit.is_some() {
+                self.audit_esp32s3_irq_boundary();
+            }
             let mut interrupts = Vec::new();
             self.collect_enabled_nvic_interrupts(&mut interrupts);
             return (interrupts, Vec::new());
