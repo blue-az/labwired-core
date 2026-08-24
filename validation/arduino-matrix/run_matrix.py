@@ -32,6 +32,7 @@ if str(_VALIDATION) not in sys.path:
     sys.path.insert(0, str(_VALIDATION))
 
 from matrix_lib import (  # noqa: E402
+    cacheable_cell,
     compile_fingerprint,
     elf_cache_hit,
     find_labwired,
@@ -309,6 +310,31 @@ def main() -> int:
                 extra={"max_steps": board.get("max_steps"), "led_watch": board.get("led_watch")},
             )
 
+            # ⚠️ AN EXTERNAL-COMPILE CELL IS NOT CACHEABLE.
+            #
+            # compile_fingerprint() above hashes the sketch sources and the
+            # PlatformIO platform/board/framework strings. For a PlatformIO cell
+            # those strings pin the toolchain, so the digest describes every
+            # input to the ELF. For an external-compile cell they describe
+            # nothing: its compiler is a driver in ANOTHER repository (for
+            # brd2709a, services/labwired-builder/silabs-arduino in the
+            # monorepo), and not one byte of it reaches the digest.
+            #
+            # So editing that Arduino core changes the ELF a user gets and
+            # leaves the digest identical — the cell hits its cache and the
+            # column reports `pass` against an ELF built from the previous
+            # core. `--out` is /tmp on a self-hosted runner, so the stale ELF
+            # survives between jobs. Measured 2026-08-24 on the brd2709a lane:
+            # the cells last really compiled on 2026-08-22 and the five runs
+            # after it were 8/8 "cache hit", 0 compiles — two of them triggered
+            # BY a change to that Arduino core.
+            #
+            # Fingerprinting the driver would mean core reaching into a repo it
+            # does not own and guessing which of its files matter. Not caching
+            # is the honest answer: these cells are cheap (~1.3 s each, and
+            # there is exactly one such board), and a cache that cannot see its
+            # own compiler must not claim a hit.
+            cacheable = cacheable_cell(ext)
             cached_elf = cell_out / "firmware.elf"
             used_cache = False
             if args.sim_only:
@@ -324,9 +350,18 @@ def main() -> int:
                     )
                     continue
                 print("    compile: skipped (--sim-only)", flush=True)
-            elif not args.force_compile and elf_cache_hit(cell_out, digest):
+            elif not args.force_compile and cacheable and elf_cache_hit(cell_out, digest):
                 used_cache = True
                 print(f"    compile: cache hit ({cached_elf.name})", flush=True)
+            elif not args.force_compile and not cacheable and elf_cache_hit(cell_out, digest):
+                # Say it out loud rather than silently spending 11s: this cell
+                # HAS a matching digest and we are recompiling anyway, because
+                # the digest cannot see this board's compiler.
+                print(
+                    "    compile: digest matches but not cacheable "
+                    "(external driver is not fingerprinted)",
+                    flush=True,
+                )
             else:
                 work = work_root / f"{bid}__{sid}"
                 if ext:

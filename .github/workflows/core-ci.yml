@@ -496,6 +496,7 @@ jobs:
             scripts/perf/test_board_perf.py \
             scripts/ci/test_board_matrix.py \
             scripts/ci/test_chip_coverage.py \
+            scripts/ci/test_matrix_external_cache.py \
             scripts/ci/test_workspace_test_shard.py \
             scripts/test_generate_validation_status.py
 
