@@ -1,4 +1,0 @@
-# Build output. `cargo test -p labwired-core --test e2e_nrf52840_obd2_scanner`
-# produces this itself; nothing here is committed except this file.
-*
-!.gitignore

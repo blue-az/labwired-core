@@ -1017,6 +1017,20 @@ jobs:
       - name: Add ARM target (wasm secure-boot repro firmware)
         run: rustup target add thumbv7em-none-eabi
 
+      # The OBD2 end-to-end (labwired-core/e2e_nrf52840_obd2_scanner) runs a
+      # REAL scanner against a REAL ECU over a modelled CAN bus. The scanner is
+      # a cargo crate; the ECU is C, built with arm-none-eabi-gcc. The test
+      # builds both itself, so the only thing it needed from this lane was the
+      # C compiler.
+      #
+      # Without it the test was allow-listed known-red (#960) and therefore
+      # proved NOTHING on every PR — a gate that cannot build its inputs is not
+      # a gate. Same package core-coverage-matrix-smoke.yml already installs.
+      - name: Add the C cross-compiler (OBD2 ECU firmware)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-arm-none-eabi
+
       # READ-ONLY. This lane restores main's `core-ci` target dir; it must not
       # write one back, for a reason that is easy to miss: GitHub scopes caches
       # by ref, so a cache written on `refs/pull/N/merge` can never be read by

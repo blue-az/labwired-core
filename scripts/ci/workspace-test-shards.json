@@ -142,13 +142,5 @@
     }
   ],
   "_known_red_about": "Tests that are RED ON MAIN TODAY for a known, tracked reason. A shard that sees one of these fail reports it as known, not new. An entry whose test PASSES is stale and FAILS the aggregate job \u2014 shrink this list in the PR that fixes the test. Exact (package, target, test-name) triples, one GitHub issue per entry: no patterns, so an unrelated failure in the same file can never hide behind an entry. Wave 0.1's suite-baseline.json never landed, so this list was measured directly (see the PR that introduced it).",
-  "known_red": [
-    {
-      "package": "labwired-core",
-      "target": "e2e_nrf52840_obd2_scanner",
-      "test": "real_scanner_and_ecu_firmware_complete_the_obd2_workflow",
-      "issue": 960,
-      "reason": "The example's two ELFs are build artifacts, not fixtures. The test now BUILDS both itself (cargo for the scanner, make for the ECU), so it no longer fails file-not-found and it passes on any machine with both toolchains. It stays red on this lane only because the shard runner has no arm-none-eabi-gcc: the make half aborts with that named reason. Removing this entry needs one `apt-get install -y gcc-arm-none-eabi` step in the shard job, the same line core-coverage-matrix-smoke.yml already uses."
-    }
-  ]
+  "known_red": []
 }
