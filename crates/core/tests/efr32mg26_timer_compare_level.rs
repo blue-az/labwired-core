@@ -30,8 +30,41 @@
 //!
 //! The other half of the same measurement is what keeps that from being a
 //! standing rule: `IF` stayed 0 while `CNT == OC` and the counter was stopped,
-//! so the match is gated on the counter actually being clocked. The model
-//! spells this as a one-shot — see `Efr32s2Timer::level_pending`.
+//! so the match is gated on the counter actually being clocked.
+//!
+//! # The second run: where exactly the flag appears
+//!
+//! The 250 ms reads above cannot see WHICH tick latched — by then the counter
+//! has moved thousands of ticks past `OC`. A second die run answered that by
+//! clearing `CFG.DEBUGRUN`, which FREEZES the counter the instant the debugger
+//! halts and makes `(CNT, IF)` an atomic hardware snapshot. Each trial writes
+//! `CNT`, clears `IF` through the alias, resumes into a parked spin loop for
+//! 14–18 ticks, halts, and reads both. 264 trials, **zero mixed verdicts**:
+//!
+//! | `TOP`    | `OC`     | last `CNT` with CC0 clear | first with CC0 set |
+//! |----------|----------|---------------------------|--------------------|
+//! | `0xFFFF` | `0x8000` | `0x8000` (6/6)            | `0x8001` (8/8)     |
+//! | `0xFFFF` | `0x1234` | `0x1234`                  | `0x1235`           |
+//! | `0x00FF` | `0x0080` | `0x0080` (4/4)            | `0x0081` (4/4)     |
+//! | `0x00FF` | `0x00FF` | `0x00FF` (3/3)            | `0x0000`, wrapped  |
+//!
+//! So the flag appears with `CNT` reading `OC + 1`, never `OC`: **every counter
+//! clock samples the value `CNT` held BEFORE it**. That one rule produces the
+//! table above AND every row of the first run — a counter placed on `OC` and
+//! started latches because its first clock samples a resident `OC`. The
+//! separate one-shot the first run inferred was never a second mechanism, only
+//! a patch for an arrival rule that fired one tick early; it is gone.
+//!
+//! Two more facts from the same rig, both measured with the counter frozen:
+//!
+//! * `OC` ABOVE `TOP` never latches. `TOP = 0xFF`, `OC = 0x180`, ~2.5 periods:
+//!   `IF` read `0x01`, overflow alone. The control in the same run
+//!   (`OC = 0x80`) read `0x11`. This refutes the old "an `OC` at or above
+//!   `TOP` latches on the wrap" rule.
+//! * **`IF` is not write-1-to-clear.** With `IF` reading `0x10` and the counter
+//!   frozen, a direct `IF = 0xFFFFFFFF` left it at `0x10`; the `+0x2000` CLR
+//!   alias then took it to `0`. Every acknowledge below goes through the alias,
+//!   because on this part that is the only thing that works.
 //!
 //! ⚠️ Series-2 register discipline, and it cost two die runs to learn: `CFG` is
 //! a config register and must be written while `EN = 0`; `TOP`, `CNT` and
@@ -48,6 +81,9 @@ const TIMER0: u64 = 0x4004_8000;
 const CFG: u64 = TIMER0 + 0x04;
 const CMD: u64 = TIMER0 + 0x0C;
 const IF: u64 = TIMER0 + 0x14;
+/// Series 2 dropped `IFC`: a flag clears ONLY through the `+0x2000` alias.
+/// MEASURED — a direct store to `IF` is silently dropped by the die.
+const IF_CLR: u64 = TIMER0 + 0x2000 + 0x14;
 const TOP: u64 = TIMER0 + 0x1C;
 const CNT: u64 = TIMER0 + 0x24;
 const EN: u64 = TIMER0 + 0x30;
@@ -198,11 +234,24 @@ fn efr32mg26_timer0_does_not_re_latch_a_compare_the_counter_is_leaving() {
     let mut bus = die_setup(0x0000_7FFF);
     bus.write_u32(CMD, 1).unwrap();
 
-    advance_ticks(&mut bus, 1); // arrives at 0x8000
+    // ⚠️ Arriving at `OC` is NOT the latch — the clock that landed the counter
+    // on 0x8000 sampled 0x7FFF. This is the boundary the frozen-counter sweep
+    // measured: 0x8000 clear 6/6, 0x8001 set 8/8.
+    advance_ticks(&mut bus, 1);
     assert_eq!(bus.read_u32(CNT).unwrap(), 0x8000);
-    assert_eq!(bus.read_u32(IF).unwrap(), IF_CC0);
+    assert_eq!(
+        bus.read_u32(IF).unwrap(),
+        0,
+        "the die reads CC0 CLEAR with CNT sitting on the compare value"
+    );
 
-    bus.write_u32(IF, 0xFFFF_FFFF).unwrap(); // the handler acknowledges
+    advance_ticks(&mut bus, 1);
+    assert_eq!(bus.read_u32(CNT).unwrap(), 0x8001);
+    assert_eq!(bus.read_u32(IF).unwrap(), IF_CC0, "the die reads 0x10 here");
+
+    // The handler acknowledges — through the alias, the only clear that works.
+    bus.write_u32(IF_CLR, 0xFFFF_FFFF).unwrap();
+    assert_eq!(bus.read_u32(IF).unwrap(), 0, "the alias really cleared it");
     advance_ticks(&mut bus, 1);
     assert_eq!(
         bus.read_u32(IF).unwrap(),
@@ -211,8 +260,145 @@ fn efr32mg26_timer0_does_not_re_latch_a_compare_the_counter_is_leaving() {
          compare interrupt this part raises"
     );
 
-    // ...and the next real match, a full period on, still lands.
-    advance_ticks(&mut bus, 0x1_0000 - 1);
-    assert_eq!(bus.read_u32(CNT).unwrap(), 0x8000);
+    // ...and the next real match, a full period on, still lands. The counter
+    // is at 0x8002 here, and the clock that samples 0x8000 again is the
+    // 0xFFFFth from there — landing CNT on 0x8001, where the flag is visible.
+    advance_ticks(&mut bus, 0xFFFF);
+    assert_eq!(bus.read_u32(CNT).unwrap(), 0x8001);
     assert_eq!(bus.read_u32(IF).unwrap(), IF_CC0 | IF_OF);
+}
+
+// ── The second die run: the frozen-counter sweep ─────────────────────────────
+
+/// Configure TIMER0 the way the sweep did, with an arbitrary `TOP` and `OC`.
+fn die_setup_at(top: u32, oc: u32, start_cnt: u32) -> SystemBus {
+    let mut bus = brd2709a_bus();
+    bus.write_u32(CMU_CLKEN0, CLKEN0_VALUE).unwrap();
+    bus.write_u32(EN, 0).unwrap();
+    bus.write_u32(CFG, 0x0FFC_0040).unwrap();
+    bus.write_u32(CC0_CFG, 0x0000_0002).unwrap();
+    bus.write_u32(EN, 1).unwrap();
+    bus.write_u32(TOP, top).unwrap();
+    bus.write_u32(CC0_OC, oc).unwrap();
+    bus.write_u32(CNT, start_cnt).unwrap();
+    bus.write_u32(IF_CLR, 0xFFFF_FFFF).unwrap();
+    bus
+}
+
+/// ⚠️ **The flag appears with `CNT` reading `OC + 1`, never `OC`.**
+///
+/// This is the boundary the frozen-counter sweep resolved, and it is the one
+/// thing the 250 ms reads in the first run could not see. Both configurations
+/// the sweep ran with a 16-bit `TOP` are replayed here; the sweep saw zero
+/// mixed verdicts across 264 trials, so a one-tick error shows up as a hard
+/// disagreement, not as flakiness.
+#[test]
+fn efr32mg26_timer0_latches_one_clock_after_the_counter_takes_the_compare() {
+    for (top, oc) in [(0x0000_FFFFu32, 0x0000_8000u32), (0x0000_FFFF, 0x0000_1234)] {
+        let start = oc - 4;
+        let mut bus = die_setup_at(top, oc, start);
+        bus.write_u32(CMD, 1).unwrap();
+
+        // up to and including CNT == OC, the die reads the flag CLEAR
+        for step in 1..=4u32 {
+            advance_ticks(&mut bus, 1);
+            let cnt = bus.read_u32(CNT).unwrap();
+            assert_eq!(cnt, start + step);
+            assert_eq!(
+                bus.read_u32(IF).unwrap() & IF_CC0,
+                0,
+                "TOP={top:#x} OC={oc:#x}: CC0 must still be clear at CNT={cnt:#x}"
+            );
+        }
+        // the very next clock samples the resident OC and latches
+        advance_ticks(&mut bus, 1);
+        assert_eq!(bus.read_u32(CNT).unwrap(), oc + 1);
+        assert_eq!(
+            bus.read_u32(IF).unwrap() & IF_CC0,
+            IF_CC0,
+            "TOP={top:#x} OC={oc:#x}: CC0 latches with CNT at OC+1"
+        );
+    }
+}
+
+/// `OC == TOP` is the same rule at the wrap: the clock that samples `TOP`
+/// latches and carries the counter to 0. MEASURED: `CNT = 0xFF` read CC0 clear
+/// 3/3, and the wrapped `CNT = 0x00` read it set 2/2.
+#[test]
+fn efr32mg26_timer0_latches_a_compare_equal_to_top_as_the_counter_wraps() {
+    let mut bus = die_setup_at(0x0000_00FF, 0x0000_00FF, 0x0000_00FD);
+    bus.write_u32(CMD, 1).unwrap();
+
+    advance_ticks(&mut bus, 2);
+    assert_eq!(bus.read_u32(CNT).unwrap(), 0xFF);
+    assert_eq!(
+        bus.read_u32(IF).unwrap() & IF_CC0,
+        0,
+        "clear while CNT == TOP"
+    );
+
+    advance_ticks(&mut bus, 1);
+    assert_eq!(bus.read_u32(CNT).unwrap(), 0x00, "wrapped");
+    assert_eq!(bus.read_u32(IF).unwrap() & IF_CC0, IF_CC0);
+    assert_eq!(
+        bus.read_u32(IF).unwrap() & IF_OF,
+        IF_OF,
+        "the wrap is an overflow too"
+    );
+}
+
+/// ⚠️ An `OC` the counter can never HOLD never latches — which refutes the
+/// "an `OC` at or above `TOP` latches on the wrap" rule this model used to
+/// carry. MEASURED: `TOP = 0xFF`, `OC = 0x180`, ~2.5 full periods, `IF` read
+/// `0x01` — overflow alone. The control below is the same run's `OC = 0x80`,
+/// which read `0x11`.
+#[test]
+fn efr32mg26_timer0_never_latches_a_compare_above_top() {
+    let mut bus = die_setup_at(0x0000_00FF, 0x0000_0180, 0);
+    bus.write_u32(CMD, 1).unwrap();
+    advance_ticks(&mut bus, 640); // ~2.5 periods, as on the die
+    assert_eq!(
+        bus.read_u32(IF).unwrap(),
+        IF_OF,
+        "overflow alone: the counter never holds 0x180, so CC0 cannot latch"
+    );
+
+    // The control, so this cannot pass by the rig simply never flagging.
+    let mut ctl = die_setup_at(0x0000_00FF, 0x0000_0080, 0);
+    ctl.write_u32(CMD, 1).unwrap();
+    advance_ticks(&mut ctl, 640);
+    assert_eq!(
+        ctl.read_u32(IF).unwrap(),
+        IF_OF | IF_CC0,
+        "the die read 0x11"
+    );
+}
+
+/// ⚠️ **`IF` is not write-1-to-clear on Series 2.**
+///
+/// MEASURED with the counter frozen (`CFG.DEBUGRUN = 0` and the core halted,
+/// so nothing can re-set a flag between the write and the read): `IF` read
+/// `0x10`, a direct `IF = 0xFFFFFFFF` left it at `0x10`, and the `+0x2000`
+/// alias then took it to `0`.
+///
+/// This matters more than it looks. Every emlib acknowledge goes through the
+/// alias (`TIMER_IntClear` writes `IF_CLR`), so a model that clears on the
+/// direct store and ignores the alias has it exactly backwards: real firmware
+/// would never clear the flag and would re-enter its handler forever.
+#[test]
+fn efr32mg26_timer0_if_clears_only_through_the_alias() {
+    let mut bus = die_setup_at(0x0000_FFFF, 0x0000_8000, 0x0000_7FFF);
+    bus.write_u32(CMD, 1).unwrap();
+    advance_ticks(&mut bus, 2);
+    assert_eq!(bus.read_u32(IF).unwrap() & IF_CC0, IF_CC0, "flag is up");
+
+    bus.write_u32(IF, 0xFFFF_FFFF).unwrap();
+    assert_eq!(
+        bus.read_u32(IF).unwrap() & IF_CC0,
+        IF_CC0,
+        "a direct store to IF is dropped by the die"
+    );
+
+    bus.write_u32(IF_CLR, IF_CC0).unwrap();
+    assert_eq!(bus.read_u32(IF).unwrap() & IF_CC0, 0, "the alias clears it");
 }

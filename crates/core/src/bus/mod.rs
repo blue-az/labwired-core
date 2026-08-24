@@ -187,6 +187,35 @@ pub fn is_clr_alias_write() -> bool {
     CLR_ALIAS_WRITE.with(|c| c.get())
 }
 
+// True while `SystemBus::write_u32` is applying ANY atomic alias (SET / CLR /
+// TGL) — the value reaching the peripheral is the computed FINAL image, not the
+// mask firmware wrote. A peripheral whose register is not plain
+// read-write needs this to tell "firmware stored V" from "an alias computed V".
+//
+// ⚠️ Deliberately NOT the same flag as `CLR_ALIAS_WRITE` above, which means
+// specifically the RP2040 CLR alias and is what the RP2040 USB model keys off.
+// Widening that one to cover SET would change how an RP2040 SET-alias write to
+// a W1C status register is interpreted, which nothing has measured.
+thread_local! {
+    static ALIAS_ABSOLUTE_WRITE: Cell<bool> = const { Cell::new(false) };
+}
+
+/// See [`ALIAS_ABSOLUTE_WRITE`].
+#[inline]
+pub fn is_alias_absolute_write() -> bool {
+    ALIAS_ABSOLUTE_WRITE.with(|c| c.get())
+}
+
+#[inline]
+pub(crate) fn with_alias_absolute_write<R>(f: impl FnOnce() -> R) -> R {
+    ALIAS_ABSOLUTE_WRITE.with(|c| {
+        let prev = c.replace(true);
+        let r = f();
+        c.set(prev);
+        r
+    })
+}
+
 #[inline]
 pub(crate) fn with_clr_alias_write<R>(f: impl FnOnce() -> R) -> R {
     CLR_ALIAS_WRITE.with(|c| {

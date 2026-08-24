@@ -600,10 +600,17 @@ impl crate::Bus for SystemBus {
                 };
                 // Flag CLR so write-clear peripherals can accept an absolute
                 // post-clear image (pico-sdk) without treating it as a W1C mask.
-                if matches!(op, crate::bus::AtomicAliasOp::Clr) {
-                    return crate::bus::with_clr_alias_write(|| self.write_u32(base, new));
-                }
-                return self.write_u32(base, new);
+                // Every alias op hands the peripheral a computed FINAL image.
+                // A register that is not plain read-write has to know that, or
+                // it re-interprets the image as a mask — which is how an
+                // EFR32 `IF_CLR` write turned into a no-op.
+                return crate::bus::with_alias_absolute_write(|| {
+                    if matches!(op, crate::bus::AtomicAliasOp::Clr) {
+                        crate::bus::with_clr_alias_write(|| self.write_u32(base, new))
+                    } else {
+                        self.write_u32(base, new)
+                    }
+                });
             }
         }
         // Debug: trace WiFi MAC-window writes (env-gated) to RE the TX path.
