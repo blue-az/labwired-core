@@ -112,6 +112,13 @@ jobs:
           - id: nrf54l15-dk
             script: examples/nrf54l15-dk/io-smoke.yaml
             system: examples/nrf54l15-dk/system.yaml
+          # nrf54lm20a's only CLI proof. Committed ELF, and the only cell here
+          # that judges a DISPLAY: its io-smoke asserts ink in the AMOLED's play
+          # area and requires the never-addressed strip below it to be exactly
+          # black, so a SPIM that completes its transfers into nothing fails.
+          - id: nrf54lm20a-snake
+            script: examples/nrf54lm20a-snake/io-smoke.yaml
+            system: examples/nrf54lm20a-snake/system.yaml
           - id: nrf54l15-smart-ring
             script: examples/nrf54l15-smart-ring/io-smoke.yaml
             system: examples/nrf54l15-smart-ring/system.yaml
