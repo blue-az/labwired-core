@@ -1,4 +1,0 @@
-# Build intermediates. The ELF and .map are committed because the lab and the
-# io-smoke reference the ELF by path; object and dependency files are not.
-*.o
-*.d
