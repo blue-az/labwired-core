@@ -808,12 +808,14 @@ impl GpioPort {
     /// through here, so a port with a non-zero window offset cannot be reached
     /// by one path and missed by another.
     fn read_reg(&self, offset: u64) -> u32 {
-        self.family.read_reg(self.translate(offset) + self.window_offset)
+        self.family
+            .read_reg(self.translate(offset) + self.window_offset)
     }
 
     fn write_reg(&mut self, offset: u64, value: u32) {
         let translated = self.translate(offset);
-        self.family.write_reg(translated + self.window_offset, value);
+        self.family
+            .write_reg(translated + self.window_offset, value);
     }
 
     /// nRF54L window offset -> the nRF52 model's register offset.

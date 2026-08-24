@@ -613,7 +613,10 @@ mod tests {
         cmd(&mut d, CMD_COLMOD, &[COLMOD_RGB565]);
         cmd(&mut d, CMD_WRDISBV, &[0xFF]);
         cmd(&mut d, CMD_DISPON, &[]);
-        assert!(d.is_lit(), "SLPOUT + brightness + DISPON must light the panel");
+        assert!(
+            d.is_lit(),
+            "SLPOUT + brightness + DISPON must light the panel"
+        );
     }
 
     /// THE AMOLED ASSERTION.
@@ -652,7 +655,10 @@ mod tests {
         let mut d = panel();
         cmd(&mut d, CMD_WRDISBV, &[0xFF]);
         cmd(&mut d, CMD_DISPON, &[]);
-        assert!(!d.is_lit(), "the panel powers up asleep; SLPOUT is required");
+        assert!(
+            !d.is_lit(),
+            "the panel powers up asleep; SLPOUT is required"
+        );
         cmd(&mut d, CMD_SLPOUT, &[]);
         assert!(d.is_lit());
     }

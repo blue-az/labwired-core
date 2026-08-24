@@ -449,16 +449,16 @@ int main(void)
             autosteer();
         }
 
-        c = snake_col[0];
-        r = snake_row[0];
-        switch (dir) {
-        case DIR_UP:    r--; break;
-        case DIR_DOWN:  r++; break;
-        case DIR_LEFT:  c--; break;
-        default:        c++; break;
-        }
-
-        if (cell_is_snake(c, r)) {
+        /*
+         * `blocked` is the ONE place a fatal move is decided, and it must be
+         * consulted whoever chose the direction. autosteer already refuses
+         * blocked headings, but a BUTTON can steer into a wall -- and the same
+         * thing happens when nothing drives the buttons at all, because these
+         * inputs are active-low and an undriven pin reads as held. Checking
+         * only self-collision here let the head walk off the board and the row
+         * counter wrap.
+         */
+        if (blocked(dir, snake_col[0], snake_row[0])) {
             uarte_write_u32("game over score=", score);
             /* Clear the board and start again so a long run keeps painting. */
             for (i = 0; i < snake_len; i++) {
@@ -468,6 +468,8 @@ int main(void)
             game_reset();
             continue;
         }
+
+        step_cell(dir, snake_col[0], snake_row[0], &c, &r);
 
         if (c == food_col && r == food_row) {
             score++;

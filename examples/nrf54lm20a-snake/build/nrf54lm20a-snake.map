@@ -36,7 +36,7 @@ LOAD build/main.o
  .isr_vector    0x00000000       0x40 build/startup.o
                 0x00000000                g_vectors
 
-.text           0x00000040      0x728
+.text           0x00000040      0x720
  *(.text .text.*)
  .text.Default_Handler
                 0x00000040        0x2 build/startup.o
@@ -65,41 +65,43 @@ LOAD build/main.o
                 0x00000174       0x50 build/main.o
  .text.game_reset
                 0x000001c4       0x60 build/main.o
+ .text.blocked  0x00000224       0x32 build/main.o
+ *fill*         0x00000256        0x2 
  .text.uarte_write
-                0x00000224       0x40 build/main.o
+                0x00000258       0x40 build/main.o
  .text.uarte_write_u32
-                0x00000264       0x78 build/main.o
+                0x00000298       0x78 build/main.o
  .text.startup.main
-                0x000002dc      0x3b8 build/main.o
-                0x000002dc                main
+                0x00000310      0x37c build/main.o
+                0x00000310                main
  *(.rodata .rodata.*)
  .rodata.main.str1.1
-                0x00000694       0xcf build/main.o
+                0x0000068c       0xcf build/main.o
  .rodata.order.0
-                0x00000763        0x4 build/main.o
-                0x00000768                        . = ALIGN (0x4)
- *fill*         0x00000767        0x1 
-                0x00000768                        _sidata = LOADADDR (.data)
+                0x0000075b        0x4 build/main.o
+                0x00000760                        . = ALIGN (0x4)
+ *fill*         0x0000075f        0x1 
+                0x00000760                        _sidata = LOADADDR (.data)
 
-.glue_7         0x00000768        0x0
- .glue_7        0x00000768        0x0 linker stubs
+.glue_7         0x00000760        0x0
+ .glue_7        0x00000760        0x0 linker stubs
 
-.glue_7t        0x00000768        0x0
- .glue_7t       0x00000768        0x0 linker stubs
+.glue_7t        0x00000760        0x0
+ .glue_7t       0x00000760        0x0 linker stubs
 
-.vfp11_veneer   0x00000768        0x0
- .vfp11_veneer  0x00000768        0x0 linker stubs
+.vfp11_veneer   0x00000760        0x0
+ .vfp11_veneer  0x00000760        0x0 linker stubs
 
-.v4_bx          0x00000768        0x0
- .v4_bx         0x00000768        0x0 linker stubs
+.v4_bx          0x00000760        0x0
+ .v4_bx         0x00000760        0x0 linker stubs
 
-.iplt           0x00000768        0x0
- .iplt          0x00000768        0x0 build/startup.o
+.iplt           0x00000760        0x0
+ .iplt          0x00000760        0x0 build/startup.o
 
-.rel.dyn        0x00000768        0x0
- .rel.iplt      0x00000768        0x0 build/startup.o
+.rel.dyn        0x00000760        0x0
+ .rel.iplt      0x00000760        0x0 build/startup.o
 
-.data           0x20000000        0x4 load address 0x00000768
+.data           0x20000000        0x4 load address 0x00000760
                 0x20000000                        . = ALIGN (0x4)
                 0x20000000                        _sdata = .
  *(.data .data.*)
@@ -108,10 +110,10 @@ LOAD build/main.o
                 0x20000004                        . = ALIGN (0x4)
                 0x20000004                        _edata = .
 
-.igot.plt       0x20000004        0x0 load address 0x0000076c
+.igot.plt       0x20000004        0x0 load address 0x00000764
  .igot.plt      0x20000004        0x0 build/startup.o
 
-.bss            0x20000004      0x414 load address 0x0000076c
+.bss            0x20000004      0x414 load address 0x00000764
                 0x20000004                        . = ALIGN (0x4)
                 0x20000004                        _sbss = .
  *(.bss .bss.*)
@@ -138,33 +140,33 @@ LOAD build/main.o
 OUTPUT(build/nrf54lm20a-snake.elf elf32-littlearm)
 LOAD linker stubs
 
-.debug_info     0x00000000      0xf74
+.debug_info     0x00000000     0x1035
  .debug_info    0x00000000      0x180 build/startup.o
- .debug_info    0x00000180      0xdf4 build/main.o
+ .debug_info    0x00000180      0xeb5 build/main.o
 
-.debug_abbrev   0x00000000      0x53b
+.debug_abbrev   0x00000000      0x562
  .debug_abbrev  0x00000000      0x111 build/startup.o
- .debug_abbrev  0x00000111      0x42a build/main.o
+ .debug_abbrev  0x00000111      0x451 build/main.o
 
 .debug_loclists
-                0x00000000      0x8e3
+                0x00000000      0xa25
  .debug_loclists
                 0x00000000       0x6b build/startup.o
  .debug_loclists
-                0x0000006b      0x878 build/main.o
+                0x0000006b      0x9ba build/main.o
 
-.debug_aranges  0x00000000       0x88
+.debug_aranges  0x00000000       0x90
  .debug_aranges
                 0x00000000       0x28 build/startup.o
  .debug_aranges
-                0x00000028       0x60 build/main.o
+                0x00000028       0x68 build/main.o
 
 .debug_rnglists
-                0x00000000      0x14e
+                0x00000000      0x14f
  .debug_rnglists
                 0x00000000       0x19 build/startup.o
  .debug_rnglists
-                0x00000019      0x135 build/main.o
+                0x00000019      0x136 build/main.o
 
 .debug_macro    0x00000000     0x10ac
  .debug_macro   0x00000000       0x24 build/startup.o
@@ -173,9 +175,9 @@ LOAD linker stubs
  .debug_macro   0x00000e56       0x64 build/main.o
  .debug_macro   0x00000eba      0x1f2 build/main.o
 
-.debug_line     0x00000000      0xcd7
+.debug_line     0x00000000      0xcee
  .debug_line    0x00000000      0x113 build/startup.o
- .debug_line    0x00000113      0xbc4 build/main.o
+ .debug_line    0x00000113      0xbdb build/main.o
 
 .debug_str      0x00000000     0x434a
  .debug_str     0x00000000     0x434a build/startup.o
@@ -196,6 +198,6 @@ LOAD linker stubs
  .ARM.attributes
                 0x00000034       0x34 build/main.o
 
-.debug_frame    0x00000000      0x15c
+.debug_frame    0x00000000      0x16c
  .debug_frame   0x00000000       0x38 build/startup.o
- .debug_frame   0x00000038      0x124 build/main.o
+ .debug_frame   0x00000038      0x134 build/main.o

@@ -1073,6 +1073,22 @@ fn gpio_offsets_for_peripheral(
         // nRF52 GPIO register layout isn't mapped for DAP board-IO bindings;
         // skip it gracefully (callers use `?`, so None drops the binding).
         labwired_core::peripherals::gpio::GpioRegisterLayout::Nrf52 => None,
+        // nRF54L family (nRF54L05/10/15, nRF54LM20A/B): OUT at 0x000, IN at
+        // 0x00C, from the Nordic MDK SVD (GLOBAL_P2).
+        //
+        // Mapped rather than skipped like nRF52 above, because on this family
+        // the arithmetic is well defined: the chip yaml declares each port at
+        // the VENDOR's own base with the block starting at OUT, so
+        // `base + offset` lands on the register. The nRF52 profiles back-offset
+        // their base instead, which is why `base + 0x504` is not a safe thing
+        // for this function to assume there.
+        //
+        // These are the same two numbers `GpioPort::odr_offset()` and
+        // `idr_offset()` return for this layout; keep the three in step.
+        labwired_core::peripherals::gpio::GpioRegisterLayout::Nrf54l => Some(GpioOffsets {
+            idr_offset: 0x00C,
+            odr_offset: 0x000,
+        }),
     }
 }
 

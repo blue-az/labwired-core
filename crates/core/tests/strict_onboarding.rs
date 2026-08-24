@@ -398,7 +398,12 @@ fn example_uses_chip(dir: &std::path::Path, chip_name: &str) -> bool {
         .lines()
         .map(str::trim)
         .find_map(|line| line.strip_prefix("system:"))
-        .map(|value| value.trim().trim_matches(['"', '\''].as_slice()).to_string())
+        .map(|value| {
+            value
+                .trim()
+                .trim_matches(['"', '\''].as_slice())
+                .to_string()
+        })
     else {
         return false;
     };

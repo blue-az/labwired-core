@@ -181,7 +181,7 @@ fn pin_cnf_reaches_the_ports_through_the_bus() {
     );
 
     // And PIN_CNF's DIR bit is authoritative for direction.
-    write_u32(&mut m, P2 + GPIO_PIN_CNF0 + 4 * 1, 0x0000_0001);
+    write_u32(&mut m, P2 + GPIO_PIN_CNF0 + 4, 0x0000_0001);
     assert_eq!(
         read_u32(&m, P2 + GPIO_DIR) & (1 << 1),
         1 << 1,

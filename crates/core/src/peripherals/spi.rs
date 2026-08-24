@@ -886,7 +886,7 @@ impl Nrf52SpiRegs {
             0x168 if value == 0 => self.events_endtx = 0,
 
             0x200 => self.shorts = value,
-            0x304 => self.inten |= value, // INTENSET
+            0x304 => self.inten |= value,  // INTENSET
             0x308 => self.inten &= !value, // INTENCLR
 
             0x500 => self.enable = value,
@@ -4644,7 +4644,10 @@ mod tests {
 
         nrf54l_arm(&mut spi, tx_base, 5, 1);
         nrf_write_u32(&mut spi, 0x000, 1); // TASKS_START
-        assert!(spi.needs_bus_tick(), "TASKS_START at 0x000 must arm the DMA");
+        assert!(
+            spi.needs_bus_tick(),
+            "TASKS_START at 0x000 must arm the DMA"
+        );
         spi.tick_with_bus(&mut bus);
 
         assert_eq!(
@@ -4727,7 +4730,6 @@ mod tests {
             "PSEL.SCK resets DISCONNECTED"
         );
     }
-
 }
 
 #[cfg(test)]

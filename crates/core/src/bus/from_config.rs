@@ -593,9 +593,7 @@ impl SystemBus {
                     // For nRF52 ports, an optional `num_pins` config key caps the
                     // valid-pin range (e.g. 16 for nRF52840 P1 which has P1.0–P1.15).
                     // Writes outside that range are discarded; reads return 0.
-                    if layout == GpioRegisterLayout::Nrf52
-                        || layout == GpioRegisterLayout::Nrf54l
-                    {
+                    if layout == GpioRegisterLayout::Nrf52 || layout == GpioRegisterLayout::Nrf54l {
                         let num_pins: u32 = p_cfg
                             .config
                             .get("num_pins")

@@ -76,7 +76,9 @@ const CHIPS: &[ChipConf] = &[
         // nRF54LM20A over SWD. Every value is MDK/SVD-derived, which is
         // authoritative for the map but is not measured silicon.
         reset_oracle: None,
-        behavior_gate: Some("nrf54lm20a_peripheral_estate::the_estate_answers_at_its_own_addresses"),
+        behavior_gate: Some(
+            "nrf54lm20a_peripheral_estate::the_estate_answers_at_its_own_addresses",
+        ),
     },
     ChipConf {
         name: "esp32",
