@@ -1054,7 +1054,30 @@ boards:
     # walk differentials, bus_visibility and logic_wire_channels_cross_family under
     # (none) / event-scheduler / jit,event-scheduler. This is an ack, not a capture.
     drift_ack: 2026-08-22
-    drift_ack_digest: 419adb95a5c7698e958c5713e4302168f7404afbedbd0b9851e10c3352ff9034
+    # 2026-08-24: gpio.rs and spi.rs each gained an nRF54L-family variant so the
+    # nRF54LM20A could be onboarded. Both are additive BEHIND A DISCRIMINANT THE
+    # STM32 CONSTRUCTION PATH NEVER SETS, so neither can reach a register this
+    # capture anchors:
+    #   - gpio.rs: a `Nrf54l` layout plus an `nrf54l_offsets` flag on GpioPort.
+    #     The flag defaults false and the new offset translation returns its
+    #     argument unchanged while it is false, so an STM32 port's register
+    #     decode is byte-for-byte what it was. The two new match arms are guarded
+    #     on that flag AND on GpioFamily::Nrf52, which an Stm32F1/Stm32V2 port is
+    #     not. odr_offset/idr_offset for the STM32 families are untouched.
+    #   - spi.rs: the nRF register file gained a `map` discriminant (default: the
+    #     nRF52 offsets) and nRF54L-only fields/constants. The STM32 register
+    #     files are SEPARATE `SpiRegs` variants (Stm32, Stm32Fifo, Stm32H5) and
+    #     no edit touches them; the nRF52 offsets kept their own function with
+    #     the same arms, so even the nRF path is unchanged unless `map` says
+    #     otherwise. The DCX/CSN and PRESCALER work in the EasyDMA engine is
+    #     gated on `map == Nrf54l`.
+    # `git diff` changes no line an STM32 path executes.
+    # Ran: cargo test -p labwired-core (153 targets, 0 failures), and explicitly
+    # stm32_spi_waveform (5), stm32h5_spi_visibility (8) and gpio's
+    # idr_pin_level_tests (3), all green. This is an ACK, NOT A CAPTURE — a live
+    # re-capture on this board is still owed.
+    drift_ack: 2026-08-24
+    drift_ack_digest: 84541cdd53ad4217b2fcd4bfdd2116f77ef4061d530a5571bec1f6a589384c41
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/cpu/cortex_m.rs
@@ -2207,7 +2230,30 @@ boards:
     # matches. No other pinned firmware on any board reaches the encoding, so
     # nothing a silicon capture asserts moved. No live re-capture is evidenced here.
     drift_ack: 2026-08-22
-    drift_ack_digest: 8dbe7ee3cc3b128f6a6046a82408b8fa3b38431054e2590a88e3e20f8c5b13c8
+    # 2026-08-24: gpio.rs and spi.rs each gained an nRF54L-family variant so the
+    # nRF54LM20A could be onboarded. Both are additive BEHIND A DISCRIMINANT THE
+    # STM32 CONSTRUCTION PATH NEVER SETS, so neither can reach a register this
+    # capture anchors:
+    #   - gpio.rs: a `Nrf54l` layout plus an `nrf54l_offsets` flag on GpioPort.
+    #     The flag defaults false and the new offset translation returns its
+    #     argument unchanged while it is false, so an STM32 port's register
+    #     decode is byte-for-byte what it was. The two new match arms are guarded
+    #     on that flag AND on GpioFamily::Nrf52, which an Stm32F1/Stm32V2 port is
+    #     not. odr_offset/idr_offset for the STM32 families are untouched.
+    #   - spi.rs: the nRF register file gained a `map` discriminant (default: the
+    #     nRF52 offsets) and nRF54L-only fields/constants. The STM32 register
+    #     files are SEPARATE `SpiRegs` variants (Stm32, Stm32Fifo, Stm32H5) and
+    #     no edit touches them; the nRF52 offsets kept their own function with
+    #     the same arms, so even the nRF path is unchanged unless `map` says
+    #     otherwise. The DCX/CSN and PRESCALER work in the EasyDMA engine is
+    #     gated on `map == Nrf54l`.
+    # `git diff` changes no line an STM32 path executes.
+    # Ran: cargo test -p labwired-core (153 targets, 0 failures), and explicitly
+    # stm32_spi_waveform (5), stm32h5_spi_visibility (8) and gpio's
+    # idr_pin_level_tests (3), all green. This is an ACK, NOT A CAPTURE — a live
+    # re-capture on this board is still owed.
+    drift_ack: 2026-08-24
+    drift_ack_digest: 4ea523739950f62fe217ea50a38e83b57850e68aef19fe54714b029d686049d8
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/cpu/cortex_m.rs
@@ -2552,7 +2598,30 @@ boards:
     # walk differentials, bus_visibility and logic_wire_channels_cross_family under
     # (none) / event-scheduler / jit,event-scheduler. This is an ack, not a capture.
     drift_ack: 2026-08-22
-    drift_ack_digest: 79e72e423894afa3443a3c6c3c6f800acf8f5654464030f2253783663255359e
+    # 2026-08-24: gpio.rs and spi.rs each gained an nRF54L-family variant so the
+    # nRF54LM20A could be onboarded. Both are additive BEHIND A DISCRIMINANT THE
+    # STM32 CONSTRUCTION PATH NEVER SETS, so neither can reach a register this
+    # capture anchors:
+    #   - gpio.rs: a `Nrf54l` layout plus an `nrf54l_offsets` flag on GpioPort.
+    #     The flag defaults false and the new offset translation returns its
+    #     argument unchanged while it is false, so an STM32 port's register
+    #     decode is byte-for-byte what it was. The two new match arms are guarded
+    #     on that flag AND on GpioFamily::Nrf52, which an Stm32F1/Stm32V2 port is
+    #     not. odr_offset/idr_offset for the STM32 families are untouched.
+    #   - spi.rs: the nRF register file gained a `map` discriminant (default: the
+    #     nRF52 offsets) and nRF54L-only fields/constants. The STM32 register
+    #     files are SEPARATE `SpiRegs` variants (Stm32, Stm32Fifo, Stm32H5) and
+    #     no edit touches them; the nRF52 offsets kept their own function with
+    #     the same arms, so even the nRF path is unchanged unless `map` says
+    #     otherwise. The DCX/CSN and PRESCALER work in the EasyDMA engine is
+    #     gated on `map == Nrf54l`.
+    # `git diff` changes no line an STM32 path executes.
+    # Ran: cargo test -p labwired-core (153 targets, 0 failures), and explicitly
+    # stm32_spi_waveform (5), stm32h5_spi_visibility (8) and gpio's
+    # idr_pin_level_tests (3), all green. This is an ACK, NOT A CAPTURE — a live
+    # re-capture on this board is still owed.
+    drift_ack: 2026-08-24
+    drift_ack_digest: 5515f34df097f237a8f989601ed3833363694888b04d1a53e678acaaf64f3bb2
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/cpu/cortex_m.rs
@@ -2957,7 +3026,30 @@ boards:
     # matches. No other pinned firmware on any board reaches the encoding, so
     # nothing a silicon capture asserts moved. No live re-capture is evidenced here.
     drift_ack: 2026-08-22
-    drift_ack_digest: c33eef7ad034b16686998a49bdbbf96b75ad2538c4388cc06f5abbb1a2e5b062
+    # 2026-08-24: gpio.rs and spi.rs each gained an nRF54L-family variant so the
+    # nRF54LM20A could be onboarded. Both are additive BEHIND A DISCRIMINANT THE
+    # STM32 CONSTRUCTION PATH NEVER SETS, so neither can reach a register this
+    # capture anchors:
+    #   - gpio.rs: a `Nrf54l` layout plus an `nrf54l_offsets` flag on GpioPort.
+    #     The flag defaults false and the new offset translation returns its
+    #     argument unchanged while it is false, so an STM32 port's register
+    #     decode is byte-for-byte what it was. The two new match arms are guarded
+    #     on that flag AND on GpioFamily::Nrf52, which an Stm32F1/Stm32V2 port is
+    #     not. odr_offset/idr_offset for the STM32 families are untouched.
+    #   - spi.rs: the nRF register file gained a `map` discriminant (default: the
+    #     nRF52 offsets) and nRF54L-only fields/constants. The STM32 register
+    #     files are SEPARATE `SpiRegs` variants (Stm32, Stm32Fifo, Stm32H5) and
+    #     no edit touches them; the nRF52 offsets kept their own function with
+    #     the same arms, so even the nRF path is unchanged unless `map` says
+    #     otherwise. The DCX/CSN and PRESCALER work in the EasyDMA engine is
+    #     gated on `map == Nrf54l`.
+    # `git diff` changes no line an STM32 path executes.
+    # Ran: cargo test -p labwired-core (153 targets, 0 failures), and explicitly
+    # stm32_spi_waveform (5), stm32h5_spi_visibility (8) and gpio's
+    # idr_pin_level_tests (3), all green. This is an ACK, NOT A CAPTURE — a live
+    # re-capture on this board is still owed.
+    drift_ack: 2026-08-24
+    drift_ack_digest: 103e57ffac527935c38a8babb853d1048b16c0bc0ab55bcae846d77a18b0dacd
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/cpu/cortex_m.rs
@@ -3322,7 +3414,30 @@ boards:
     # matches. No other pinned firmware on any board reaches the encoding, so
     # nothing a silicon capture asserts moved. No live re-capture is evidenced here.
     drift_ack: 2026-08-22
-    drift_ack_digest: a149f8657128847df2a5af54c399fd8d16331b04d7a191ab7c1a9a84353789af
+    # 2026-08-24: gpio.rs and spi.rs each gained an nRF54L-family variant so the
+    # nRF54LM20A could be onboarded. Both are additive BEHIND A DISCRIMINANT THE
+    # STM32 CONSTRUCTION PATH NEVER SETS, so neither can reach a register this
+    # capture anchors:
+    #   - gpio.rs: a `Nrf54l` layout plus an `nrf54l_offsets` flag on GpioPort.
+    #     The flag defaults false and the new offset translation returns its
+    #     argument unchanged while it is false, so an STM32 port's register
+    #     decode is byte-for-byte what it was. The two new match arms are guarded
+    #     on that flag AND on GpioFamily::Nrf52, which an Stm32F1/Stm32V2 port is
+    #     not. odr_offset/idr_offset for the STM32 families are untouched.
+    #   - spi.rs: the nRF register file gained a `map` discriminant (default: the
+    #     nRF52 offsets) and nRF54L-only fields/constants. The STM32 register
+    #     files are SEPARATE `SpiRegs` variants (Stm32, Stm32Fifo, Stm32H5) and
+    #     no edit touches them; the nRF52 offsets kept their own function with
+    #     the same arms, so even the nRF path is unchanged unless `map` says
+    #     otherwise. The DCX/CSN and PRESCALER work in the EasyDMA engine is
+    #     gated on `map == Nrf54l`.
+    # `git diff` changes no line an STM32 path executes.
+    # Ran: cargo test -p labwired-core (153 targets, 0 failures), and explicitly
+    # stm32_spi_waveform (5), stm32h5_spi_visibility (8) and gpio's
+    # idr_pin_level_tests (3), all green. This is an ACK, NOT A CAPTURE — a live
+    # re-capture on this board is still owed.
+    drift_ack: 2026-08-24
+    drift_ack_digest: bb1ecbf5adc8fefbd14ad3b814a3ca30f08032984719b374618590dd796a3bc0
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     # 2026-08-12: chip yaml adds bxcan1 (type bxcan @ 0x40006400, APB1ENR bit 25) for
     # Arduino matrix L8 loopback. Existing BxCan model; no register-map change to
