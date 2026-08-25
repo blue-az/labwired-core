@@ -37,6 +37,10 @@ Chips that cannot yet produce edges for a bus are listed here with a reason — 
   * I2C: nRF54L15 serial bank not yet edge-gated on from_config
   * SPI: nRF54L15 serial bank not yet edge-gated on from_config
   * UART: nRF54L15 serial bank not yet edge-gated on from_config
+* **nrf54lm20a**
+  * I2C: nRF54L pad claims unwired: PSEL.PORT is 3 bits on this family and the claim engine decodes the nRF52840 1-bit field only, so no PadLines cell is installed and no wire waveform is narrated
+  * SPI: nRF54L pad claims unwired: PSEL.PORT is 3 bits on this family and the claim engine decodes the nRF52840 1-bit field only, so no PadLines cell is installed and no wire waveform is narrated
+  * UART: nRF54L pad claims unwired: PSEL.PORT is 3 bits on this family and the claim engine decodes the nRF52840 1-bit field only, so no PadLines cell is installed and no wire waveform is narrated
 * **rp2350**
   * I2C: rp2350 from_config bus not yet edge-gated (no line cells)
   * SPI: rp2350 from_config bus not yet edge-gated (no line cells)
@@ -55,6 +59,7 @@ Chips that cannot yet produce edges for a bus are listed here with a reason — 
 | nrf52840 | ✓ | ✓ | ✓ |
 | nrf5340 | — | — | — |
 | nrf54l15 | — | — | — |
+| nrf54lm20a | — | — | — |
 | rp2040 | ✓ | ✓ | ✓ |
 | rp2350 | — | — | — |
 | stm32f103 | ✓ | ✓ | ✓ |

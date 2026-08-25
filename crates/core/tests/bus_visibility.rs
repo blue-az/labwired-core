@@ -168,6 +168,36 @@ const EXCLUSIONS: &[(&str, BusKind, &str)] = &[
         BusKind::Uart,
         "nRF5340 serial bank not yet edge-gated on from_config",
     ),
+    // nRF54LM20A: the ports decline the nRF52 pad-claim wiring on purpose.
+    // `wire_nrf52_pads` installs the PSEL claim table only for
+    // GpioRegisterLayout::Nrf52, because that engine's PSEL field decode is
+    // verified on the nRF52840 alone -- and this family widened PSEL.PORT from
+    // one bit to three (SVD GLOBAL_SPIM00.PSEL.SCK, PORT [7:5]) to address four
+    // ports. With no claim table there is no PadLines cell, so the models
+    // publish line NAMES but no wire channel and there are no edges to decode.
+    // Lifting these three means teaching the claim engine the wider PORT field,
+    // not relaxing the gate.
+    (
+        "nrf54lm20a",
+        BusKind::I2c,
+        "nRF54L pad claims unwired: PSEL.PORT is 3 bits on this family and the \
+         claim engine decodes the nRF52840 1-bit field only, so no PadLines \
+         cell is installed and no wire waveform is narrated",
+    ),
+    (
+        "nrf54lm20a",
+        BusKind::Spi,
+        "nRF54L pad claims unwired: PSEL.PORT is 3 bits on this family and the \
+         claim engine decodes the nRF52840 1-bit field only, so no PadLines \
+         cell is installed and no wire waveform is narrated",
+    ),
+    (
+        "nrf54lm20a",
+        BusKind::Uart,
+        "nRF54L pad claims unwired: PSEL.PORT is 3 bits on this family and the \
+         claim engine decodes the nRF52840 1-bit field only, so no PadLines \
+         cell is installed and no wire waveform is narrated",
+    ),
     (
         "nrf54l15",
         BusKind::I2c,

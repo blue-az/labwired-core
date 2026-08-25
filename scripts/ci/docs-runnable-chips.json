@@ -41,6 +41,12 @@
       "expect": "nRF54L15 boot OK",
       "note": "The README quickstart. Firmware is committed, so a clone is enough."
     },
+    "nrf54lm20a": {
+      "how": "example",
+      "script": "examples/nrf54lm20a-snake/io-smoke.yaml",
+      "expect": "core=cortex-m33 rram=2036K ram=511K",
+      "note": "Snake on an RM67162 AMOLED over SPIM22. Firmware is committed (tests/fixtures/nrf54lm20a-snake.elf), so a clone plus the CLI is the whole prerequisite. The expected line is the chip's own geometry rather than the banner on purpose: nRF54L15 is 1524K/256K, so a firmware linked against the sibling's map cannot print it."
+    },
     "rp2040": {
       "how": "committed",
       "firmware": "tests/fixtures/tier1/rp2040.elf",

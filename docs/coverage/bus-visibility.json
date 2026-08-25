@@ -62,6 +62,10 @@
     "name": "nrf54l15"
   },
   {
+    "buses": [],
+    "name": "nrf54lm20a"
+  },
+  {
     "buses": [
       "I2C",
       "SPI",

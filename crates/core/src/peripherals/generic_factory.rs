@@ -122,6 +122,13 @@ pub const MODEL_TYPES: &[&str] = &[
     // generic STM32 UART layout — it is a distinct silicon register map.
     "nrf54l_uarte",
     "nrf54l_twim",
+    // ⚠️ Load-bearing. Without this entry the fuzzy `contains("spi")` heuristic
+    // coerces `nrf54l_spim` onto the shared `spi` arm, which then sees
+    // `contains("nrf")` and picks the nRF52 SPIM offset map. That failure is
+    // silent: ENABLE (0x500) and CONFIG (0x554) are at the same addresses on
+    // both generations, so the instance enables and configures cleanly and then
+    // never sees a start task, because 0x000 means nothing to the nRF52 map.
+    "nrf54l_spim",
     // ESP32-classic behavioral models (esp32 factory). Absent while every C3
     // sibling was listed: only the Xtensa builder ever built these, and it
     // registers the bank in Rust without consulting this table, so the gap was

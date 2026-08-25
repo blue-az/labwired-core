@@ -46,6 +46,14 @@ const PARSE_FALLBACK_CHIPS: &[&str] = &[
     "nrf52840",
     "nrf5340",
     "nrf54l15",
+    // Same reasoning as efr32mg26 above: Nordic names GPIO pins P<port>.<pin>
+    // straight through the datasheet and the board devicetree, and
+    // `parse_stm32_pin` maps that form directly onto gpio<port> / bit -- so the
+    // parse IS the datasheet truth here, not a guess, and there is no alternate
+    // package-label scheme to transcribe a `pins:` override from. Checked on
+    // this part specifically because it is the first nRF with FOUR ports: P3.04
+    // resolves to gpio3 bit 4, and the chip declares gpio3.
+    "nrf54lm20a",
     "rp2040",
     "rp2350",
     "stm32f103",
