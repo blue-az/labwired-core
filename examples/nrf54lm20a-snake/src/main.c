@@ -75,6 +75,17 @@ static uint32_t str_copy(char *dst, const char *src)
     return n;
 }
 
+/* Eight lowercase hex digits, no prefix. Returns the count written. */
+static uint32_t hex8(char *dst, uint32_t v)
+{
+    static const char digits[] = "0123456789abcdef";
+    uint32_t i;
+    for (i = 0; i < 8u; i++) {
+        dst[i] = digits[(v >> (28u - 4u * i)) & 0xFu];
+    }
+    return 8u;
+}
+
 static void uarte_init(void)
 {
     UARTE_PSEL_TXD(UARTE20_BASE) = UARTE20_PIN_TXD;
@@ -246,6 +257,57 @@ static void gpio_init(void)
 static uint32_t button_pressed(uint32_t port, uint32_t pin)
 {
     return (GPIO_IN(port) & (1u << pin)) == 0u ? 1u : 0u;
+}
+
+/* ── Map probe ────────────────────────────────────────────────────────────
+ *
+ * Prove the chip profile's map by TOUCHING it, and print what came back.
+ *
+ * This replaces a banner that printed `rram=2036K ram=511K` and
+ * `p3@0x500D8600` as STRING LITERALS. Those read like assertions about the
+ * silicon and were nothing of the kind: a literal is printed whatever the chip
+ * profile says, so the smoke that asserted them passed with P3 deleted from
+ * the chip entirely. Measured, not argued -- that deletion was tried and the
+ * smoke still went 7/7.
+ *
+ * Each value below is READ BACK from the model:
+ *
+ *   rram  a word near the top of RRAM. On the sibling's 1524 KB map this
+ *         address is outside the region.
+ *   ram   write-then-read near the top of SRAM. Outside the sibling's 256 KB.
+ *   p3    PIN_CNF on the FOURTH GPIO port, which the sibling does not have at
+ *         all. Written and read back, so a missing port cannot answer.
+ */
+static void probe_map(void)
+{
+    char line[96];
+    uint32_t n;
+    uint32_t rram_word;
+    uint32_t ram_word;
+    uint32_t p3_word;
+
+    /* RRAM is readable but never written by this firmware; the value does not
+     * matter, reaching the address does. */
+    rram_word = REG32(RRAM_PROBE_ADDR);
+
+    REG32(RAM_PROBE_ADDR) = 0x54120000UL;  /* arbitrary marker */
+    ram_word = REG32(RAM_PROBE_ADDR);
+
+    /* P3.02 is the panel's chip-select pad. Configure it as an output through
+     * PIN_CNF and read the value back out of the port. */
+    GPIO_PIN_CNF(P3_BASE, 2) = PIN_CNF_OUTPUT;
+    p3_word = GPIO_PIN_CNF(P3_BASE, 2);
+
+    n = str_copy(line, "map rram=");
+    n += hex8(line + n, rram_word);
+    n += str_copy(line + n, " ram=");
+    n += hex8(line + n, ram_word);
+    n += str_copy(line + n, " p3cnf=");
+    n += hex8(line + n, p3_word);
+    line[n++] = '\r';
+    line[n++] = '\n';
+    line[n] = '\0';
+    uarte_write(line);
 }
 
 /* ── Snake ────────────────────────────────────────────────────────────────*/
@@ -423,14 +485,7 @@ int main(void)
 
     uarte_init();
     uarte_write("nRF54LM20A AMOLED Snake\r\n");
-    /*
-     * Identity, printed from the SAME constants the driver code uses. These
-     * two lines are what the strict-onboarding smoke asserts, and they are
-     * chosen to be wrong on the sibling part: nRF54L15 has 1524K/256K, not
-     * 2036K/511K, and has no P3 at all.
-     */
-    uarte_write("core=cortex-m33 rram=2036K ram=511K\r\n");
-    uarte_write("uarte20@0x500C6000 spim22@0x500C8000 p1@0x500D8200 p3@0x500D8600\r\n");
+    probe_map();
 
     gpio_init();
     GPIO_OUTSET(P1_BASE) = (1u << LED0_PIN);

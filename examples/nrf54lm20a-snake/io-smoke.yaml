@@ -16,13 +16,19 @@ limits:
 assertions:
   # The chip booted and UARTE20 EasyDMA reached the console.
   - uart_contains: "nRF54LM20A AMOLED Snake"
-  # Memory geometry from the devicetree. nRF54L15 is 1524K/256K -- this line
-  # cannot be produced by a firmware linked against the sibling's map.
-  - uart_contains: "core=cortex-m33 rram=2036K ram=511K"
-  # The register map, including P3 at 0x500D8600 -- a FOURTH GPIO port, which
-  # nRF54L15 does not have and which is the port whose 0x400 spacing from P1
-  # makes the old back-offset window arrangement unrepresentable here.
-  - uart_contains: "uarte20@0x500C6000 spim22@0x500C8000 p1@0x500D8200 p3@0x500D8600"
+  # The map, READ BACK from the model rather than printed as a literal.
+  #
+  # This assertion used to be two banner lines -- `rram=2036K ram=511K` and
+  # `p3@0x500D8600` -- which were string literals in the firmware. They read
+  # like claims about the silicon and gated nothing: deleting gpio3 from the
+  # chip profile entirely left this smoke passing 7/7. Measured, not argued.
+  #
+  # Every field below is a value the firmware read out of the model:
+  #   rram=ffffffff  a word at 1984 KB -- erased NVM. Outside nRF54L15's 1524 KB.
+  #   ram=54120000   a marker written and read at 508 KB. Outside its 256 KB.
+  #   p3cnf=00000003 PIN_CNF written and read on the FOURTH GPIO port, which
+  #                  the sibling does not have. A missing port cannot answer.
+  - uart_contains: "map rram=ffffffff ram=54120000 p3cnf=00000003"
   # SPIM22 completed the panel's init transfers.
   - uart_contains: "panel init ok"
 

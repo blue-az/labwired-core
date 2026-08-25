@@ -3574,6 +3574,24 @@ pub struct DisplayRegionDetails {
     /// which is only allowed when `min_ink` is itself above zero.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub max_ink: Option<f64>,
+    /// Require the panel to be EMITTING, not merely painted.
+    ///
+    /// Ink measures frame memory, and frame memory fills whether or not the
+    /// panel can show it. On an emissive display those are different
+    /// questions: an AMOLED has no backlight and its brightness lives in the
+    /// controller (DCS `WRDISBV`, reset 0x00), so firmware ported from a
+    /// backlit TFT driver paints a perfect frame and displays black.
+    ///
+    /// This is not hypothetical and it is why the field exists: deleting the
+    /// one `WRDISBV` write from the nRF54LM20A snake firmware left its lab
+    /// passing 7/7, because every assertion measured pixels that had genuinely
+    /// been written to a panel nobody could see.
+    ///
+    /// Only meaningful for a panel that publishes `meta.lit`; asking it of one
+    /// that does not is an error rather than a pass, on the same principle as
+    /// every other way of not-measuring here.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lit: Option<bool>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

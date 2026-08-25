@@ -1685,6 +1685,40 @@ pub(crate) fn evaluate_display_region(
             )
         })?;
 
+    // `lit` is checked BEFORE the pixels, because it answers a different
+    // question and a failure here explains a passing ink measurement rather
+    // than contradicting it: the frame really was painted, onto a panel that
+    // cannot show it.
+    if let Some(want_lit) = d.lit {
+        let got = artifact
+            .meta
+            .get("lit")
+            .and_then(|v| v.as_bool())
+            .ok_or_else(|| {
+                format!(
+                    "display_region '{}': `lit` was asserted but this panel publishes no \
+                     `meta.lit` -- it has no emissive state to report, so the assertion \
+                     cannot be measured (do not ask it of a backlit panel)",
+                    d.id
+                )
+            })?;
+        if got != want_lit {
+            let brightness = artifact
+                .meta
+                .get("brightness")
+                .and_then(|v| v.as_u64())
+                .map(|b| format!(", brightness={b}"))
+                .unwrap_or_default();
+            return Err(format!(
+                "display_region '{}': lit is {got}, expected {want_lit}{brightness}. An \
+                 emissive panel shows nothing at brightness 0 however much was painted \
+                 into frame memory -- check that the firmware writes WRDISBV and leaves \
+                 sleep",
+                d.id
+            ));
+        }
+    }
+
     let bytes = artifact.bytes.as_deref().ok_or_else(|| {
         format!(
             "display_region '{}': the device published a '{}' artifact with no byte payload",
@@ -4272,6 +4306,7 @@ mod tests {
                     h: None,
                     min_ink: 1.0,
                     max_ink: None,
+                    lit: None,
                 },
             },
         )];

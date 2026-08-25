@@ -37,6 +37,12 @@ assertions:
       h: 520
       min_ink: 0.002
       max_ink: 0.40
+      # The panel must be EMITTING, not merely painted. Ink alone cannot tell
+      # the two apart: frame memory fills whether or not brightness was ever
+      # written, and on an AMOLED brightness IS the display. Without this the
+      # lab passed firmware that shows a black screen -- verified by deleting
+      # the WRDISBV write and watching it go 7/7.
+      lit: true
 
   # NEGATIVE SPACE, and the more informative of the two. The board is 26 rows
   # of 20 px = 520, so the bottom 16 rows of the 536-row panel are never drawn.

@@ -181,6 +181,15 @@
 
 #define COLMOD_RGB565               0x55u
 
+/* ── Map probes (see probe_map() in main.c) ───────────────────────────────
+ *
+ * Addresses NEAR THE TOP of each region, chosen so that a chip profile
+ * carrying the sibling's smaller map cannot answer them: nRF54L15 has 1524 KB
+ * of RRAM and 256 KB of SRAM, so both of these land outside it.
+ */
+#define RRAM_PROBE_ADDR             0x001F0000UL  /* 1984 KB: inside 2036, outside 1524 */
+#define RAM_PROBE_ADDR              0x2007F000UL  /* 508 KB in: inside 511, outside 256 */
+
 #define PANEL_W                     240u
 #define PANEL_H                     536u
 
