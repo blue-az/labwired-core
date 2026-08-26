@@ -434,8 +434,8 @@ require_literal "$backfill_workflow" 'examples/ci/dummy-max-steps.yaml' 'runner 
 require_literal RELEASE_PROCESS.md 'core-backfill-runner-image.yml' 'release process documents the one-time runner image backfill workflow'
 require_literal RELEASE_PROCESS.md 'v0.18.0' 'release process documents the initial v0.18.0 runner image backfill'
 
-safe_action_sha=cfc26b5df0218cceedcd832bc689c89d00a13e2d
-safe_action_version=v0.22.1
+safe_action_sha=75a3d9e906bab90fc0281d1dd786fe479a910d48
+safe_action_version=v0.22.2
 safe_action_ref="w1ne/labwired-core/.github/actions/labwired-test@${safe_action_sha}"
 for doc in docs/ci_integration.md docs/ci_test_runner.md docs/integration-templates/github-actions.yml docs/integration-templates/gitlab-ci.yml docs/integration-templates/README.md docs/reference_client_flows.md .github/actions/labwired-test/README.md; do
   require_absent_literal "$doc" 'ghcr.io/w1ne/labwired:latest' "$doc does not recommend a mutable runner image tag"
@@ -487,7 +487,7 @@ else
     fail "immutable action-source commit $safe_action_sha contains its action README"
   fi
   if [[ -n "$pinned_action" ]]; then
-    require_block_literal "$pinned_action" 'default: "v0.22.1"' 'pinned action defaults to the supported public release'
+    require_block_literal "$pinned_action" 'default: "v0.22.2"' 'pinned action defaults to the supported public release'
     require_block_literal "$pinned_action" 'https://github.com/w1ne/labwired-core/releases/download/${version}/${asset}' 'pinned action downloads the public release archive'
     pinned_action_inputs=$(awk '
       /^inputs:$/ { inside = 1; next }
@@ -508,7 +508,7 @@ else
     require_block_literal "$pinned_action" 'name: labwired-${{ github.job }}-${{ github.run_id }}-${{ github.action }}' 'pinned action gives each invocation a unique artifact name'
   fi
   if [[ -n "$pinned_action_readme" ]]; then
-    require_block_literal "$pinned_action_readme" 'defaults to `v0.22.1`' 'pinned action README states the supported public release'
+    require_block_literal "$pinned_action_readme" 'defaults to `v0.22.2`' 'pinned action README states the supported public release'
     require_block_literal "$pinned_action_readme" '[CI integration guide](../../../docs/ci_integration.md)' 'pinned action README links the canonical consumer guide'
     require_block_literal "$pinned_action_readme" 'intentionally documents the action beside its implementation' 'pinned action README explains its source-local contract'
     require_block_absent_literal "$pinned_action_readme" 'uses: w1ne/labwired-core/.github/actions/labwired-test@' 'pinned action README does not recursively choose its own SHA'

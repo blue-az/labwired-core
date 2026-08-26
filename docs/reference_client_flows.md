@@ -37,16 +37,16 @@ jobs:
       # Step 2: Run the public immutable Core action
       - id: labwired
         name: Run LabWired CLI
-        uses: w1ne/labwired-core/.github/actions/labwired-test@cfc26b5df0218cceedcd832bc689c89d00a13e2d
+        uses: w1ne/labwired-core/.github/actions/labwired-test@75a3d9e906bab90fc0281d1dd786fe479a910d48
         with:
           script: tests/hardware_validation.yaml
-          version: v0.22.1
+          version: v0.22.2
           output-dir: out/labwired
           args: --no-uart-stdout
 ```
 
 The action source is an immutable action-source pin. It has exactly four inputs:
-`script` (required), `version` (default `v0.22.1`), `output-dir`, and
+`script` (required), `version` (default `v0.22.2`), `output-dir`, and
 `args`. It downloads the selected public release
 with `curl`; callers do not need to add a token, repository, JUnit, or artifact
 upload setting. It automatically uploads `out/labwired/`, including
