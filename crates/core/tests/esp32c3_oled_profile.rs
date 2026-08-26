@@ -410,7 +410,7 @@ fn esp32c3_oled_guest_pc_attribution() {
     let budget = budget();
     let mut lab = build_oled_lab();
     let hist = Arc::new(PcHistogram::default());
-    lab.machine.observers.push(hist.clone());
+    lab.machine.add_observer(hist.clone());
 
     lab.machine.reset_step_profile();
     let mut fuel: u64 = 0;

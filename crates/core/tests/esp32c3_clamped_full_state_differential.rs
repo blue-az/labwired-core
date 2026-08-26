@@ -220,7 +220,7 @@ fn diag_measure_tick_costs_interval_1_and_64() {
     for interval in [1u32, 64] {
         let mut lab = build_oled_lab(interval);
         let metrics = Arc::new(PerformanceMetrics::new());
-        lab.machine.observers.push(metrics.clone());
+        lab.machine.add_observer(metrics.clone());
         const CHUNK: u32 = 1_000_000;
         let mut steps = 0u64;
         while steps < PAINT_BUDGET {

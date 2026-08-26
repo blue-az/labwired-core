@@ -1818,7 +1818,7 @@ pub mod integration_tests {
         use crate::metrics::PerformanceMetrics;
         let mut machine = create_machine();
         let metrics = std::sync::Arc::new(PerformanceMetrics::new());
-        machine.observers.push(metrics.clone());
+        machine.add_observer(metrics.clone());
 
         // Setup: R0 = 10 (16-bit MOV)
         // Code: 200A (MOV R0, #10)
@@ -1868,7 +1868,7 @@ pub mod integration_tests {
 
         let mut machine = create_machine();
         let metrics = std::sync::Arc::new(PerformanceMetrics::new());
-        machine.observers.push(metrics.clone());
+        machine.add_observer(metrics.clone());
 
         machine.bus.add_peripheral(
             "cost_ticker",
@@ -2738,7 +2738,7 @@ pub mod integration_tests {
 
         let mut machine = create_machine();
         let cov = Arc::new(PcCoverageObserver::new());
-        machine.observers.push(cov.clone());
+        machine.add_observer(cov.clone());
 
         let pc = 0x2000_0000u32;
         machine.cpu.set_pc(pc);

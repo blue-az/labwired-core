@@ -314,7 +314,7 @@ fn run_s3_rom_boot_no_elf(
     // fine here only because the USB-Serial-JTAG block echoes to stdout on its
     // own; a sink is what assertions read, and it had none.
     machine.bus.attach_usb_serial_jtag_sink(uart_tx.clone());
-    machine.observers.push(metrics.clone());
+    machine.add_observer(metrics.clone());
 
     let fault_evidence = handle_faults(&mut machine.bus, faults);
 
@@ -604,7 +604,7 @@ fn run_c3_rom_boot_no_elf(
 
     let metrics = std::sync::Arc::new(labwired_core::metrics::PerformanceMetrics::new());
     apply_run_speed_opts(&mut machine);
-    machine.observers.push(metrics.clone());
+    machine.add_observer(metrics.clone());
     let fault_evidence = handle_faults(&mut machine.bus, faults);
 
     // No ELF: empty firmware bytes degrade symbol/hash diagnostics gracefully; a
@@ -1218,7 +1218,7 @@ pub(crate) fn run_test(
                     cpu.faithful_windows = true;
                     bus.attach_uart_tx_sink(uart_tx.clone(), !args.no_uart_stdout);
                     let mut machine = labwired_core::Machine::new(cpu, bus);
-                    machine.observers.push(metrics.clone());
+                    machine.add_observer(metrics.clone());
                     machine
                 } else {
                     // Matrix / plain `labwired test`: fast-boot — configure S3
@@ -1465,7 +1465,7 @@ pub(crate) fn run_test(
                     // reset vector holds no startup code. Wait for
                     // `ets_set_appcpu_boot_addr`.
                     machine.secondary_awaits_boot_addr = true;
-                    machine.observers.push(metrics.clone());
+                    machine.add_observer(metrics.clone());
                     eprintln!(
                         "labwired-cli test: ESP32-S3 fast-boot entry=0x{:08x} (dual-core APP_CPU)",
                         program.entry_point
@@ -1533,7 +1533,7 @@ pub(crate) fn run_test(
                 // flash-thunks, no forged s_cpu_up — APP_CPU runs call_start_cpu1.
                 let mut machine =
                     labwired_core::Machine::new(pro_cpu, esp_bus).with_secondary_cpu(app_cpu);
-                machine.observers.push(metrics.clone());
+                machine.add_observer(metrics.clone());
                 if let Err(e) = machine.load_firmware(&program) {
                     return handle_load_error(
                         &args,
@@ -1804,7 +1804,7 @@ pub(crate) fn run_test(
                     program.arch,
                 );
             if !jit_eligible {
-                machine.observers.push(metrics.clone());
+                machine.add_observer(metrics.clone());
             }
             let fault_evidence = handle_faults(&mut machine.bus, &faults);
             execute_test_loop(

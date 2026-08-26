@@ -2032,7 +2032,7 @@ fn execute_test_loop<C: labwired_core::Cpu>(
         let obs = Arc::new(labwired_core::trace::TraceObserver::new(
             args.trace_max.unwrap_or(100_000),
         ));
-        machine.observers.push(obs.clone());
+        machine.add_observer(obs.clone());
         Some(obs)
     } else {
         None
@@ -2040,7 +2040,7 @@ fn execute_test_loop<C: labwired_core::Cpu>(
 
     let coverage_observer = if args.coverage {
         let obs = Arc::new(labwired_core::pc_coverage::PcCoverageObserver::new());
-        machine.observers.push(obs.clone());
+        machine.add_observer(obs.clone());
         Some(obs)
     } else {
         None
@@ -2049,7 +2049,7 @@ fn execute_test_loop<C: labwired_core::Cpu>(
     if let Some(vcd_path) = &args.vcd {
         let file = std::fs::File::create(vcd_path).expect("Failed to create VCD file");
         let observer = std::sync::Arc::new(vcd_trace::VcdObserver::new(file));
-        machine.observers.push(observer);
+        machine.add_observer(observer);
     }
 
     let mut sim_error_happened = false;

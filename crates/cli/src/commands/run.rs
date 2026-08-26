@@ -1783,12 +1783,12 @@ pub(crate) fn run_interactive_arm(
 ) -> ExitCode {
     let (cpu, _nvic) = labwired_core::system::cortex_m::configure_cortex_m(&mut bus);
     let mut machine = labwired_core::Machine::new(cpu, bus);
-    machine.observers.push(metrics.clone());
+    machine.add_observer(metrics.clone());
 
     if let Some(vcd_path) = &cli.vcd {
         let file = std::fs::File::create(vcd_path).expect("Failed to create VCD file");
         let observer = std::sync::Arc::new(vcd_trace::VcdObserver::new(file));
-        machine.observers.push(observer);
+        machine.add_observer(observer);
     }
 
     if let Err(e) = machine.load_firmware(&program) {
@@ -1851,12 +1851,12 @@ pub(crate) fn run_interactive_riscv(
 ) -> ExitCode {
     let cpu = labwired_core::system::riscv::configure_riscv(&mut bus);
     let mut machine = labwired_core::Machine::new(cpu, bus);
-    machine.observers.push(metrics.clone());
+    machine.add_observer(metrics.clone());
 
     if let Some(vcd_path) = &cli.vcd {
         let file = std::fs::File::create(vcd_path).expect("Failed to create VCD file");
         let observer = std::sync::Arc::new(vcd_trace::VcdObserver::new(file));
-        machine.observers.push(observer);
+        machine.add_observer(observer);
     }
 
     if let Err(e) = machine.load_firmware(&program) {
@@ -1914,12 +1914,12 @@ pub(crate) fn run_interactive_xtensa(
 ) -> ExitCode {
     let cpu = labwired_core::system::xtensa::configure_xtensa(&mut bus);
     let mut machine = labwired_core::Machine::new(cpu, bus);
-    machine.observers.push(metrics.clone());
+    machine.add_observer(metrics.clone());
 
     if let Some(vcd_path) = &cli.vcd {
         let file = std::fs::File::create(vcd_path).expect("Failed to create VCD file");
         let observer = std::sync::Arc::new(vcd_trace::VcdObserver::new(file));
-        machine.observers.push(observer);
+        machine.add_observer(observer);
     }
 
     if let Err(e) = machine.load_firmware(&program) {

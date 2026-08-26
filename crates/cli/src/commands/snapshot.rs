@@ -195,7 +195,7 @@ pub(crate) fn run_snapshot_capture(
     // The authoritative path owns its observers, so hand the trace ring to the
     // Machine instead of passing a list into every cpu.step call.
     if let Some(r) = &ring {
-        machine.observers.push(r.clone());
+        machine.add_observer(r.clone());
     }
     if let Some(path) = &args.trace_out {
         eprintln!(

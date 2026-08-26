@@ -10,6 +10,18 @@ use crate::{SimResult, SimulationError};
 use std::sync::atomic::Ordering;
 
 impl SystemBus {
+    /// Register a [`crate::SimulationObserver`] for the bus's own events
+    /// (`on_memory_write`).
+    ///
+    /// Most callers want [`crate::Machine::add_observer`] instead, which
+    /// registers for the CPU- and tick-shaped events as well; this entry
+    /// point is for an observer that only wants bus traffic, or that is
+    /// attached to a bus before a `Machine` owns it (the DAP memory
+    /// tracker).
+    pub fn add_observer(&mut self, observer: std::sync::Arc<dyn crate::SimulationObserver>) {
+        self.observers.push(observer);
+    }
+
     /// Side-effect-free byte read used by the universal inspect `peek`.
     ///
     /// Mirrors `read_u8`'s routing (RAM, flash, extra windows, flash boot
@@ -41,6 +53,35 @@ impl SystemBus {
             return p.dev.peek(addr - p.base);
         }
         None
+    }
+
+    /// Publish a completed **multi-byte peripheral store** to the bus
+    /// observers as byte events, little-endian.
+    ///
+    /// `write_u8` already notifies on every successful store (RAM and MMIO
+    /// alike), so a trace consumer expects one uniform byte stream and does
+    /// not care which access width the firmware used. The wide accessors
+    /// short-circuit into the peripheral before reaching their `write_u8`
+    /// fallback, so without this their MMIO stores — GPIO BSRR, USART TDR,
+    /// exactly the traffic a firmware trace exists for — are invisible.
+    ///
+    /// Callers pass `value.to_le_bytes()`: the event count is derived from
+    /// the stored type rather than written out at the call site, so a
+    /// half-word store can never emit word-shaped events.
+    ///
+    /// `old` is reported as 0 rather than read back: sampling a peripheral
+    /// register to report its previous value can have side effects
+    /// (read-to-clear status, USART RDR), and a trace must not perturb the
+    /// run it observes.
+    fn notify_peripheral_store(&self, addr: u64, bytes: &[u8]) {
+        if self.observers.is_empty() {
+            return;
+        }
+        for (i, &byte) in bytes.iter().enumerate() {
+            for observer in &self.observers {
+                observer.on_memory_write(addr + i as u64, 0, byte);
+            }
+        }
     }
 }
 
@@ -570,6 +611,7 @@ impl crate::Bus for SystemBus {
                 self.sync_esp32c3_pms_write(idx, addr - base);
                 self.refresh_legacy_tick_index(idx);
                 self.refresh_bus_tick_index(idx);
+                self.notify_peripheral_store(addr, &value.to_le_bytes());
             }
             return r;
         }
@@ -686,6 +728,7 @@ impl crate::Bus for SystemBus {
                 self.sync_esp32c3_pms_write(idx, addr - base);
                 self.refresh_legacy_tick_index(idx);
                 self.refresh_bus_tick_index(idx);
+                self.notify_peripheral_store(addr, &value.to_le_bytes());
             }
             return r;
         }
