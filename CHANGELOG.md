@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.22.2] - 2026-08-26
+
 ### Changed
 - **The EFR32 TIMER compare is a level match on `CNT == OC`, measured on a
   BRD2709A die.** A counter *written* onto its compare value and then started

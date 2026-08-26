@@ -69,6 +69,11 @@ json.dump(m, open(work / "wrong-marker.json", "w"), indent=2)
 
 # 4. The positive control.
 json.dump(trimmed({"stm32f103"}), open(work / "good.json", "w"), indent=2)
+
+# 5. The nRF54LM20A smoke changed its measured map transcript in #1064. Keep
+# this real-map entry as a regression control so its marker cannot remain on a
+# retired banner while the example itself still passes.
+json.dump(trimmed({"nrf54lm20a"}), open(work / "nrf54lm20a.json", "w"), indent=2)
 PY
 
 expect_gate_to_fail() {
@@ -92,6 +97,14 @@ if LABWIRED_CHIPS_MAP="$work/good.json" bash "$GATE" "$CLI" > "$work/real" 2>&1;
 else
   printf 'FAIL  a correct map does not pass\n' >&2
   tail -n 12 "$work/real" >&2
+  failures=$((failures + 1))
+fi
+
+if LABWIRED_CHIPS_MAP="$work/nrf54lm20a.json" bash "$GATE" "$CLI" > "$work/nrf54lm20a" 2>&1; then
+  printf 'ok    the nRF54LM20A map marker matches its smoke transcript\n'
+else
+  printf 'FAIL  the nRF54LM20A map marker does not match its smoke transcript\n' >&2
+  tail -n 12 "$work/nrf54lm20a" >&2
   failures=$((failures + 1))
 fi
 
