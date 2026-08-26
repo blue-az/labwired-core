@@ -227,7 +227,7 @@ impl LabwiredAdapter {
             labwired_core::Arch::Arm => {
                 let (cpu, _nvic) = labwired_core::system::cortex_m::configure_cortex_m(&mut bus);
                 bus.attach_uart_tx_sink(self.uart_sink.clone(), false);
-                bus.observers.push(self.mem_tracker.clone()); // Attach memory tracker
+                bus.add_observer(self.mem_tracker.clone()); // Attach memory tracker
                 let mut machine = Machine::new(cpu, bus);
                 machine
                     .load_firmware(&image)
@@ -237,7 +237,7 @@ impl LabwiredAdapter {
             labwired_core::Arch::RiscV => {
                 let cpu = labwired_core::system::riscv::configure_riscv(&mut bus);
                 bus.attach_uart_tx_sink(self.uart_sink.clone(), false);
-                bus.observers.push(self.mem_tracker.clone()); // Attach memory tracker
+                bus.add_observer(self.mem_tracker.clone()); // Attach memory tracker
                 let mut machine = Machine::new(cpu, bus);
                 machine
                     .load_firmware(&image)
@@ -247,7 +247,7 @@ impl LabwiredAdapter {
             labwired_core::Arch::XtensaLx7 => {
                 let cpu = labwired_core::system::xtensa::configure_xtensa(&mut bus);
                 bus.attach_uart_tx_sink(self.uart_sink.clone(), false);
-                bus.observers.push(self.mem_tracker.clone());
+                bus.add_observer(self.mem_tracker.clone());
                 let mut machine = Machine::new(cpu, bus);
                 machine
                     .load_firmware(&image)
@@ -1467,7 +1467,7 @@ mod tests {
         // Setup a simple machine manually for testing
         let mut bus = labwired_core::bus::SystemBus::new();
         let (cpu, _) = labwired_core::system::cortex_m::configure_cortex_m(&mut bus);
-        bus.observers.push(adapter.mem_tracker.clone());
+        bus.add_observer(adapter.mem_tracker.clone());
 
         let mut machine = labwired_core::Machine::new(cpu, bus);
         machine.set_pc(0x100);
@@ -1558,7 +1558,7 @@ mod tests {
         let adapter = LabwiredAdapter::new();
         let mut bus = labwired_core::bus::SystemBus::new();
         let (cpu, _) = labwired_core::system::cortex_m::configure_cortex_m(&mut bus);
-        bus.observers.push(adapter.mem_tracker.clone());
+        bus.add_observer(adapter.mem_tracker.clone());
 
         let mut machine = labwired_core::Machine::new(cpu, bus);
         machine.set_pc(0x100);

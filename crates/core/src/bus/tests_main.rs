@@ -3069,7 +3069,7 @@ fn test_system_bus_memory_observer() {
 
     let writes = Arc::new(Mutex::new(Vec::new()));
     let mut bus = SystemBus::new();
-    bus.observers.push(Arc::new(MockObserver {
+    bus.add_observer(Arc::new(MockObserver {
         writes: writes.clone(),
     }));
 

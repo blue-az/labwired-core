@@ -1361,7 +1361,7 @@ fn run_cortex_m_firmware(
     let (cpu, _nvic) = configure_cortex_m(&mut bus);
     let mut machine = Machine::new(cpu, bus);
     let trace = Arc::new(TraceObserver::new(5000));
-    machine.observers.push(trace.clone());
+    machine.add_observer(trace.clone());
 
     let image = labwired_loader::load_elf(&firmware_path)
         .unwrap_or_else(|e| panic!("Failed to load ELF {:?}: {e}", firmware_path));
@@ -1432,7 +1432,7 @@ fn run_riscv_firmware(
     bus.attach_uart_tx_sink(uart_sink.clone(), false);
     let mut machine = Machine::new(RiscV::new(), bus);
     let trace = Arc::new(TraceObserver::new(5000));
-    machine.observers.push(trace.clone());
+    machine.add_observer(trace.clone());
 
     let image = labwired_loader::load_elf(&firmware_path)
         .unwrap_or_else(|e| panic!("Failed to load ELF {:?}: {e}", firmware_path));

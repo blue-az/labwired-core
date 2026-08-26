@@ -1803,6 +1803,29 @@ pub struct Machine<C: Cpu> {
 }
 
 impl<C: Cpu> Machine<C> {
+    /// Register a [`SimulationObserver`] for the **whole** simulation.
+    ///
+    /// Observer events have two emitters and each keeps its own list:
+    /// [`Machine`] publishes the CPU- and tick-shaped events
+    /// (`on_step_start` / `on_step_end` / `on_peripheral_tick`), while
+    /// [`bus::SystemBus`] publishes `on_memory_write`. The split is a
+    /// borrow-checker fact — the CPU steps `&mut bus` while holding
+    /// `&machine.observers` — not two audiences, and the two emitters never
+    /// publish the same event, so an observer in both lists sees each event
+    /// exactly once.
+    ///
+    /// Pushing straight to `machine.observers` therefore registers for half
+    /// the events: that is why a `--vcd` trace recorded `pc` and nothing
+    /// else, and why `--trace` carried no memory writes. Registering here
+    /// instead of at either field is what makes an observer whole. An
+    /// observer that genuinely wants only bus traffic (the DAP memory
+    /// tracker, which outlives no `Machine`) still registers on the bus
+    /// directly via [`bus::SystemBus::add_observer`].
+    pub fn add_observer(&mut self, observer: Arc<dyn SimulationObserver>) {
+        self.observers.push(observer.clone());
+        self.bus.add_observer(observer);
+    }
+
     /// Whether any logic-analyzer / signal probe is armed (poll or push mode).
     /// The `jit_framework` [`SafetyGate`](crate::cpu::jit_framework::fallback::SafetyGate)
     /// reads this to force the interpreter while a probe needs per-cycle pad
