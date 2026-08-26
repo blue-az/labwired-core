@@ -69,6 +69,7 @@ json.dump(m, open(work / "wrong-marker.json", "w"), indent=2)
 
 # 4. The positive control.
 json.dump(trimmed({"stm32f103"}), open(work / "good.json", "w"), indent=2)
+
 PY
 
 expect_gate_to_fail() {
@@ -92,6 +93,22 @@ if LABWIRED_CHIPS_MAP="$work/good.json" bash "$GATE" "$CLI" > "$work/real" 2>&1;
 else
   printf 'FAIL  a correct map does not pass\n' >&2
   tail -n 12 "$work/real" >&2
+  failures=$((failures + 1))
+fi
+
+if python3 - "$MAP" <<'PY'
+import json, pathlib, sys
+
+entry = json.load(open(sys.argv[1]))["chips"]["nrf54lm20a"]
+smoke = pathlib.Path(entry["script"]).read_text()
+marker = entry["expect"]
+if f'- uart_contains: "{marker}"' not in smoke:
+    raise SystemExit(f"nrf54lm20a map marker is stale: {marker!r}")
+PY
+then
+  printf 'ok    the nRF54LM20A map marker matches its smoke transcript\n'
+else
+  printf 'FAIL  the nRF54LM20A map marker does not match its smoke transcript\n' >&2
   failures=$((failures + 1))
 fi
 
