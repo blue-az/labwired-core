@@ -367,7 +367,7 @@ chip: "../chips/esp32c3.yaml"
             .expect("program GPIO4 IO_MUX word");
 
         let writes = Arc::new(Mutex::new(Vec::new()));
-        bus.add_observer(Arc::new(MemoryWriteObserver {
+        bus.observers.push(Arc::new(MemoryWriteObserver {
             writes: Arc::clone(&writes),
         }));
 
