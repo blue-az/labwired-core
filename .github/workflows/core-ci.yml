@@ -63,6 +63,9 @@ jobs:
       - name: Verify installer contract
         run: bash scripts/ci/test-install-script.sh
 
+      - name: Keep extension distribution checks outside core
+        run: bash scripts/ci/test-install-canary-boundaries.sh
+
       # Docs are checked against the RELEASED CLI, not the workspace build:
       # what a reader can run is whatever they were able to install. The README
       # told people to pass `--system` to `labwired run` for months; that flag
