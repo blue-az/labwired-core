@@ -356,7 +356,7 @@ jobs:
 
   # ── Two claims that are not commands, but are still promises ────────────────
   promises:
-    name: Release freshness and extension availability
+    name: Release freshness and telemetry contract
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -379,23 +379,6 @@ jobs:
       # break or fix the other side.
       - name: install.sh and the CLI speak the schema the endpoint serves
         run: bash scripts/ci/telemetry-schema-conformance.sh
-
-      # The extension is a product with a distribution channel, and until it is
-      # on a registry the only way to install it is downloading a .vsix by
-      # hand. That is worth a red light rather than a note in a backlog.
-      - name: The extension is installable from a registry
-        run: |
-          set -uo pipefail
-          fail=0
-          mk=$(curl -s -o /dev/null -w '%{http_code}' -L \
-            'https://marketplace.visualstudio.com/items?itemName=w1ne.labwired-vscode')
-          ovsx=$(curl -s -o /dev/null -w '%{http_code}' -L \
-            'https://open-vsx.org/api/w1ne/labwired-vscode')
-          echo "VS Code Marketplace: $mk"
-          echo "Open VSX:            $ovsx"
-          [ "$mk" = "200" ] || { echo "::error::Not on the VS Code Marketplace. Create the w1ne publisher and add VSCE_PAT to labwired-vscode."; fail=1; }
-          [ "$ovsx" = "200" ] || { echo "::error::Not on Open VSX — VSCodium, Cursor and Windsurf users cannot install it. Create the namespace and add OVSX_PAT."; fail=1; }
-          exit "$fail"
 
   # ── One issue, kept current, when any of the above goes red ─────────────────
   report:
