@@ -1,5 +1,12 @@
 name: Rust Core CI
 
+# Scheduled runs are gated to this repository. GitHub attributes a cron run to
+# whoever last edited the schedule, so a fork with Actions enabled mails this
+# workflow's nightly failures to a maintainer here, about a run they can
+# neither see nor stop. The schedule-reachable jobs below say
+# `github.event_name == 'schedule' && github.repository == 'w1ne/labwired-core'`
+# in place of a bare schedule arm; the PR lanes never run on a schedule and are
+# untouched, so a fork still gets full CI on its own changes.
 on:
   push:
     branches:
@@ -41,6 +48,7 @@ jobs:
   # ── Static contract (always on PR; seconds) ────────────────────────────────
   release-runner-contract:
     name: release-runner-contract
+    if: ${{ github.event_name != 'schedule' || github.repository == 'w1ne/labwired-core' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -1133,7 +1141,7 @@ jobs:
     name: core-integrity
     if: >
       github.event_name == 'push' ||
-      github.event_name == 'schedule' ||
+      (github.event_name == 'schedule' && github.repository == 'w1ne/labwired-core') ||
       github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     # 30, not 20: the release-gated step now boots two ESP32-C3 mask ROMs and
@@ -1389,7 +1397,7 @@ jobs:
     name: ci-runner-image
     if: >
       github.event_name == 'workflow_dispatch' ||
-      github.event_name == 'schedule' ||
+      (github.event_name == 'schedule' && github.repository == 'w1ne/labwired-core') ||
       (github.event_name == 'push' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
     timeout-minutes: 40
@@ -1477,7 +1485,7 @@ jobs:
     name: core-full
     if: >
       github.event_name == 'workflow_dispatch' ||
-      github.event_name == 'schedule' ||
+      (github.event_name == 'schedule' && github.repository == 'w1ne/labwired-core') ||
       (github.event_name == 'push' && contains(github.event.head_commit.message, '[full-ci]'))
     runs-on: ubuntu-latest
     # 45 was the budget for a job that never finished: `Run Workspace Tests`

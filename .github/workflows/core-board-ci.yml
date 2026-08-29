@@ -1,5 +1,11 @@
 name: Core Board CI
 
+# Scheduled runs are gated to this repository: every job below carries
+# `if: github.event_name != 'schedule' || github.repository == 'w1ne/labwired-core'`.
+# GitHub attributes a cron run to whoever last edited the schedule, so a fork
+# with Actions enabled mails this workflow's failures to a maintainer here,
+# about a run they can neither see nor stop. Pushes, PRs and manual dispatch
+# are untouched — a fork still gets full CI on its own changes.
 on:
   push:
     branches: [main]
@@ -33,6 +39,7 @@ concurrency:
 
 jobs:
   setup:
+    if: ${{ github.event_name != 'schedule' || github.repository == 'w1ne/labwired-core' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
@@ -51,6 +58,7 @@ jobs:
           echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
 
   board:
+    if: ${{ github.event_name != 'schedule' || github.repository == 'w1ne/labwired-core' }}
     needs: setup
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -122,6 +130,7 @@ jobs:
   # auto-committing to protected main: regenerate here and fail if it drifted, so
   # whoever changed the matrix must commit the regenerated scoreboard.
   coverage-staleness:
+    if: ${{ github.event_name != 'schedule' || github.repository == 'w1ne/labwired-core' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

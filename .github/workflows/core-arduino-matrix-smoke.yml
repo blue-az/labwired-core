@@ -4,6 +4,12 @@ name: Core Arduino Matrix Smoke
 # Required status: `arduino-matrix-gate` (branch protection).
 # See validation/FRAMEWORK_FLEET.md.
 
+# Scheduled runs are gated to this repository: every job below carries
+# `if: github.event_name != 'schedule' || github.repository == 'w1ne/labwired-core'`.
+# GitHub attributes a cron run to whoever last edited the schedule, so a fork
+# with Actions enabled mails this workflow's failures to a maintainer here,
+# about a run they can neither see nor stop. Pushes and manual dispatch are
+# untouched — a fork still gets this workflow on its own changes.
 on:
   # Slow fleet: nightly + main tip + manual. Not on PRs (PR merge target <1 min).
   schedule:
@@ -28,6 +34,7 @@ concurrency:
 jobs:
   arduino-matrix:
     name: arduino-${{ matrix.board }}
+    if: ${{ github.event_name != 'schedule' || github.repository == 'w1ne/labwired-core' }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     strategy:
@@ -154,7 +161,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     needs: arduino-matrix
-    if: always()
+    if: ${{ always() && (github.event_name != 'schedule' || github.repository == 'w1ne/labwired-core') }}
     steps:
       - uses: actions/checkout@v4
 
