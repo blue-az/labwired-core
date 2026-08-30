@@ -482,6 +482,14 @@ jobs:
           python3 scripts/generate_validation_status.py --check --drift
           python3 scripts/generate_firmware_exercise_matrix.py --check
 
+      # The CHEAT(...) surface FIDELITY.md defines had no gate at all: the doc
+      # said "grep for it", and a convention nothing counts is a comment. This
+      # asserts the schema, the marker format, that FIDELITY.md's own references
+      # still resolve (two had rotted onto paths that no longer exist), and that
+      # the count only falls. Pure Python over comments — under a second.
+      - name: Fidelity debt — the CHEAT surface only falls
+        run: python3 scripts/ci/cheat_ratchet.py --check
+
       # The perf gate measures whatever chip descriptors it can link a fixture
       # against. Adding a chip on an unhandled memory map used to drop it out of
       # the gate silently — this asserts, on the PR that adds it, that it is
@@ -509,6 +517,7 @@ jobs:
             scripts/ci/test_chip_coverage.py \
             scripts/ci/test_matrix_external_cache.py \
             scripts/ci/test_matrix_verdict.py \
+            scripts/ci/test_cheat_ratchet.py \
             scripts/ci/test_workspace_test_shard.py \
             scripts/test_generate_validation_status.py
 

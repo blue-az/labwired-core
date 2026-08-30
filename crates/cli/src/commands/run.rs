@@ -667,7 +667,8 @@ pub(crate) fn run_firmware_esp32(args: &RunArgs) -> ExitCode {
 
     // Set PC to ELF entry and seed SP at top of SRAM1 (post-BROM default on
     // real silicon; see e2e_external_arduino_esp32_in_sim for the rationale).
-    // CHEAT(SKIP): bypasses the boot ROM and hand-seeds PC/SP. See FIDELITY.md §C.
+    // CHEAT(SKIP): bypasses the boot ROM and hand-seeds PC/SP — real: the boot
+// ROM executes and leaves PC/SP where it puts them. See FIDELITY.md §C.
     cpu.set_pc(image.entry_point as u32);
     cpu.set_sp(0x3FFE_0000);
     // Post-bootloader PS state: WOE=1 (windowed ABI), INTLEVEL=0, EXCM=0.
