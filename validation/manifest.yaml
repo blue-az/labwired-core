@@ -26,6 +26,26 @@
 #   recording when; that keeps CI green. Any later model change moves the digest
 #   and re-fails the gate. No silent decay.
 #
+#   AN ACK LAPSES. `drift_ack` covers a drifted board for 30 days
+#   (ACK_TTL_DAYS in the generator), after which `--drift` fails again. The
+#   digest rule made acks precise and, in doing so, permanent: while the models
+#   held still, an ack from any date kept a board green forever, and every acked
+#   board here read "re-capture pending" with nothing making the pending part
+#   come due. An ack is a promise to re-capture; a promise with no date is a
+#   waiver.
+#
+#   When it lapses you have three honest moves, in order of preference:
+#     1. re-capture (bump silicon.last_capture + silicon.models_digest),
+#     2. renew the ack (new drift_ack date, then --write-ack-digests),
+#     3. set `drift_ack_expires: YYYY-MM-DD` with a note saying why a
+#        re-capture is blocked (no probe, board on order). An explicit later
+#        date is reviewable. Widening ACK_TTL_DAYS to clear a red gate is not —
+#        it silences every board at once.
+#
+#   The expiry never appears in a VERDICT in the generated doc, only as the
+#   `expires` date in the status column. A doc that changed with the calendar
+#   would go stale on a day nobody committed, which is the #834 defect.
+#
 #   Print the current digests with:
 #     python3 scripts/generate_validation_status.py --digests
 #
