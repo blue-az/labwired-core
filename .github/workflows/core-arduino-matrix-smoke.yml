@@ -172,38 +172,27 @@ jobs:
           pattern: arduino-matrix-*
           merge-multiple: false
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Fleet verdict inputs
+        run: python -m pip install --quiet pyyaml
+
+      # The verdict lives in scripts/ci/matrix_verdict.py with a pytest suite
+      # (scripts/ci/test_matrix_verdict.py, run by core-ci.yml) because the
+      # inline version it replaces reported success while proving nothing:
+      # `skipped` counted as a pass with no check that the skip was WAIVED, and
+      # there was no minimum-pass floor, so a run whose 144 cells were all
+      # skipped printed "full fleet pass". Measured on this fixture before the
+      # change: old block exit 0, new gate exit 1.
+      #
+      # `EXPECTED` was also the literal `16 * 9`. It is now derived from
+      # boards.yaml (boards without `external_compile:` x sketches), so a fleet
+      # that shrinks cannot quietly lower its own floor.
       - name: Require full fleet cells pass
         run: |
-          python3 - <<'PY'
-          import json
-          import sys
-          from pathlib import Path
-
-          # 16 boards × 9 sketches (L0–L8); skips count as cells
-          EXPECTED = 16 * 9
-          root = Path("validation/arduino-matrix/out-ci")
-          results = list(root.rglob("results.json"))
-          if not results:
-              print("::error::no results.json from arduino matrix jobs", file=sys.stderr)
-              sys.exit(1)
-
-          bad = []
-          total = 0
-          for path in results:
-              data = json.loads(path.read_text())
-              for row in data.get("rows") or []:
-                  total += 1
-                  st = row.get("status")
-                  # skipped = explicit boards.yaml sketches_skip (e.g. STM32 L3 Wire)
-                  if st not in ("pass", "skipped"):
-                      bad.append(f"{row.get('board')}/{row.get('sketch')}: {st}")
-          print(f"cells={total} expected>={EXPECTED} fails={len(bad)}")
-          for b in bad:
-              print("FAIL", b)
-          if total < EXPECTED:
-              print(f"::error::expected ≥{EXPECTED} cells, got {total}", file=sys.stderr)
-              sys.exit(1)
-          if bad:
-              sys.exit(1)
-          print("arduino matrix gate: full fleet pass (pass|skipped ok)")
-          PY
+          python3 scripts/ci/matrix_verdict.py \
+            --results-dir validation/arduino-matrix/out-ci \
+            --fleet validation/arduino-matrix/boards.yaml
