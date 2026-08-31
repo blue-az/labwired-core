@@ -44,7 +44,7 @@ pub mod sim_inputs;
 mod tick;
 
 pub use can_devices::*;
-pub use resident_device::BusResidentDevice;
+pub use resident_device::{BusResidentDevice, DevicePins};
 
 pub use bus_trace::{new_log, BusPayload, BusTraceEvent, BusTraceLog, I2cSym};
 pub use interrupt_fabric::{
