@@ -1580,6 +1580,17 @@ jobs:
           rustup target add thumbv7em-none-eabihf
           rustup target add thumbv8m.main-none-eabi
 
+      # `pr-workspace-tests` installs this and this job did not, so the same
+      # OBD2 end-to-end passed on every PR and failed here — the ECU half is C,
+      # built with arm-none-eabi-gcc, and the test builds it itself. It asserts
+      # rather than skips (a gate that cannot build its inputs is not a gate),
+      # so the absent compiler is a hard failure, and it was invisible for as
+      # long as the firmware build above failed first and skipped this step.
+      - name: Add the C cross-compiler (OBD2 ECU firmware)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-arm-none-eabi
+
       - name: Build test firmware fixture
         run: |
           cargo build -p demo-blinky --release --target thumbv7m-none-eabi
