@@ -1087,9 +1087,7 @@ impl SystemBus {
     /// point — the same path `AttachCtx::install_gpio_observer` uses.
     pub fn install_gpio_observer<T>(bus: &mut SystemBus, observer: std::sync::Arc<T>)
     where
-        T: crate::peripherals::esp32s3::gpio::GpioObserver
-            + crate::peripherals::esp32::gpio::GpioObserver
-            + 'static,
+        T: crate::peripherals::device::GpioObserver + 'static,
     {
         if let Some(idx) = bus.find_peripheral_index_by_name("gpio") {
             let any = bus.peripherals[idx].dev.as_any_mut();

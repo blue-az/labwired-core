@@ -13,117 +13,18 @@
 // `as_any`) is unchanged. The chip-yaml `profile` selects the variant.
 
 use crate::{Bus, SimResult};
-use std::any::Any;
 use std::cell::Cell;
 use std::str::FromStr;
-use std::sync::mpsc::{Receiver, Sender};
 use std::sync::Arc;
 
 use crate::peripherals::pad_lines::PadLines;
 use crate::peripherals::spi_waveform::{NarrationFit, SpiFraming, SpiNarrator};
 
-/// Trait implemented by simulated SPI devices (peripherals attached to an SPI bus).
-///
-/// For v1, CS-pin-aware routing is not implemented: all transfers are broadcast
-/// to every attached device and the first non-zero MISO byte wins.  This is
-/// correct for single-device labs (MAX31855 alone).  CS-aware routing is noted
-/// as a Phase 2 follow-up.
-pub trait SpiDevice: Send {
-    fn needs_external_bus_poll(&self) -> bool {
-        false
-    }
-    fn component_id(&self) -> Option<&str> {
-        None
-    }
-    fn attach_can_bus(
-        &mut self,
-        _tx: Sender<crate::network::CanFrame>,
-        _rx: Receiver<crate::network::CanFrame>,
-    ) -> anyhow::Result<()> {
-        anyhow::bail!("SPI device is not a CAN controller")
-    }
-    fn poll_external_bus(&mut self) {}
-    /// Called when the CS line goes low (chip is selected).
-    fn cs_select(&mut self) {}
-    /// Called when the CS line goes high (chip is released — flush state).
-    fn cs_release(&mut self) {}
-    /// SPI is full-duplex: master sends `mosi_byte`, device returns its current MISO byte.
-    /// On read-only devices like MAX31855, `mosi_byte` is ignored.
-    fn transfer(&mut self, mosi_byte: u8) -> u8;
-    /// CS pin label this device is wired to (e.g. "PA4" or numeric pin ID). Used by the bus
-    /// dispatcher to pick which device responds when the firmware drives a particular CS line.
-    fn cs_pin(&self) -> &str;
-
-    /// What this device can show of itself — its own inspect evidence.
-    ///
-    /// The ONE place a a SPI device's artifacts are decided is the model
-    /// itself, next to the buffers it owns. Default: nothing, which is correct
-    /// for a sensor with no display surface and honest for anything else —
-    /// absent means "this engine has nothing to show", never "the screen was
-    /// blank". See [`crate::inspect::DeviceEvidence`] for why this is not a
-    /// central match on concrete types.
-    ///
-    /// Implementations must read the model's REAL buffer and synthesize
-    /// nothing; a panel that was never painted reports zero.
-    fn artifacts(
-        &self,
-        _id: &str,
-        _opts: &crate::inspect::InspectOpts,
-    ) -> Vec<crate::inspect::Artifact> {
-        Vec::new()
-    }
-    /// Data/Command (D/C) pin label this device observes, if any (e.g. "PB6").
-    ///
-    /// Displays like the Nokia 5110 (PCD8544) distinguish command bytes from
-    /// pixel-data bytes by the level of a dedicated GPIO line rather than by
-    /// byte semantics. When this returns `Some(pin)`, the bus latches that
-    /// pin's current output level into the device via [`set_dc_level`] after
-    /// each MMIO write, so the value is current by the time the firmware
-    /// writes the SPI data register. Default `None` → the bus does no latching
-    /// and the device infers framing from the protocol (ILI9341 / SSD1680).
-    ///
-    /// [`set_dc_level`]: SpiDevice::set_dc_level
-    fn dc_pin(&self) -> Option<&str> {
-        None
-    }
-    /// Latched level of the [`dc_pin`](SpiDevice::dc_pin) at transfer time,
-    /// pushed by the bus. No-op for devices that do not observe a D/C line.
-    fn set_dc_level(&mut self, _level: bool) {}
-    /// Resolved `(ODR address, bit)` of the D/C line. The bus computes this
-    /// once at install time (from [`dc_pin`](SpiDevice::dc_pin)) and records it
-    /// via [`set_dc_source`]; thereafter the bus reads that GPIO output bit
-    /// just before each transfer and pushes the level via [`set_dc_level`].
-    /// Default `None` → no D/C latching.
-    ///
-    /// [`set_dc_source`]: SpiDevice::set_dc_source
-    fn dc_source(&self) -> Option<(u64, u8)> {
-        None
-    }
-    /// Bus-side setter recording the resolved D/C `(ODR address, bit)`.
-    fn set_dc_source(&mut self, _odr_addr: u64, _bit: u8) {}
-    fn as_any(&self) -> Option<&dyn Any> {
-        None
-    }
-    fn as_any_mut(&mut self) -> Option<&mut dyn Any> {
-        None
-    }
-    /// Runtime-drivable view of this device, if it accepts simulated input.
-    /// Same contract as the hook on `I2cDevice`: input devices override it so
-    /// the generic [`crate::Machine::set_input`] resolver can reach them
-    /// without a downcast. Default `None` = not an input device.
-    fn as_sim_input_mut(&mut self) -> Option<&mut dyn crate::sim_input::SimInput> {
-        None
-    }
-    /// Binary mid-flight snapshot for runtime resume. Default empty;
-    /// override for stateful devices (e-paper panels with framebuffers,
-    /// thermocouples with cached temperatures, etc.).
-    fn runtime_snapshot(&self) -> Vec<u8> {
-        Vec::new()
-    }
-    fn restore_runtime_snapshot(&mut self, _bytes: &[u8]) -> crate::SimResult<()> {
-        Ok(())
-    }
-}
+/// The off-chip SPI device contract. Declared in
+/// [`peripherals::device`](crate::peripherals::device) — the ONE home for the
+/// vocabulary of things that hang off a wire — and re-exported here so every
+/// existing `impl`, bound and intra-doc link at this path keeps resolving.
+pub use crate::peripherals::device::SpiDevice;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize)]
 #[serde(rename_all = "snake_case")]
