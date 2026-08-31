@@ -1097,7 +1097,7 @@ boards:
     # idr_pin_level_tests (3), all green. This is an ACK, NOT A CAPTURE — a live
     # re-capture on this board is still owed.
     drift_ack: 2026-08-24
-    drift_ack_digest: e6a7c0479a962ada8585851c8735e065090b676ad211e8bb78fa776dc60e2490
+    drift_ack_digest: e82b3e1b850491dc1c777701e7717b14bc78fc643e43af97f8e52f3112ec21ea
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/cpu/cortex_m.rs
@@ -1121,6 +1121,18 @@ boards:
       - configs/chips/stm32h563.yaml
 
   # ── Silicon-verified once, but shared models drifted since (acknowledged) ─────
+    # 2026-08-31: adc.rs — CR.ADCAL is now the self-clearing COMMAND bit silicon
+    # makes it, on both the L4 and H7 layouts, and stm32h563 returns to the
+    # `stm32l4` ADC profile it was moved off on 2026-08-12. The move was wrong:
+    # this repo's own vendor-derived schemas put the H563 ADC1 register map at
+    # EXACTLY the L476's offsets (one extra ADC_OR) with CFGR.RES two bits at
+    # [4:3], where the H735's differs in eight registers and encodes RES in
+    # three bits at [4:2]. The model now matches the schema it is measured
+    # against; nothing here claims new silicon evidence, so this is an ack.
+    # Ran: labwired-core --lib peripherals::adc (13), h563_conformance (6),
+    # stm32h563_walk_differential (5, event-scheduler), tier1_matrix +
+    # tier1_matrix_ratchet (h563 adc pass -> the row is whole again).
+    drift_ack: 2026-08-31
   - id: esp32c3
     doc: docs/boards/esp32c3.md
     chip: configs/chips/esp32c3.yaml
@@ -2273,7 +2285,7 @@ boards:
     # idr_pin_level_tests (3), all green. This is an ACK, NOT A CAPTURE — a live
     # re-capture on this board is still owed.
     drift_ack: 2026-08-24
-    drift_ack_digest: 70afb05b26f0a9ee97b6c6c9680c5e8e3c85dd2eca3b5e30633befa831a6c9c9
+    drift_ack_digest: 8dfffc0b46711add7c7ec90b06b7de6fb0ea78182a64fdd512b8ceeab4060e41
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/cpu/cortex_m.rs
@@ -2292,6 +2304,18 @@ boards:
       - crates/core/src/peripherals/pwr.rs
       - configs/chips/stm32l476.yaml
 
+    # 2026-08-31: adc.rs — CR.ADCAL is now the self-clearing COMMAND bit silicon
+    # makes it, on both the L4 and H7 layouts, and stm32h563 returns to the
+    # `stm32l4` ADC profile it was moved off on 2026-08-12. The move was wrong:
+    # this repo's own vendor-derived schemas put the H563 ADC1 register map at
+    # EXACTLY the L476's offsets (one extra ADC_OR) with CFGR.RES two bits at
+    # [4:3], where the H735's differs in eight registers and encodes RES in
+    # three bits at [4:2]. The model now matches the schema it is measured
+    # against; nothing here claims new silicon evidence, so this is an ack.
+    # Ran: labwired-core --lib peripherals::adc (13), h563_conformance (6),
+    # stm32h563_walk_differential (5, event-scheduler), tier1_matrix +
+    # tier1_matrix_ratchet (h563 adc pass -> the row is whole again).
+    drift_ack: 2026-08-31
   - id: nucleo-l073rz
     doc: docs/boards/nucleo-l073rz.md
     chip: configs/chips/stm32l073.yaml
@@ -3069,7 +3093,7 @@ boards:
     # idr_pin_level_tests (3), all green. This is an ACK, NOT A CAPTURE — a live
     # re-capture on this board is still owed.
     drift_ack: 2026-08-24
-    drift_ack_digest: 8cf71b344af92780991f0b079991fca197b531fd7dc60c15e5c3ac726871a7b0
+    drift_ack_digest: 8a96821d2313f19eb519fe04f73a37edf4e3026425df95208c0db9abeb907cfe
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/cpu/cortex_m.rs
@@ -3090,6 +3114,18 @@ boards:
       - crates/core/src/peripherals/wwdg.rs
       - configs/chips/stm32f103.yaml
 
+    # 2026-08-31: adc.rs — CR.ADCAL is now the self-clearing COMMAND bit silicon
+    # makes it, on both the L4 and H7 layouts, and stm32h563 returns to the
+    # `stm32l4` ADC profile it was moved off on 2026-08-12. The move was wrong:
+    # this repo's own vendor-derived schemas put the H563 ADC1 register map at
+    # EXACTLY the L476's offsets (one extra ADC_OR) with CFGR.RES two bits at
+    # [4:3], where the H735's differs in eight registers and encodes RES in
+    # three bits at [4:2]. The model now matches the schema it is measured
+    # against; nothing here claims new silicon evidence, so this is an ack.
+    # Ran: labwired-core --lib peripherals::adc (13), h563_conformance (6),
+    # stm32h563_walk_differential (5, event-scheduler), tier1_matrix +
+    # tier1_matrix_ratchet (h563 adc pass -> the row is whole again).
+    drift_ack: 2026-08-31
   - id: stm32f407
     doc: docs/boards/stm32f407.md
     chip: configs/chips/stm32f407.yaml
