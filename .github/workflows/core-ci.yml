@@ -476,6 +476,18 @@ jobs:
       - name: Every `#[ignore]` says why
         run: python3 scripts/ci/ignore_reasons.py --check
 
+      # A doubled `-Tlink.x` duplicates memory.x's MEMORY block and the link
+      # dies with "region 'FLASH' already defined". It is invisible on a warm
+      # `target/` — cargo does not relink a cached artifact — so the build step
+      # further down carried the flag for a week after the crate's build.rs
+      # started passing its own, stayed green on the self-hosted runners, and
+      # failed the first time it ran on a clean one. The rule is derived, not
+      # listed: a crate whose build.rs emits the flag owns it, and no caller may
+      # repeat it. Pure Python, no toolchain, so it sits before the Rust
+      # install with the two checks above.
+      - name: One source for `-Tlink.x`
+        run: python3 scripts/ci/linker_script_single_source.py --check
+
       - name: Install Rust
         uses: dtolnay/rust-toolchain@1.95.0
         with:
@@ -537,6 +549,7 @@ jobs:
             scripts/ci/test_matrix_verdict.py \
             scripts/ci/test_cheat_ratchet.py \
             scripts/ci/test_ignore_reasons.py \
+            scripts/ci/test_linker_script_single_source.py \
             scripts/ci/test_workspace_test_shard.py \
             scripts/test_generate_validation_status.py
 
@@ -1567,12 +1580,56 @@ jobs:
           rustup target add thumbv7em-none-eabihf
           rustup target add thumbv8m.main-none-eabi
 
+      # `pr-workspace-tests` installs this and this job did not, so the same
+      # OBD2 end-to-end passed on every PR and failed here — the ECU half is C,
+      # built with arm-none-eabi-gcc, and the test builds it itself. It asserts
+      # rather than skips (a gate that cannot build its inputs is not a gate),
+      # so the absent compiler is a hard failure, and it was invisible for as
+      # long as the firmware build above failed first and skipped this step.
+      - name: Add the C cross-compiler (OBD2 ECU firmware)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-arm-none-eabi
+
+      # ubuntu-latest ships ~14 GB free, and this job builds the workspace test
+      # binaries twice — once on default features, once on `jit,event-scheduler`
+      # — with debug info. `Feature tests` died on:
+      #
+      #     rustc-LLVM ERROR: IO failure on output stream: No space left on device
+      #     collect2: fatal error: ld terminated with signal 7 [Bus error]
+      #
+      # The bus error is the same exhaustion wearing a different hat, which is
+      # why this looked like an LLVM crash and says "PLEASE submit a bug report".
+      #
+      # The images carry ~25 GB of preinstalled SDKs this job never touches.
+      # Measured, not assumed: the df either side is printed, so if a future
+      # image stops shipping them the log says so instead of the step quietly
+      # freeing nothing.
+      - name: Reclaim runner disk
+        run: |
+          df -h / | tail -1
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc \
+                      /usr/local/.ghcup /opt/hostedtoolcache/CodeQL || true
+          docker image prune -af >/dev/null 2>&1 || true
+          df -h / | tail -1
+
       - name: Build test firmware fixture
         run: |
           cargo build -p demo-blinky --release --target thumbv7m-none-eabi
           cargo build -p firmware-h563-io-demo --release --target thumbv7m-none-eabi
           cargo build -p firmware-f401-demo --release --target thumbv7em-none-eabi
-          RUSTFLAGS="-C link-arg=-Tlink.x" cargo build -p firmware-rp2040-pio-onboarding --release --target thumbv6m-none-eabi
+          # No RUSTFLAGS here. firmware-rp2040-pio-onboarding passes its own
+          # `-Tlink.x` from build.rs, so a plain `cargo build -p <crate>` links
+          # on its own.
+          #
+          # ⚠️ Exactly one place may pass `-Tlink.x`. This line used to add it
+          # too; once the crate's build.rs started passing its own
+          # (labwired-core#1064) the script was included twice, along with the
+          # memory.x it consumes, and the link died with "region 'FLASH'
+          # already defined". A warm target/ hides it — cargo does not relink a
+          # cached artifact — so this stayed green on the self-hosted runners
+          # and only fell over the first time the job ran on a clean one.
+          cargo build -p firmware-rp2040-pio-onboarding --release --target thumbv6m-none-eabi
           cargo build -p firmware-ci-fixture --target thumbv7m-none-eabi
 
       - name: Run Workspace Tests
