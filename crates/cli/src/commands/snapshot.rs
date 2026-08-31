@@ -151,7 +151,8 @@ pub(crate) fn run_snapshot_capture(
     }
     // XtensaLx7::reset() leaves PC at the 0x40000400 BROM reset vector.
     // Skip BROM and jump straight to the ELF's app entry — same as WASM.
-    // CHEAT(SKIP): bypasses the boot ROM and hand-seeds PC (SP seeded below).
+    // CHEAT(SKIP): bypasses the boot ROM and hand-seeds PC (SP seeded below)
+    // — real: the boot ROM executes and hands over at its own entry.
     // See FIDELITY.md §C.
     machine.cpu.set_pc(program_image.entry_point as u32);
 

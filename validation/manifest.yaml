@@ -1243,7 +1243,7 @@ boards:
       # changes. Behaviour-preserving extraction, not a model correction —
       # `pr-workspace-tests` green on all shards is what exercises this peripheral,
       # so nothing the silicon capture asserts changed and the capture stands.
-    drift_ack_digest: c973ed6df35e75c599d163f114cbe648d73606d710f82858692050e1f9e9f15b
+    drift_ack_digest: 5c35a6f778b2787af06537d52b04e3e25df34ab15a87c9e577f19a7a10c66da4
     models:
       - crates/core/src/cpu/riscv.rs
       - crates/core/src/decoder/riscv.rs
@@ -3996,7 +3996,7 @@ boards:
       # changes. Behaviour-preserving extraction, not a model correction —
       # `pr-workspace-tests` green on all shards is what exercises this peripheral,
       # so nothing the silicon capture asserts changed and the capture stands.
-    drift_ack_digest: 821161b38b4859863e513233a8da9edeb9ce71cfc4f8796a71ba6302c0550f3a
+    drift_ack_digest: 7601f41b277b41da8799dd7554689c238e44da88b4ab95012499cff98be979cd
     models:
       - crates/core/src/cpu/xtensa_lx7.rs
       - crates/core/src/decoder/xtensa.rs
