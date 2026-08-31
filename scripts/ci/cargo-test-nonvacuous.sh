@@ -174,6 +174,11 @@ done
 
 empty=()          # declares no tests at all
 all_skipped=()    # declares tests, executes none of them under this invocation
+# One `target|declared|executed|ignored` record per executable, for the roster
+# printed below. `bash` 3.2 has no associative arrays either, so this is a plain
+# indexed array of pipe-joined fields split at print time — the same reason the
+# executable list above is read with a `while read` loop rather than `mapfile`.
+roster=()
 declared_total=0
 ignored_total=0
 executed_total=0
@@ -191,6 +196,12 @@ for exe in "${executables[@]}"; do
     ignored_total=$((ignored_total + ignored))
     executed_total=$((executed_total + executed))
 
+    # The binary name is the target name plus cargo's hash suffix; drop the hash
+    # so the roster reads as the `--test <name>` a human would type. A unit-test
+    # binary for a lib target is named after the crate, which is also what you
+    # would pass to `-p`, so both stay greppable.
+    roster+=("$(basename "$exe" | sed 's/-[0-9a-f]\{8,\}$//')|$declared|$executed|$ignored")
+
     if [ "$declared" -eq 0 ]; then
         empty+=("$exe")
     elif [ "$executed" -eq 0 ]; then
@@ -200,6 +211,48 @@ done
 
 echo "==> ${#executables[@]} test target(s): $declared_total declared, \
 $executed_total executed by this invocation ($ignored_total ignored, run mode: $run_mode)"
+
+# ── THE SKIP ROSTER ─────────────────────────────────────────────────────────
+# The counts above were already in hand and were thrown away: the script only
+# ever spoke up to FAIL. That left the interesting middle case silent — a target
+# that executes SOME of its tests and skips the rest passes this gate and prints
+# nothing, so "42 declared, 3 executed, 39 ignored" and "3 declared, 3 executed"
+# were the same green tick. `esp32c3_walk_differential` sat at 11 declared / 1
+# executed inside a merge-gating lane and it took a person reading the file to
+# notice.
+#
+# Printing it costs nothing — no extra `--list` call, no extra compile — and it
+# turns the per-lane skip surface into something a reviewer can see on the run
+# page instead of something they have to reconstruct from the source tree.
+#
+# `$GITHUB_STEP_SUMMARY` is a file path Actions gives every step; anything
+# appended to it renders as Markdown on the job page. Outside Actions the
+# variable is unset and the same table goes to stdout, so a local invocation
+# shows the same numbers CI will.
+emit_roster() {
+    printf '\n### `cargo test %s` — %s test target(s), run mode `%s`\n\n' \
+        "${cargo_args[*]}" "${#executables[@]}" "$run_mode"
+    printf '| target | declared | executed | ignored | mode |\n'
+    printf '| --- | ---: | ---: | ---: | --- |\n'
+    for row in ${roster[@]+"${roster[@]}"}; do
+        # bash 3.2: split the record with IFS rather than a `read -a`/`mapfile`.
+        old_ifs="$IFS"
+        IFS='|'
+        # shellcheck disable=SC2086  # the word split on IFS='|' IS the parse
+        set -- $row
+        IFS="$old_ifs"
+        printf '| `%s` | %s | %s | %s | %s |\n' "$1" "$2" "$3" "$4" "$run_mode"
+    done
+    printf '| **total** | **%s** | **%s** | **%s** | %s |\n' \
+        "$declared_total" "$executed_total" "$ignored_total" "$run_mode"
+    printf '\n'
+}
+
+if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+    emit_roster >>"$GITHUB_STEP_SUMMARY"
+else
+    emit_roster
+fi
 
 if [ ${#empty[@]} -gt 0 ]; then
     {

@@ -458,6 +458,24 @@ jobs:
       - name: Ignored-test inventory is fresh and undocumented ignores have not grown
         run: python3 scripts/generate_ignored_tests.py --check
 
+      # The step above ratchets a COUNT of bare `#[ignore]`s. A count cannot say
+      # WHICH ones: at a ceiling of N you could delete one bare ignore and add a
+      # different one somewhere else and stay green, because N is still N — the
+      # substitution the ledger exists to notice. This keys its baseline on the
+      # individual test (crate + fn name, so a file move or a reflow does not rot
+      # it), and refuses a new bare `#[ignore]` even when the total does not move.
+      #
+      # As of the change that added it the baseline is EMPTY: all 28 bare ignores
+      # were read and given a reason. So this fails closed — the next bare
+      # `#[ignore]` to reach a PR is rejected by name, and `--write` is the
+      # deliberate, committed way to make an exception.
+      #
+      # Same shape as `scripts/ci/cheat_ratchet.py` below. Pure Python over
+      # crates/**/*.rs, no toolchain, sub-second — it sits here, before the Rust
+      # install, for the same reason the step above does.
+      - name: Every `#[ignore]` says why
+        run: python3 scripts/ci/ignore_reasons.py --check
+
       - name: Install Rust
         uses: dtolnay/rust-toolchain@1.95.0
         with:
@@ -518,6 +536,7 @@ jobs:
             scripts/ci/test_matrix_external_cache.py \
             scripts/ci/test_matrix_verdict.py \
             scripts/ci/test_cheat_ratchet.py \
+            scripts/ci/test_ignore_reasons.py \
             scripts/ci/test_workspace_test_shard.py \
             scripts/test_generate_validation_status.py
 

@@ -52,7 +52,18 @@ DOC = REPO / "docs" / "testing" / "IGNORED_TESTS.md"
 
 # Ratchet. Lower it when you document an ignore; never raise it.
 # 2026-08-14, core main fca5a5613: 114 `#[ignore]` attributes, 28 of them bare.
-MAX_UNDOCUMENTED = 28
+# 2026-08-31: 117 attributes, 0 bare. All 28 were read and given a reason — five
+# `diag_*` probes that eprintln! and assert nothing, five UART capture helpers in
+# firmware_survival.rs, and eighteen hw-oracle tests that need a physically
+# attached board over SWD or USB-JTAG.
+#
+# At 0 this ceiling can no longer do anything except stay at 0, which is the
+# point. `scripts/ci/ignore_reasons.py` is the gate that now holds the line:
+# a count cannot say WHICH ignores it is tolerating, so at a ceiling of N you
+# could delete one bare `#[ignore]` and add a different one and stay green. That
+# gate keys its baseline on the individual test. Both still run — this script
+# keeps the human-readable inventory in docs/testing/IGNORED_TESTS.md fresh.
+MAX_UNDOCUMENTED = 0
 
 # Must match the attribute at the start of a line, so that prose mentioning
 # `#[ignore]` in a doc comment is not counted — several files explain at length

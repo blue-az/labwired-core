@@ -37,7 +37,9 @@ fn nearest(syms: &HashMap<u32, String>, pc: u32) -> String {
 }
 
 #[test]
-#[ignore]
+#[ignore = "diagnostic probe, not a gate: it eprintln!s C3 Arduino L0 boot progress and asserts \
+            nothing past the fixture existing. Needs validation/arduino-matrix/out/esp32c3/\
+            L0_serial_boot/firmware.elf, a PlatformIO matrix build output that is not in the tree"]
 fn diag_c3_boot_progress() {
     let core = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
     let sys = core.join("validation/arduino-matrix/systems/esp32c3.yaml");
