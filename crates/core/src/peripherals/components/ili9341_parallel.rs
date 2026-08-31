@@ -6,7 +6,7 @@
 //!
 //! Phase-2 v1 targets ESP32 / ESP32-S3 GPIO bit-bang of the classic 16-bit
 //! Intel 8080 bus (CS, RS/D-C, WR, RD, RST, DB[15:0]). Edges arrive through
-//! [`GpioObserver`](crate::peripherals::esp32s3::gpio::GpioObserver); unit tests
+//! [`GpioObserver`](crate::peripherals::device::GpioObserver); unit tests
 //! inject them directly.
 //!
 //! ## Bus protocol (write path)
@@ -420,13 +420,7 @@ impl Ili9341Parallel {
     }
 }
 
-impl crate::peripherals::esp32s3::gpio::GpioObserver for Ili9341Parallel {
-    fn on_pin_change(&self, pin: u8, _from: bool, to: bool, sim_cycle: u64) {
-        self.on_gpio_edge(pin, to, sim_cycle);
-    }
-}
-
-impl crate::peripherals::esp32::gpio::GpioObserver for Ili9341Parallel {
+impl crate::peripherals::device::GpioObserver for Ili9341Parallel {
     fn on_pin_change(&self, pin: u8, _from: bool, to: bool, sim_cycle: u64) {
         self.on_gpio_edge(pin, to, sim_cycle);
     }

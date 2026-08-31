@@ -17,6 +17,7 @@ pub mod crc;
 pub mod dac;
 pub mod dbgmcu;
 pub mod declarative;
+pub mod device;
 pub mod dma;
 pub mod dwt;
 pub mod efr32;

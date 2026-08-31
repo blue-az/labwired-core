@@ -225,9 +225,7 @@ impl<'a> AttachCtx<'a> {
     /// in `from_config` so bit-bang devices share one attach path.
     pub fn install_gpio_observer<T>(&mut self, observer: std::sync::Arc<T>)
     where
-        T: crate::peripherals::esp32s3::gpio::GpioObserver
-            + crate::peripherals::esp32::gpio::GpioObserver
-            + 'static,
+        T: crate::peripherals::device::GpioObserver + 'static,
     {
         SystemBus::install_gpio_observer(self.bus, observer);
     }

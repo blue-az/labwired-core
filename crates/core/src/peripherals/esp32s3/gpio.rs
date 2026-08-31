@@ -226,12 +226,17 @@ const fn spec(word: usize) -> Option<(u32, u32)> {
     }
 }
 
-/// Notified synchronously inside the bus write path on every GPIO pin
-/// transition. Observers must not panic — a panic propagates out of
-/// `bus.write_u8` and crashes the simulator.
-pub trait GpioObserver: Send + Sync + std::fmt::Debug {
-    fn on_pin_change(&self, pin: u8, from: bool, to: bool, sim_cycle: u64);
-}
+/// Edge-observation contract for anything watching this port's pads.
+/// Declared in [`peripherals::device`](crate::peripherals::device) — ONE
+/// declaration shared by every GPIO family — and re-exported here so every
+/// existing `impl`, bound and intra-doc link at this path keeps resolving.
+///
+/// It used to be declared separately, byte for byte, in the classic-ESP32
+/// and S3 GPIO models. Two identical traits are two types: a component that
+/// wanted edges on both families wrote the same `impl` twice, and every
+/// call site accepting an observer carried a two-trait bound that no third
+/// family could satisfy without a third copy of all of it.
+pub use crate::peripherals::device::GpioObserver;
 
 /// ESP32-S3 GPIO peripheral. Mapped at 0x6000_4000.
 /// Push-capture state for one S3 GPIO port. `scratch` caches each watched
