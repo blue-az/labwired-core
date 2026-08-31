@@ -1097,7 +1097,7 @@ boards:
     # idr_pin_level_tests (3), all green. This is an ACK, NOT A CAPTURE — a live
     # re-capture on this board is still owed.
     drift_ack: 2026-08-24
-    drift_ack_digest: 22140134a1b9c42fba953d7f06c147c905e07b115e38a0529482a3af76523d2a
+    drift_ack_digest: e82b3e1b850491dc1c777701e7717b14bc78fc643e43af97f8e52f3112ec21ea
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/cpu/cortex_m.rs
@@ -2285,7 +2285,7 @@ boards:
     # idr_pin_level_tests (3), all green. This is an ACK, NOT A CAPTURE — a live
     # re-capture on this board is still owed.
     drift_ack: 2026-08-24
-    drift_ack_digest: b3c6d3fc1e011a1c3c6c36dbb9bd1fe87ebe0d14e20be452de56ffa293ae2e9f
+    drift_ack_digest: 8dfffc0b46711add7c7ec90b06b7de6fb0ea78182a64fdd512b8ceeab4060e41
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/cpu/cortex_m.rs
@@ -3093,7 +3093,7 @@ boards:
     # idr_pin_level_tests (3), all green. This is an ACK, NOT A CAPTURE — a live
     # re-capture on this board is still owed.
     drift_ack: 2026-08-24
-    drift_ack_digest: e6e7d11957207a3655f7d28c3f5916c8ad326886048e263d6b1ee2d47a1ef0ca
+    drift_ack_digest: 8a96821d2313f19eb519fe04f73a37edf4e3026425df95208c0db9abeb907cfe
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/cpu/cortex_m.rs
