@@ -577,17 +577,36 @@ impl Adc {
             0x00 => r.isr &= !value,
             0x04 => r.ier = value,
             0x08 => {
-                r.cr = value; // latch verbatim (ADCAL self-clear not modelled)
-                              // ADEN with the voltage regulator up (ADVREGEN set, DEEPPWD
-                              // clear) raises ISR.ADRDY. Silicon-verified on STM32H563
-                              // ADC1 (2026-06-11): DEEPPWD=0 -> ADVREGEN=1 -> ADEN=1 reads
-                              // back CR=0x10000001 with ISR=0x00000001.
-                let aden = value & 0x1 != 0;
-                let advregen = value & (1 << 28) != 0;
-                let deeppwd = value & (1 << 29) != 0;
+                // ADCAL (bit 31) is a self-clearing COMMAND, not a state bit:
+                // hardware clears it when calibration completes (RM0351 §16.4.2,
+                // RM0481 §11.4.2 — same block). Calibration is instantaneous
+                // here (there is no analog settling to model), so it reads back
+                // already complete.
+                //
+                // ⚠️ This latched verbatim until 2026-08-31, and a HAL doing the
+                // documented `while (ADC->CR & ADC_CR_ADCAL);` therefore spun
+                // forever. That hang is what moved stm32h563 onto the `stm32h7`
+                // profile — a chip whose ADC register map is L4-identical — and
+                // the H7's 3-bit CFGR.RES[4:2] then decoded the fixture's 2-bit
+                // RES[4:3] write as 16-bit, so `TIER1 adc` reported the widened
+                // code and went red. One unmodelled self-clearing bit, two
+                // failures, neither of them where it was.
+                let calibrating = value & (1 << 31) != 0;
+                r.cr = value & !(1 << 31);
+                // ADEN with the voltage regulator up (ADVREGEN set, DEEPPWD
+                // clear) raises ISR.ADRDY. Silicon-verified on STM32H563
+                // ADC1 (2026-06-11): DEEPPWD=0 -> ADVREGEN=1 -> ADEN=1 reads
+                // back CR=0x10000001 with ISR=0x00000001.
+                let aden = r.cr & 0x1 != 0;
+                let advregen = r.cr & (1 << 28) != 0;
+                let deeppwd = r.cr & (1 << 29) != 0;
                 if aden && advregen && !deeppwd {
                     r.isr |= 0x1;
                 }
+                // A calibration request while the converter is in deep
+                // power-down is a no-op on silicon; nothing to record either
+                // way, since this block has no CALFACT model yet.
+                let _ = calibrating;
             }
             0x0C => r.cfgr = value,
             0x10 => r.cfgr2 = value,
@@ -929,6 +948,80 @@ mod tests {
         let mut cold = Adc::new_with_layout(AdcRegisterLayout::Stm32L4);
         cold.write_u32(0x08, (1 << 29) | 1).unwrap();
         assert_eq!(cold.read_u32(0x00).unwrap() & 0x1, 0);
+    }
+
+    /// ADCAL is a self-clearing command bit, and a HAL is entitled to spin on
+    /// it. `while (ADC->CR & ADC_CR_ADCAL);` is the sequence ST's own driver
+    /// runs, so a model that latches bit 31 hangs the firmware rather than
+    /// failing it — the worst shape of defect, because it looks like a stall
+    /// in the CPU rather than a wrong value in a peripheral.
+    ///
+    /// Regression: this bit staying set is what moved stm32h563 onto the
+    /// `stm32h7` ADC profile, whose 3-bit `CFGR.RES[4:2]` then read the L4's
+    /// 2-bit `RES[4:3]` write as 16-bit and turned `TIER1 adc` red.
+    #[test]
+    fn test_adc_l4_adcal_self_clears() {
+        let mut adc = Adc::new_with_layout(AdcRegisterLayout::Stm32L4);
+        adc.write_u32(0x08, 0).unwrap(); // leave deep power-down
+        adc.write_u32(0x08, 1 << 28).unwrap(); // ADVREGEN
+
+        adc.write_u32(0x08, (1 << 28) | (1 << 31)).unwrap(); // ADVREGEN | ADCAL
+        assert_eq!(
+            adc.read_u32(0x08).unwrap() & (1 << 31),
+            0,
+            "ADCAL must read back clear — a HAL polling it would spin forever"
+        );
+        assert_eq!(
+            adc.read_u32(0x08).unwrap(),
+            1 << 28,
+            "clearing ADCAL must not disturb the rest of CR"
+        );
+
+        // And calibration must not be a back door to readiness: ADRDY still
+        // requires ADEN.
+        assert_eq!(adc.read_u32(0x00).unwrap() & 0x1, 0, "no ADRDY without ADEN");
+        adc.write_u32(0x08, (1 << 28) | 1).unwrap();
+        assert_eq!(adc.read_u32(0x00).unwrap() & 0x1, 0x1);
+    }
+
+    /// The H7 clears ADCAL too, and nothing asserted it. Found by accident:
+    /// a mis-aimed negative control deleted the H7's `& !(1 << 31)` and the
+    /// whole ADC suite stayed green. Same defect as the L4 had, one layout
+    /// over, and the same hang on any HAL that polls the bit.
+    #[test]
+    fn test_adc_h7_adcal_self_clears() {
+        let mut adc = Adc::new_with_layout(AdcRegisterLayout::Stm32H7);
+        adc.write_u32(0x08, 0).unwrap(); // leave deep power-down
+        adc.write_u32(0x08, 1 << 28).unwrap(); // ADVREGEN
+        adc.write_u32(0x08, (1 << 28) | (1 << 31)).unwrap(); // ADCAL
+        assert_eq!(
+            adc.read_u32(0x08).unwrap() & (1 << 31),
+            0,
+            "ADCAL must read back clear on the H7 as well"
+        );
+        assert_eq!(adc.read_u32(0x08).unwrap(), 1 << 28);
+    }
+
+    /// The H563 is an L4-class ADC: `CFGR.RES` is two bits at [4:3], so the
+    /// same firmware write means 12-bit here and 16-bit on the H7. This is the
+    /// exact divergence that produced `stm32h563/adc: pass -> blocked`, and it
+    /// is asserted on both layouts so neither can drift onto the other again.
+    #[test]
+    fn test_res_field_placement_differs_between_l4_and_h7() {
+        // RES = 0 written at the L4's [4:3] is 12-bit on the L4 …
+        let mut l4 = Adc::new_with_layout(AdcRegisterLayout::Stm32L4);
+        l4.write_u32(0x08, 0).unwrap();
+        l4.write_u32(0x08, 1 << 28).unwrap();
+        l4.write_u32(0x08, (1 << 28) | 1).unwrap();
+        l4.write_u32(0x0C, 0).unwrap();
+        l4.write_u32(0x00, 1 << 2).unwrap();
+        l4.write_u32(0x08, (1 << 28) | 1 | (1 << 2)).unwrap();
+        assert_eq!(l4.read_u32(0x40).unwrap() & 0xFFFF, 3723, "L4 12-bit code");
+
+        // … and 16-bit on the H7, from the identical CFGR write.
+        assert_eq!(h7_resolution_bits(0), 16);
+        assert_eq!(l4_adc_code(12), 3723);
+        assert_eq!(h7_adc_code(16), 3723 << 4);
     }
 
     /// L4 ADSTART converts the fixed internal source: DR holds a derived code,
