@@ -1591,6 +1591,28 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y gcc-arm-none-eabi
 
+      # ubuntu-latest ships ~14 GB free, and this job builds the workspace test
+      # binaries twice — once on default features, once on `jit,event-scheduler`
+      # — with debug info. `Feature tests` died on:
+      #
+      #     rustc-LLVM ERROR: IO failure on output stream: No space left on device
+      #     collect2: fatal error: ld terminated with signal 7 [Bus error]
+      #
+      # The bus error is the same exhaustion wearing a different hat, which is
+      # why this looked like an LLVM crash and says "PLEASE submit a bug report".
+      #
+      # The images carry ~25 GB of preinstalled SDKs this job never touches.
+      # Measured, not assumed: the df either side is printed, so if a future
+      # image stops shipping them the log says so instead of the step quietly
+      # freeing nothing.
+      - name: Reclaim runner disk
+        run: |
+          df -h / | tail -1
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc \
+                      /usr/local/.ghcup /opt/hostedtoolcache/CodeQL || true
+          docker image prune -af >/dev/null 2>&1 || true
+          df -h / | tail -1
+
       - name: Build test firmware fixture
         run: |
           cargo build -p demo-blinky --release --target thumbv7m-none-eabi
