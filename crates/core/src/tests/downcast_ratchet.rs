@@ -59,8 +59,17 @@ use std::path::{Path, PathBuf};
 /// part added after, so the number stops tracking the number of off-chip parts
 /// at all. The alternative was a seventh public field on `SystemBus` the next
 /// time somebody adds a stepper.
+/// 208 → 210: the SAM SERCOM console joins the by-type and by-name RX-source
+/// walks in `bus::construct`. Both walks are a chain of `downcast_ref` arms,
+/// one per UART-shaped model (generic `Uart`, `EspUart`, `Nrf52Uarte`,
+/// `Nrf54lUarte`), and a new console model that is not in the chain silently
+/// gets NO injected serial input — a board that cannot be typed at, with no
+/// error to say so. This is the debt row 6.5 names, added knowingly: the fix
+/// that would actually retire it is a `UartConsole` capability trait covering
+/// `set_sink` and `rx_buffer`, which retires all four existing arms too and is
+/// its own change, not a rider on a chip onboarding.
 const MAX_AS_ANY: usize = 194;
-const MAX_DOWNCAST_REF: usize = 208;
+const MAX_DOWNCAST_REF: usize = 210;
 
 fn repo_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))

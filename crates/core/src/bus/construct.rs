@@ -443,6 +443,17 @@ impl SystemBus {
                 uarte.set_sink(Some(sink.clone()), echo_stdout);
                 continue;
             }
+            // Microchip SERCOM in USART mode — the SAM console. Its own model
+            // (one block that is also the SPI and I2C controller), so it needs
+            // its own arm: without it a SAM board runs, prints to the host
+            // stdout, and captures an EMPTY uart.log, so every serial
+            // assertion in `labwired test` silently has nothing to match.
+            if let Some(sercom) =
+                any.downcast_mut::<crate::peripherals::sam::sercom_usart::SamSercomUsart>()
+            {
+                sercom.set_sink(Some(sink.clone()), echo_stdout);
+                continue;
+            }
             // ESP32-S3 UART0 — the faithful ROM-boot console. The real mask ROM
             // and 2nd-stage bootloader print their banner/progress here, and
             // esp-hal's default `esp_println` targets UART0 too. Without this the
@@ -588,6 +599,10 @@ impl SystemBus {
                 uart.set_sink(None, false);
             } else if let Some(uart) = any.downcast_mut::<crate::peripherals::esp_uart::EspUart>() {
                 uart.set_sink(None);
+            } else if let Some(sercom) =
+                any.downcast_mut::<crate::peripherals::sam::sercom_usart::SamSercomUsart>()
+            {
+                sercom.set_sink(None, false);
             }
         }
 
@@ -614,6 +629,12 @@ impl SystemBus {
                 any.downcast_mut::<crate::peripherals::esp32s3::usb_serial_jtag::UsbSerialJtag>()
             {
                 jtag.set_sink(Some(sink), echo_stdout);
+                return true;
+            }
+            if let Some(sercom) =
+                any.downcast_mut::<crate::peripherals::sam::sercom_usart::SamSercomUsart>()
+            {
+                sercom.set_sink(Some(sink), echo_stdout);
                 return true;
             }
             return false;
@@ -643,6 +664,10 @@ impl SystemBus {
                 any.downcast_ref::<crate::peripherals::nrf54l::uarte::Nrf54lUarte>()
             {
                 sources.push(uarte.rx_buffer());
+            } else if let Some(sercom) =
+                any.downcast_ref::<crate::peripherals::sam::sercom_usart::SamSercomUsart>()
+            {
+                sources.push(sercom.rx_buffer());
             }
         }
         sources
@@ -675,6 +700,12 @@ impl SystemBus {
                 any.downcast_ref::<crate::peripherals::nrf54l::uarte::Nrf54lUarte>()
             {
                 return Some(uarte.rx_buffer());
+            }
+            // Microchip SERCOM in USART mode: same injection queue contract.
+            if let Some(sercom) =
+                any.downcast_ref::<crate::peripherals::sam::sercom_usart::SamSercomUsart>()
+            {
+                return Some(sercom.rx_buffer());
             }
             return any
                 .downcast_ref::<crate::peripherals::esp_uart::EspUart>()
