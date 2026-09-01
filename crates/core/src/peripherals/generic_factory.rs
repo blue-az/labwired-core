@@ -122,6 +122,12 @@ pub const MODEL_TYPES: &[&str] = &[
     // generic STM32 UART layout — it is a distinct silicon register map.
     "nrf54l_uarte",
     "nrf54l_twim",
+    // Microchip SERCOM in USART mode. ⚠️ Load-bearing for the same reason
+    // `nrf54l_uarte` is: the fuzzy `contains("uart")` heuristic would coerce
+    // `sam_sercom_usart` onto the generic STM32 UART layout, whose DR/SR
+    // offsets mean nothing to a SERCOM. That is the silent shape — a console
+    // that enables cleanly and never emits a byte.
+    "sam_sercom_usart",
     // ⚠️ Load-bearing. Without this entry the fuzzy `contains("spi")` heuristic
     // coerces `nrf54l_spim` onto the shared `spi` arm, which then sees
     // `contains("nrf")` and picks the nRF52 SPIM offset map. That failure is
@@ -441,6 +447,9 @@ pub fn try_build(
             }
         }
         "avr_gpio" => Box::new(crate::peripherals::avr_gpio::AvrGpioPort::new()),
+        "sam_sercom_usart" => {
+            Box::new(crate::peripherals::sam::sercom_usart::SamSercomUsart::new())
+        }
         "spi" | "stm32spi" => {
             let layout: crate::peripherals::spi::SpiRegisterLayout = if p_cfg.r#type.contains("nrf")
             {
