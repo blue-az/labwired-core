@@ -121,6 +121,7 @@ nav:
     - nRF52832: boards/nrf52832.md
     - nRF5340: boards/nrf5340.md
     - nRF54L15: boards/nrf54l15.md
+    - ATSAMD21G18A: boards/atsamd21g18a.md
 
   - Parts:
     - Overview: parts/index.md
