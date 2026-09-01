@@ -52,6 +52,11 @@
 //! stored; DATA carries 8 bits), parity and the FORM field, the ERROR/PERR/
 //! FERR/BUFOVF paths, collision detection, CTS/RTS flow control, RXS/RXBRK/
 //! CTSIC, DBGCTRL.DBGSTOP, and the SERCOM SPI and I²C modes.
+//!
+//! Also absent: a `PadLines` wire cell. TX bytes reach the console sink and the
+//! bus trace, but no narration wire is published, so a logic-analyzer WIRE
+//! probe on this SERCOM has nothing to bind to. Declared rather than faked —
+//! see the note on the `Peripheral` impl.
 
 use std::collections::VecDeque;
 use std::io::{self, Write};
@@ -380,9 +385,14 @@ impl Peripheral for SamSercomUsart {
         Some(self)
     }
 
-    fn line_names(&self) -> &'static [&'static str] {
-        &["TX", "RX"]
-    }
+    // NOTE: `line_names()` is deliberately NOT implemented. Naming TX/RX here
+    // without a `wire_lines()` PadLines cell to back them is a claim the model
+    // cannot honour: a wire probe would resolve to a channel with no source and
+    // read a flat line, which looks like a quiet bus rather than a missing
+    // feature. `bus_visibility` catches exactly that pairing, and the honest
+    // answer while this model emits into the console sink rather than onto a
+    // modelled wire is the default `&[]` — "this model publishes no wire".
+    // Publishing one is follow-up work, alongside SERCOM SPI/I2C modes.
 }
 
 impl SamSercomUsart {

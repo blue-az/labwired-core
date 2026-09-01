@@ -1097,7 +1097,7 @@ boards:
     # idr_pin_level_tests (3), all green. This is an ACK, NOT A CAPTURE — a live
     # re-capture on this board is still owed.
     drift_ack: 2026-08-24
-    drift_ack_digest: e82b3e1b850491dc1c777701e7717b14bc78fc643e43af97f8e52f3112ec21ea
+    drift_ack_digest: 6de9d4c06237c71abfd0fba8674adb31047b03e2f2e19632f2e259cd490f607d
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/cpu/cortex_m.rs
@@ -1133,6 +1133,22 @@ boards:
     # stm32h563_walk_differential (5, event-scheduler), tier1_matrix +
     # tier1_matrix_ratchet (h563 adc pass -> the row is whole again).
     drift_ack: 2026-08-31
+    # 2026-09-01: `gpio.rs` gained a `SamPort` variant (Microchip SAM D21/D51
+    # PORT) so the ATSAMD21G18A could be onboarded, and `generic_factory.rs` +
+    # `bus/construct.rs` gained the SERCOM console arms beside it.
+    #
+    # Additive BEHIND A DISCRIMINANT THE STM32 CONSTRUCTION PATH NEVER SETS,
+    # exactly like the 2026-08-24 nRF54L ack above: `GpioRegisterLayout::SamPort`
+    # is reachable only from a chip yaml declaring `profile: sam`, and no STM32
+    # chip yaml in this tree does. The new match arms are added arms — every
+    # pre-existing arm is byte-identical, and `git diff` changes no line an STM32
+    # path executes. The new SERCOM downcast arms sit AFTER the generic `Uart`
+    # arm in both console walks, which returns first for every board here.
+    #
+    # Ran: cargo test -p labwired-core --lib (3300 passed, 0 failed), including
+    # this board's own conformance/oracle sim arms and gpio's own suites.
+    # This is an ACK, NOT A CAPTURE — a live re-capture is still owed.
+    drift_ack: 2026-09-01
   - id: esp32c3
     doc: docs/boards/esp32c3.md
     chip: configs/chips/esp32c3.yaml
@@ -2285,7 +2301,7 @@ boards:
     # idr_pin_level_tests (3), all green. This is an ACK, NOT A CAPTURE — a live
     # re-capture on this board is still owed.
     drift_ack: 2026-08-24
-    drift_ack_digest: 8dfffc0b46711add7c7ec90b06b7de6fb0ea78182a64fdd512b8ceeab4060e41
+    drift_ack_digest: 96c3cdb956b1249a40dbf8a46db5fadda3a9c8eadeb455ed5bae0a6ae288d7d3
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/cpu/cortex_m.rs
@@ -2316,6 +2332,22 @@ boards:
     # stm32h563_walk_differential (5, event-scheduler), tier1_matrix +
     # tier1_matrix_ratchet (h563 adc pass -> the row is whole again).
     drift_ack: 2026-08-31
+    # 2026-09-01: `gpio.rs` gained a `SamPort` variant (Microchip SAM D21/D51
+    # PORT) so the ATSAMD21G18A could be onboarded, and `generic_factory.rs` +
+    # `bus/construct.rs` gained the SERCOM console arms beside it.
+    #
+    # Additive BEHIND A DISCRIMINANT THE STM32 CONSTRUCTION PATH NEVER SETS,
+    # exactly like the 2026-08-24 nRF54L ack above: `GpioRegisterLayout::SamPort`
+    # is reachable only from a chip yaml declaring `profile: sam`, and no STM32
+    # chip yaml in this tree does. The new match arms are added arms — every
+    # pre-existing arm is byte-identical, and `git diff` changes no line an STM32
+    # path executes. The new SERCOM downcast arms sit AFTER the generic `Uart`
+    # arm in both console walks, which returns first for every board here.
+    #
+    # Ran: cargo test -p labwired-core --lib (3300 passed, 0 failed), including
+    # this board's own conformance/oracle sim arms and gpio's own suites.
+    # This is an ACK, NOT A CAPTURE — a live re-capture is still owed.
+    drift_ack: 2026-09-01
   - id: nucleo-l073rz
     doc: docs/boards/nucleo-l073rz.md
     chip: configs/chips/stm32l073.yaml
@@ -2665,7 +2697,23 @@ boards:
     # idr_pin_level_tests (3), all green. This is an ACK, NOT A CAPTURE — a live
     # re-capture on this board is still owed.
     drift_ack: 2026-08-24
-    drift_ack_digest: b18bb27d064db6a933712f6e290a9154f2dcede8d1981bc342be9ddb829b7858
+    # 2026-09-01: `gpio.rs` gained a `SamPort` variant (Microchip SAM D21/D51
+    # PORT) so the ATSAMD21G18A could be onboarded, and `generic_factory.rs` +
+    # `bus/construct.rs` gained the SERCOM console arms beside it.
+    #
+    # Additive BEHIND A DISCRIMINANT THE STM32 CONSTRUCTION PATH NEVER SETS,
+    # exactly like the 2026-08-24 nRF54L ack above: `GpioRegisterLayout::SamPort`
+    # is reachable only from a chip yaml declaring `profile: sam`, and no STM32
+    # chip yaml in this tree does. The new match arms are added arms — every
+    # pre-existing arm is byte-identical, and `git diff` changes no line an STM32
+    # path executes. The new SERCOM downcast arms sit AFTER the generic `Uart`
+    # arm in both console walks, which returns first for every board here.
+    #
+    # Ran: cargo test -p labwired-core --lib (3300 passed, 0 failed), including
+    # this board's own conformance/oracle sim arms and gpio's own suites.
+    # This is an ACK, NOT A CAPTURE — a live re-capture is still owed.
+    drift_ack: 2026-09-01
+    drift_ack_digest: 6a364659fb7e5f401a7a4a9b5069dc10f537cd8b9cac27e8512a75624a24989b
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/cpu/cortex_m.rs
@@ -3093,7 +3141,7 @@ boards:
     # idr_pin_level_tests (3), all green. This is an ACK, NOT A CAPTURE — a live
     # re-capture on this board is still owed.
     drift_ack: 2026-08-24
-    drift_ack_digest: 8a96821d2313f19eb519fe04f73a37edf4e3026425df95208c0db9abeb907cfe
+    drift_ack_digest: f114c5f65250cf1d284a1177d61e0fde8203963f52d1c4e30be3efacfb15ecc3
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     models:
       - crates/core/src/cpu/cortex_m.rs
@@ -3126,6 +3174,22 @@ boards:
     # stm32h563_walk_differential (5, event-scheduler), tier1_matrix +
     # tier1_matrix_ratchet (h563 adc pass -> the row is whole again).
     drift_ack: 2026-08-31
+    # 2026-09-01: `gpio.rs` gained a `SamPort` variant (Microchip SAM D21/D51
+    # PORT) so the ATSAMD21G18A could be onboarded, and `generic_factory.rs` +
+    # `bus/construct.rs` gained the SERCOM console arms beside it.
+    #
+    # Additive BEHIND A DISCRIMINANT THE STM32 CONSTRUCTION PATH NEVER SETS,
+    # exactly like the 2026-08-24 nRF54L ack above: `GpioRegisterLayout::SamPort`
+    # is reachable only from a chip yaml declaring `profile: sam`, and no STM32
+    # chip yaml in this tree does. The new match arms are added arms — every
+    # pre-existing arm is byte-identical, and `git diff` changes no line an STM32
+    # path executes. The new SERCOM downcast arms sit AFTER the generic `Uart`
+    # arm in both console walks, which returns first for every board here.
+    #
+    # Ran: cargo test -p labwired-core --lib (3300 passed, 0 failed), including
+    # this board's own conformance/oracle sim arms and gpio's own suites.
+    # This is an ACK, NOT A CAPTURE — a live re-capture is still owed.
+    drift_ack: 2026-09-01
   - id: stm32f407
     doc: docs/boards/stm32f407.md
     chip: configs/chips/stm32f407.yaml
@@ -3493,7 +3557,23 @@ boards:
     # idr_pin_level_tests (3), all green. This is an ACK, NOT A CAPTURE — a live
     # re-capture on this board is still owed.
     drift_ack: 2026-08-24
-    drift_ack_digest: 9b9e0c07d849292195854123981cd6099f1346198e9baea13d58d1a762018bb7
+    # 2026-09-01: `gpio.rs` gained a `SamPort` variant (Microchip SAM D21/D51
+    # PORT) so the ATSAMD21G18A could be onboarded, and `generic_factory.rs` +
+    # `bus/construct.rs` gained the SERCOM console arms beside it.
+    #
+    # Additive BEHIND A DISCRIMINANT THE STM32 CONSTRUCTION PATH NEVER SETS,
+    # exactly like the 2026-08-24 nRF54L ack above: `GpioRegisterLayout::SamPort`
+    # is reachable only from a chip yaml declaring `profile: sam`, and no STM32
+    # chip yaml in this tree does. The new match arms are added arms — every
+    # pre-existing arm is byte-identical, and `git diff` changes no line an STM32
+    # path executes. The new SERCOM downcast arms sit AFTER the generic `Uart`
+    # arm in both console walks, which returns first for every board here.
+    #
+    # Ran: cargo test -p labwired-core --lib (3300 passed, 0 failed), including
+    # this board's own conformance/oracle sim arms and gpio's own suites.
+    # This is an ACK, NOT A CAPTURE — a live re-capture is still owed.
+    drift_ack: 2026-09-01
+    drift_ack_digest: 920004a9654eaf54cf599d140c9d3a10a3f8b2bfda0c8ae2fea28dc51a636fde
     # 2026-08-05: deterministic motor plants (DC/BLDC physics + bus service) land; shared timer/bus paths may be watched for this board. Additive plant models; no live re-capture this session — tracked.
     # 2026-08-12: chip yaml adds bxcan1 (type bxcan @ 0x40006400, APB1ENR bit 25) for
     # Arduino matrix L8 loopback. Existing BxCan model; no register-map change to
