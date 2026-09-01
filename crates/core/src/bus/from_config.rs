@@ -136,7 +136,7 @@ impl SystemBus {
         // `from_file` is the CLI's path, and the browser and hosted runners
         // parse with `from_yaml`. Validating at load time only would mean two
         // of our three runtimes silently accept documents the third rejects.
-        manifest.validate_parts()?;
+        super::part_pack::validate_manifest(manifest)?;
         let flash_size = chip.flash.size;
         let ram_size = chip.ram.size;
 
