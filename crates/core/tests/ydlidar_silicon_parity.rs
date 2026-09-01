@@ -197,10 +197,10 @@ fn drain_ticks(dev: &mut YdLidar, ticks: usize) -> Vec<u8> {
 fn model_emits_at_the_rate_the_scan_produces_not_the_tick_rate() {
     let mut dev = YdLidar::new();
     let bytes = drain_ticks(&mut dev, 1000); // one second of simulated time
-    // 4031 samples/s x 3 bytes, plus 10 bytes of overhead on each of the
-    // 161.2 data frames, plus 10 zero packets of 13 = 13 836 B/s. The unit
-    // measured 13 806 B/s. The default one-byte-per-tick budget would cap
-    // this at 1 000 and no frame would ever complete.
+                                             // 4031 samples/s x 3 bytes, plus 10 bytes of overhead on each of the
+                                             // 161.2 data frames, plus 10 zero packets of 13 = 13 836 B/s. The unit
+                                             // measured 13 806 B/s. The default one-byte-per-tick budget would cap
+                                             // this at 1 000 and no frame would ever complete.
     assert!(
         (13_500..=14_200).contains(&bytes.len()),
         "expected ~13836 bytes in one second, got {}",
@@ -221,7 +221,11 @@ fn model_output_decodes_as_valid_frames_at_the_declared_scan_rate() {
     let bytes = drain_ticks(&mut dev, 1000);
     let (frames, rejected) = decode_capture(&bytes);
     assert_eq!(rejected, 0, "our own stream failed its own checksum");
-    assert!(frames.len() > 100, "only {} frames in a second", frames.len());
+    assert!(
+        frames.len() > 100,
+        "only {} frames in a second",
+        frames.len()
+    );
     let revolutions = frames.iter().filter(|f| f.ct & 1 == 1).count();
     assert!(
         (9..=11).contains(&revolutions),
@@ -283,7 +287,8 @@ fn declared_room_is_what_firmware_decodes() {
             if mm <= 0.0 {
                 continue;
             }
-            let correction = labwired_core::peripherals::components::ydlidar::angle_correction_deg(mm);
+            let correction =
+                labwired_core::peripherals::components::ydlidar::angle_correction_deg(mm);
             hits.push(((first + step * k as f64 + correction).rem_euclid(360.0), mm));
         }
     }
@@ -332,7 +337,8 @@ fn a_driven_target_appears_at_the_bearing_it_was_driven_to() {
             if mm <= 0.0 {
                 continue;
             }
-            let correction = labwired_core::peripherals::components::ydlidar::angle_correction_deg(mm);
+            let correction =
+                labwired_core::peripherals::components::ydlidar::angle_correction_deg(mm);
             let bearing = (first + step * k as f64 + correction).rem_euclid(360.0);
             let delta = ((bearing - 200.0 + 180.0).rem_euclid(360.0) - 180.0).abs();
             if delta <= 8.0 {
@@ -344,5 +350,8 @@ fn a_driven_target_appears_at_the_bearing_it_was_driven_to() {
             }
         }
     }
-    assert!(at_target > 10, "target arc produced only {at_target} samples");
+    assert!(
+        at_target > 10,
+        "target arc produced only {at_target} samples"
+    );
 }
