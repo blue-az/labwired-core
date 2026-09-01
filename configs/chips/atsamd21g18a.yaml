@@ -32,6 +32,94 @@ ram:
   base: 0x20000000
   size: "32KB"
 
+# ── Pin map ─────────────────────────────────────────────────────────────────
+# WHY THIS IS DECLARED RATHER THAN LEFT TO THE LABEL PARSE.
+#
+# `SystemBus::parse_stm32_pin` would be WRONG for this part twice over, not
+# merely approximate:
+#   1. it rejects any bit above 15 ("STM32 ports stop at 15"), and PA17 is
+#      LED_BUILTIN on every board in this family — the parse returns None for
+#      the single most-used pin on the chip;
+#   2. it builds a port name as `gpio<letter>`, and these ports are `gpio_a` /
+#      `gpio_b`, because one LabWired port is one PORT GROUP.
+# So this part is NOT a `PARSE_FALLBACK_CHIPS` entry: recording it there would
+# record a falsehood. See crates/config/tests/chip_pins_ratchet.rs.
+#
+# WHAT THIS MAP ASSERTS, EXACTLY: which port register and which bit a pin LABEL
+# resolves to. That is mechanical on this family — Microchip labels pins
+# `P<group><bit>` straight through the datasheet, and the SVD's PORT cluster
+# has two GROUPs of 32 — so no number here is transcribed or guessed.
+#
+# WHAT IT DOES NOT ASSERT: package bond-out. The G18A is a 48-pin part and does
+# NOT bring every one of these 64 pads to a ball; this map says where PA17
+# lives if you name it, not that PA31 exists on your package. A board manifest
+# is the thing that may only name pins its package has.
+pins:
+  PA0: { gpio: gpio_a, bit: 0 }
+  PA1: { gpio: gpio_a, bit: 1 }
+  PA2: { gpio: gpio_a, bit: 2 }
+  PA3: { gpio: gpio_a, bit: 3 }
+  PA4: { gpio: gpio_a, bit: 4 }
+  PA5: { gpio: gpio_a, bit: 5 }
+  PA6: { gpio: gpio_a, bit: 6 }
+  PA7: { gpio: gpio_a, bit: 7 }
+  PA8: { gpio: gpio_a, bit: 8 }
+  PA9: { gpio: gpio_a, bit: 9 }
+  PA10: { gpio: gpio_a, bit: 10 }
+  PA11: { gpio: gpio_a, bit: 11 }
+  PA12: { gpio: gpio_a, bit: 12 }
+  PA13: { gpio: gpio_a, bit: 13 }
+  PA14: { gpio: gpio_a, bit: 14 }
+  PA15: { gpio: gpio_a, bit: 15 }
+  PA16: { gpio: gpio_a, bit: 16 }
+  PA17: { gpio: gpio_a, bit: 17 }
+  PA18: { gpio: gpio_a, bit: 18 }
+  PA19: { gpio: gpio_a, bit: 19 }
+  PA20: { gpio: gpio_a, bit: 20 }
+  PA21: { gpio: gpio_a, bit: 21 }
+  PA22: { gpio: gpio_a, bit: 22 }
+  PA23: { gpio: gpio_a, bit: 23 }
+  PA24: { gpio: gpio_a, bit: 24 }
+  PA25: { gpio: gpio_a, bit: 25 }
+  PA26: { gpio: gpio_a, bit: 26 }
+  PA27: { gpio: gpio_a, bit: 27 }
+  PA28: { gpio: gpio_a, bit: 28 }
+  PA29: { gpio: gpio_a, bit: 29 }
+  PA30: { gpio: gpio_a, bit: 30 }
+  PA31: { gpio: gpio_a, bit: 31 }
+  PB0: { gpio: gpio_b, bit: 0 }
+  PB1: { gpio: gpio_b, bit: 1 }
+  PB2: { gpio: gpio_b, bit: 2 }
+  PB3: { gpio: gpio_b, bit: 3 }
+  PB4: { gpio: gpio_b, bit: 4 }
+  PB5: { gpio: gpio_b, bit: 5 }
+  PB6: { gpio: gpio_b, bit: 6 }
+  PB7: { gpio: gpio_b, bit: 7 }
+  PB8: { gpio: gpio_b, bit: 8 }
+  PB9: { gpio: gpio_b, bit: 9 }
+  PB10: { gpio: gpio_b, bit: 10 }
+  PB11: { gpio: gpio_b, bit: 11 }
+  PB12: { gpio: gpio_b, bit: 12 }
+  PB13: { gpio: gpio_b, bit: 13 }
+  PB14: { gpio: gpio_b, bit: 14 }
+  PB15: { gpio: gpio_b, bit: 15 }
+  PB16: { gpio: gpio_b, bit: 16 }
+  PB17: { gpio: gpio_b, bit: 17 }
+  PB18: { gpio: gpio_b, bit: 18 }
+  PB19: { gpio: gpio_b, bit: 19 }
+  PB20: { gpio: gpio_b, bit: 20 }
+  PB21: { gpio: gpio_b, bit: 21 }
+  PB22: { gpio: gpio_b, bit: 22 }
+  PB23: { gpio: gpio_b, bit: 23 }
+  PB24: { gpio: gpio_b, bit: 24 }
+  PB25: { gpio: gpio_b, bit: 25 }
+  PB26: { gpio: gpio_b, bit: 26 }
+  PB27: { gpio: gpio_b, bit: 27 }
+  PB28: { gpio: gpio_b, bit: 28 }
+  PB29: { gpio: gpio_b, bit: 29 }
+  PB30: { gpio: gpio_b, bit: 30 }
+  PB31: { gpio: gpio_b, bit: 31 }
+
 peripherals:
   # ── Clocks and reset ───────────────────────────────────────────────────────
   # PM — the power manager: the AHB/APB clock masks and the CPU/APB dividers.
