@@ -194,6 +194,29 @@ fn angle_centideg(raw: u16) -> u32 {
     (raw as u32 >> 1) * 100 / 64
 }
 
+/// The angle correction, in centidegrees, as a first-order approximation.
+///
+/// A frame carries the MECHANICAL angle of the head. The bearing the beam
+/// actually travelled is `mech + atan(21.8 * (155.3 - d) / (155.3 * d))`,
+/// because the emitter sits off the rotation axis. It is not a small term: it
+/// runs from about -1.8 deg at 200 mm to -7.8 deg far away.
+///
+/// Over this scanner's whole range the argument stays under 0.14, and there
+/// `atan(x) ~ x` is good to 0.05 deg, so the transcendental collapses to one
+/// rational expression:
+///
+///   correction_cdeg ~ 804 * (155.3 - d) / d,   d in mm
+///
+/// That matters here: this is a Cortex-M3 with no FPU, and pulling in a
+/// software `atan` would dwarf the rest of the firmware.
+fn angle_correction_cdeg(mm: u32) -> i32 {
+    if mm == 0 {
+        return 0;
+    }
+    let d = mm as i64;
+    ((804 * (1553 - 10 * d)) / (10 * d)) as i32
+}
+
 #[entry]
 fn main() -> ! {
     enable_peripheral_clocks();
@@ -255,7 +278,9 @@ fn main() -> ! {
             points += 1;
             if mm < near_mm {
                 near_mm = mm;
-                near_centideg = (first + span * i as u32 / divisor) % 36_000;
+                let mech = (first + span * i as u32 / divisor) % 36_000;
+                let corrected = mech as i32 + angle_correction_cdeg(mm);
+                near_centideg = corrected.rem_euclid(36_000) as u32;
             }
         }
     }

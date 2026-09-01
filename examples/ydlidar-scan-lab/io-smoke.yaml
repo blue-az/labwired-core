@@ -8,5 +8,5 @@ limits:
 assertions:
   - uart_contains: "Scanning Lidar Lab"
   - uart_contains: "[SCAN] rev="
-  - uart_contains: " near="
+  - uart_contains: " near=1000mm@"
   - expected_stop_reason: max_steps
