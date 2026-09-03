@@ -21,7 +21,7 @@ carrier**. USB-C is native USB — there is no UART-bridge chip.
 | Chip descriptor | [`configs/chips/rp2350.yaml`](../../configs/chips/rp2350.yaml) |
 | System YAML | [`configs/systems/rp2350-zero.yaml`](../../configs/systems/rp2350-zero.yaml) |
 | Example | [`examples/rp2350-zero/`](../../examples/rp2350-zero/README.md) |
-| Playground board id | *not registered* (slice 2) |
+| Playground board id | `rp2350-zero` |
 | Reference firmware | `crates/firmware-rp2350-demo/` (UART0 smoke) |
 | Tier (snapshot) | smoke-manual (UART0). **No silicon capture.** |
 
@@ -36,7 +36,7 @@ Pico 2 (GP25 LED, different USB connector) is [`rp2350.md`](rp2350.md) /
 |-----|----------|--------|
 | Twin / CLI | **ELF** linked at XIP `0x10000000` | `firmware-rp2350-demo` |
 | Bench | **UF2** | Hold BOOT, tap RUN, copy to the UF2 disk |
-| Arduino-Pico | `waveshare_rp2350_zero` | Hosted compile is **not** wired yet |
+| Arduino-Pico | `waveshare_rp2350_zero` | Hosted compile id `rp2350-zero`. Browser flash is **not** wired (UF2 on the bench). |
 
 !!! warning "USB-C is not UART0"
     The cable is RP2350 USB CDC. Header UART0 is GP0 (TX) / GP1 (RX). The twin
@@ -180,8 +180,8 @@ Details: [`examples/rp2350-zero/VALIDATION.md`](../../examples/rp2350-zero/VALID
 
 ### Playground
 
-Not in the picker yet. Do not pass `board: rp2350-zero` to playground APIs
-until that id is registered.
+Board id `rp2350-zero` on [app.labwired.com](https://app.labwired.com). USB CDC
+on the cable is still unmodeled — serial in the twin is UART0.
 
 ### Agent
 
