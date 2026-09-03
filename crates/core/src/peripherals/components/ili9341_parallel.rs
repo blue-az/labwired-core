@@ -6,7 +6,7 @@
 //!
 //! Phase-2 v1 targets ESP32 / ESP32-S3 GPIO bit-bang of the classic 16-bit
 //! Intel 8080 bus (CS, RS/D-C, WR, RD, RST, DB[15:0]). Edges arrive through
-//! [`GpioObserver`](crate::peripherals::esp32s3::gpio::GpioObserver); unit tests
+//! [`GpioObserver`](crate::peripherals::device::GpioObserver); unit tests
 //! inject them directly.
 //!
 //! ## Bus protocol (write path)
@@ -420,13 +420,7 @@ impl Ili9341Parallel {
     }
 }
 
-impl crate::peripherals::esp32s3::gpio::GpioObserver for Ili9341Parallel {
-    fn on_pin_change(&self, pin: u8, _from: bool, to: bool, sim_cycle: u64) {
-        self.on_gpio_edge(pin, to, sim_cycle);
-    }
-}
-
-impl crate::peripherals::esp32::gpio::GpioObserver for Ili9341Parallel {
+impl crate::peripherals::device::GpioObserver for Ili9341Parallel {
     fn on_pin_change(&self, pin: u8, _from: bool, to: bool, sim_cycle: u64) {
         self.on_gpio_edge(pin, to, sim_cycle);
     }
@@ -533,7 +527,7 @@ impl PeripheralKit for Ili9341ParallelKit {
                 lcd.attach_panel(panel.clone());
             }
         }
-        ctx.bus.ili9341_parallel.push(panel);
+        ctx.bus.observe_device(panel);
         Ok(())
     }
 }
@@ -576,6 +570,27 @@ impl crate::inspect::DeviceEvidence for Ili9341Parallel {
             }),
             bytes: crate::inspect::artifact_bytes(&fb, opts),
         }]
+    }
+}
+
+/// A bus-resident DISPLAY: readback only as far as the bus is concerned, but
+/// it reports its RGB565 framebuffer as evidence, the same shape the SPI kit's
+/// panels emit.
+impl crate::bus::ObservedDevice for Ili9341Parallel {
+    fn manifest_id(&self) -> &str {
+        self.id()
+    }
+
+    fn evidence(&self) -> Option<&dyn crate::inspect::DeviceEvidence> {
+        Some(self)
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn as_arc_any(self: std::sync::Arc<Self>) -> std::sync::Arc<dyn std::any::Any + Send + Sync> {
+        self
     }
 }
 

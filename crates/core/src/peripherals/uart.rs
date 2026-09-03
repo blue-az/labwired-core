@@ -8,7 +8,6 @@ use super::pad_lines::PadLines;
 use super::uart_waveform::{UartFraming, UartNarrator};
 use super::wave_plan::NarrationFit;
 use crate::SimResult;
-use std::any::Any;
 use std::collections::VecDeque;
 use std::io::{self, Write};
 use std::str::FromStr;
@@ -52,64 +51,13 @@ pub struct UartTraceEvent {
     pub byte: u8,
 }
 
-/// A UART model that can host a [`UartStreamDevice`] — the contract an
-/// inter-chip cross-link binds to.
-///
-/// This exists so the cross-link seam names a CAPABILITY rather than one
-/// concrete struct. It used to downcast to [`Uart`], which silently excluded
-/// every chip family with its own UART model: an ESP32-C3's `uart1` reported
-/// "is not a UART" and two C3s could not be wired together at all. A new UART
-/// model now joins by implementing this trait, not by editing the seam.
-pub trait UartStreamHost {
-    /// Bind a peer to this UART's RX/TX paths.
-    fn attach_stream_device(&mut self, dev: Box<dyn UartStreamDevice>);
-
-    /// Stop mirroring TX to the console/capture sink. A cross-linked UART
-    /// carries raw protocol octets, not console text, and letting those into
-    /// the serial monitor floods it with binary that looks identical on both
-    /// peers.
-    fn detach_console_sink(&mut self);
-
-    /// True when any attached peer carries protocol octets — the test
-    /// `attach_uart_tx_sink` uses to leave a linked UART off the console sink.
-    fn hosts_protocol_peer(&self) -> bool;
-}
-
-/// A device that emits bytes through the UART's RX path (e.g. a GPS module).
-pub trait UartStreamDevice: Send {
-    /// Called periodically by the bus tick. Returns the next byte to push into UART RX,
-    /// or None if no byte is pending. Implementations should respect `elapsed_us` to
-    /// pace output (e.g. 9600 baud → ~1 ms/byte → emit one byte per ~1000 us tick).
-    fn poll(&mut self, elapsed_us: u32) -> Option<u8>;
-    /// Observe a byte transmitted by firmware on the TX path. Default: ignore.
-    /// Bidirectional peers (e.g. an IO-Link master) override this to receive the
-    /// device's responses, complementing `poll` which drives the RX path.
-    fn on_tx_byte(&mut self, _byte: u8) {}
-
-    /// True when this peer's traffic is raw protocol octets rather than console
-    /// text, so the UART hosting it must be kept OFF the console capture sink.
-    ///
-    /// Without this, a node's link UART and its console UART push into the same
-    /// buffer and the two byte streams splice together — a two-chip run prints
-    /// `pPiInNgGer up` and no serial assertion can be trusted. Default `false`:
-    /// an ordinary stream device (a GPS emitting NMEA) is console-safe.
-    fn carries_protocol_octets(&self) -> bool {
-        false
-    }
-    fn as_any(&self) -> Option<&dyn Any> {
-        None
-    }
-    fn as_any_mut(&mut self) -> Option<&mut dyn Any> {
-        None
-    }
-    /// Runtime-drivable view of this device, if it accepts simulated input.
-    /// Same contract as the hook on `I2cDevice`: input devices override it so
-    /// the generic [`crate::Machine::set_input`] resolver can reach them
-    /// without a downcast. Default `None` = not an input device.
-    fn as_sim_input_mut(&mut self) -> Option<&mut dyn crate::sim_input::SimInput> {
-        None
-    }
-}
+/// The UART cross-link contracts — a model that can HOST a stream peer
+/// ([`UartStreamHost`]) and the peer itself ([`UartStreamDevice`]). Declared
+/// in [`peripherals::device`](crate::peripherals::device) — the ONE home for
+/// the vocabulary of things that hang off a wire — and re-exported here so
+/// every existing `impl`, bound and intra-doc link at this path keeps
+/// resolving.
+pub use crate::peripherals::device::{UartStreamDevice, UartStreamHost};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -1000,9 +948,10 @@ impl Uart {
     /// so they are evaluated once; only the RX-stream pacing is replayed `n`
     /// times. Replaying it — rather than handing a stream one poll carrying
     /// `n * TICK_US` — is what keeps this refactor byte-exact: the
-    /// [`UartStreamDevice::poll`] contract emits at most ONE byte per call, so
-    /// `n` polls is the only way to produce the `n` bytes the per-cycle path
-    /// would have produced, in the same order.
+    /// [`UartStreamDevice::poll`] contract emits at most ONE byte per call
+    /// (times the peer's [`UartStreamDevice::max_bytes_per_tick`] budget, 1 by
+    /// default), so `n` polls is the only way to produce the `n` bytes the
+    /// per-cycle path would have produced, in the same order.
     fn advance_ticks(&mut self, n: u32) -> (bool, Vec<u32>) {
         // Publish any burst the wire has now had time to carry. Cheap and
         // inert when nothing is buffered, which is every tick on a UART that
@@ -1038,9 +987,19 @@ impl Uart {
                     *elapsed_us = 0; // consumed this tick
 
                     for stream in attached_streams.iter_mut() {
-                        if let Some(byte) = stream.poll(elapsed) {
+                        // Time is credited once per tick; the remaining calls
+                        // pass 0, so a fast peer drains what it earned without
+                        // being handed the tick again. The default budget of 1
+                        // is exactly the old single-poll behaviour.
+                        let budget = stream.max_bytes_per_tick().max(1);
+                        let mut credit = elapsed;
+                        for _ in 0..budget {
+                            let Some(byte) = stream.poll(credit) else {
+                                break;
+                            };
                             rx_guard.push_back(byte);
                             rx_trace.push(byte);
+                            credit = 0;
                         }
                     }
                 }

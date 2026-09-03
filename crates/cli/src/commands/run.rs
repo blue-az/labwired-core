@@ -8,6 +8,7 @@
 
 use crate::artifacts::{write_interactive_snapshot, InteractiveSnapshotInputs};
 use crate::*;
+use labwired_core::peripherals::components::ili9341_parallel::Ili9341Parallel;
 
 /// Export every attached parallel-panel framebuffer, if `--display-out <path>`
 /// was given: a binary PPM per panel (`<path>` for the first, `<path>.<id>`
@@ -24,11 +25,12 @@ pub(crate) fn export_display_if_requested(
     let Some(path) = display_out else {
         return;
     };
-    if bus.ili9341_parallel.is_empty() {
+    let panels: Vec<&Ili9341Parallel> = bus.observed_of::<Ili9341Parallel>().collect();
+    if panels.is_empty() {
         eprintln!("labwired-cli run: --display-out given but no parallel panel is attached");
         return;
     }
-    for (n, panel) in bus.ili9341_parallel.iter().enumerate() {
+    for (n, panel) in panels.iter().enumerate() {
         let (w, h) = panel.logical_dimensions();
         let fb = panel.oriented_framebuffer();
         let ink = fb.iter().filter(|&&b| b != 0).count();
@@ -667,7 +669,8 @@ pub(crate) fn run_firmware_esp32(args: &RunArgs) -> ExitCode {
 
     // Set PC to ELF entry and seed SP at top of SRAM1 (post-BROM default on
     // real silicon; see e2e_external_arduino_esp32_in_sim for the rationale).
-    // CHEAT(SKIP): bypasses the boot ROM and hand-seeds PC/SP. See FIDELITY.md §C.
+    // CHEAT(SKIP): bypasses the boot ROM and hand-seeds PC/SP — real: the boot
+    // ROM executes and leaves PC/SP where it puts them. See FIDELITY.md §C.
     cpu.set_pc(image.entry_point as u32);
     cpu.set_sp(0x3FFE_0000);
     // Post-bootloader PS state: WOE=1 (windowed ABI), INTLEVEL=0, EXCM=0.

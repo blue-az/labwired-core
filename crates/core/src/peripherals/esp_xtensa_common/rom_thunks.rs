@@ -10,8 +10,9 @@
 //! these.  Rather than emulate the whole BROM, we register Rust thunks at
 //! the addresses the firmware calls.
 //!
-//! CHEAT(THUNK): every fn in this module fakes a function instead of executing
-//! real code. Two kinds (see FIDELITY.md §A): THUNK-ROM (boot-ROM helpers we
+//! CHEAT(THUNK, module): every fn in this module fakes a function instead of
+//! executing it — real: the CPU executes the ROM routine or the library code
+//! that is already present in the image. Two kinds (see FIDELITY.md §A): THUNK-ROM (boot-ROM helpers we
 //! have no binary to run — math, memcpy, cache, printf — reasonable to emulate)
 //! and THUNK-LIB / BYPASS / NOP (firmware library code that IS in the ELF but we
 //! skip — heap_caps, FreeRTOS, the SPI/GxEPD path — genuine fidelity debt).
@@ -773,7 +774,8 @@ pub fn xthal_window_spill_thunk(cpu: &mut XtensaLx7, bus: &mut dyn Bus) -> SimRe
 /// operator sees what blew up.  The caller never re-runs, so the loop
 /// breaks.  The OTHER CPU (if dual-core) keeps running.
 // CHEAT(NOP): halts the sim on abort() instead of running the real abort path
-// (which would print a backtrace via the panic handler). See FIDELITY.md §A.
+// — real: the firmware's abort() runs the panic handler and prints a
+// backtrace, then resets. See FIDELITY.md §A.
 pub fn abort_halt(cpu: &mut XtensaLx7, bus: &mut dyn Bus) -> SimResult<()> {
     use core::sync::atomic::{AtomicU32, Ordering};
     static FIRST_PRINT: AtomicU32 = AtomicU32::new(0);

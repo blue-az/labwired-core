@@ -1,5 +1,11 @@
 name: Core Coverage Matrix Smoke
 
+# Scheduled runs are gated to this repository: every job below carries
+# `if: github.event_name != 'schedule' || github.repository == 'w1ne/labwired-core'`.
+# GitHub attributes a cron run to whoever last edited the schedule, so a fork
+# with Actions enabled mails this workflow's failures to a maintainer here,
+# about a run they can neither see nor stop. Pushes and manual dispatch are
+# untouched — a fork still gets this workflow on its own changes.
 on:
   # Slow gates: nightly + main tip + manual. Not on PRs (PR merge target <1 min).
   schedule:
@@ -24,6 +30,7 @@ concurrency:
 jobs:
   coverage-matrix-smoke:
     name: coverage-matrix-${{ matrix.id }}
+    if: ${{ github.event_name != 'schedule' || github.repository == 'w1ne/labwired-core' }}
     runs-on: ubuntu-latest
     timeout-minutes: 35
     strategy:
@@ -195,6 +202,26 @@ jobs:
             profile_dir: release
             script: examples/rp2350-demo/io-smoke.yaml
             system: examples/rp2350-demo/system.yaml
+          # atsamd21g18a's only CLI proof — the first Microchip part in the
+          # engine. Same shape as the rp2350 cell above, `build_dir` included
+          # and for the same reason: this crate's `-Tlink.x` comes from its own
+          # .cargo/config.toml via build.rs, and built from the workspace root
+          # it links entry 0x0 and boots nowhere while the BUILD SUCCEEDS.
+          #
+          # Not a banner check. Three of its seven assertions are `memory_value`
+          # reads of the PORT registers the firmware configured — DIR bit 17,
+          # PINCFG[10] = PMUXEN|INEN, and PMUX[5]'s LOW nibble = 2 (function C,
+          # where SERCOM0 PAD[2] lives). Non-vacuity checked by flipping the
+          # expected PMUX nibble to 0x3: the run fails with
+          # "expected 0x3, got 0x22" while every UART line still passes.
+          - id: samd21-smoke
+            target: thumbv6m-none-eabi
+            crate: firmware-samd21-demo
+            build_dir: crates/firmware-samd21-demo
+            profile: release
+            profile_dir: release
+            script: examples/samd21-smoke/io-smoke.yaml
+            system: examples/samd21-smoke/system.yaml
 
     steps:
       - uses: actions/checkout@v4
@@ -344,7 +371,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     needs: coverage-matrix-smoke
-    if: always()
+    if: ${{ always() && (github.event_name != 'schedule' || github.repository == 'w1ne/labwired-core') }}
     steps:
       - uses: actions/checkout@v4
 
